@@ -1,27 +1,15 @@
 import { assertEvmAddress } from "../domain/address.js";
 import { ExternalCallError, CircuitBreaker, withResilience } from "./resilience.js";
 
-export interface VerifiedFunction {
-  type: "function";
-  name: string;
-  inputs: readonly { name?: string; type: string }[];
-  stateMutability?: string;
-}
-
-export interface VerificationResult {
-  status: "verified" | "unverified" | "unavailable";
-  abi?: readonly VerifiedFunction[];
-  source?: string;
-  detail?: string;
-}
-
+export interface VerifiedFunction { type: "function"; name: string; inputs: readonly { name?: string; type: string }[]; stateMutability?: string; }
+export type VerificationResult =
+  | { status: "verified"; abi: readonly VerifiedFunction[]; source?: string }
+  | { status: "unverified"; detail: string }
+  | { status: "unavailable"; detail: string };
 export interface VerificationClient { getContract(address: string): Promise<VerificationResult>; }
-
 interface EtherscanResponse { status?: string; message?: string; result?: unknown; }
 
-function isUnverified(message: string | undefined): boolean {
-  return /(?:not verified|source code.*not verified)/i.test(message ?? "");
-}
+function isUnverified(message: string | undefined): boolean { return /(?:not verified|source code.*not verified)/i.test(message ?? ""); }
 
 function parseAbi(value: unknown): readonly VerifiedFunction[] {
   if (typeof value !== "string") throw new Error("Verification ABI result must be a JSON string");
@@ -53,7 +41,6 @@ function parseAbi(value: unknown): readonly VerifiedFunction[] {
 
 export class EtherscanVerificationClient implements VerificationClient {
   private readonly breaker = new CircuitBreaker({ failureThreshold: 3, cooldownMs: 10_000 });
-
   constructor(private readonly baseUrl: string, private readonly apiKey?: string, private readonly chainId?: number, private readonly fetcher: typeof fetch = fetch) {
     if (!/^https?:\/\//i.test(baseUrl)) throw new Error("Verification API URL must use http or https");
   }
@@ -79,7 +66,7 @@ export class EtherscanVerificationClient implements VerificationClient {
         (error) => error instanceof ExternalCallError ? error.failure : { kind: "provider_failure", message: error instanceof Error ? error.message : "Verification provider request failed", retryable: true },
       );
       if (result.status === "1") return { status: "verified", abi: parseAbi(result.result) };
-      if (isUnverified(result.message)) return { status: "unverified", detail: result.message };
+      if (isUnverified(result.message)) return { status: "unverified", detail: result.message ?? "Contract source code is not verified" };
       return { status: "unavailable", detail: result.message ?? "verification provider returned an unsuccessful response" };
     } catch (error) {
       if (error instanceof ExternalCallError) return { status: "unavailable", detail: error.failure.kind };
