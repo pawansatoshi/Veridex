@@ -65,9 +65,13 @@ export class CircuitBreaker {
 export function classifyRpcFailure(status: number | undefined, error: unknown): Failure {
   const message = error instanceof Error ? error.message : String(error);
   const normalized = message.toLowerCase();
+  const errorName = error instanceof Error ? error.name : "";
 
-  if (normalized.includes("execution reverted") || normalized.includes("reverted") || normalized.includes("revert")) {
+  if (normalized.includes("execution reverted") || normalized.includes("revert")) {
     return { class: "application_revert", message, retryable: false, countsTowardCircuit: false };
+  }
+  if (errorName === "AbortError" || normalized.includes("timeout") || normalized.includes("timed out")) {
+    return { class: "timeout", message, retryable: true, countsTowardCircuit: true };
   }
   if (status === 429) {
     return { class: "rate_limited", message, retryable: true, countsTowardCircuit: true };
@@ -75,8 +79,12 @@ export function classifyRpcFailure(status: number | undefined, error: unknown): 
   if (status !== undefined && status >= 500) {
     return { class: "provider_unavailable", message, retryable: true, countsTowardCircuit: true };
   }
-  if (normalized.includes("timeout") || normalized.includes("aborted")) {
-    return { class: "timeout", message, retryable: true, countsTowardCircuit: true };
-  }
   return { class: "provider_unavailable", message, retryable: true, countsTowardCircuit: true };
+}
+
+export function classifyJsonRpcError(message: string): Failure {
+  if (message.toLowerCase().includes("revert")) {
+    return { class: "application_revert", message, retryable: false, countsTowardCircuit: false };
+  }
+  return { class: "rpc_application_error", message, retryable: false, countsTowardCircuit: false };
 }
