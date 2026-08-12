@@ -14,24 +14,28 @@ Implemented in the current branch:
 - instruction-aligned EVM walker with PUSH operand handling
 - selector fallback limited to actual PUSH4 instructions
 - shared timeout/retry/circuit-breaker foundation
-- JSON-RPC transport with application-revert separation
-- verification-provider boundary with explicit verification states
+- JSON-RPC transport with application-revert separation and QUANTITY block tags
+- verification-provider boundary with explicit verification states and preserved failure detail
 - evidence provenance and certainty metadata
-- ownership observation
-- ERC-1967 implementation/beacon observation
+- bounded runtime configuration validation
+- bounded concurrency utility
+- deterministic analysis event/telemetry abstraction
+- normalized Phase 01 orchestration
+- ownership observation and verified-ABI negative handling
+- ERC-1967 implementation/beacon observation with explicit unresolved beacon semantics
 - pause capability and live paused-state observation
 - mint capability detection with authority explicitly left unresolved
 - adversarial regression coverage
-- optional live-RPC integration test structure
+- synchronized npm lockfile and locked CI
 
 ## Scope
 
 ### 1. Runtime foundation
 
 - [x] TypeScript strictness
-- [ ] configuration validation
-- [ ] deterministic logging/telemetry abstraction
-- [ ] bounded concurrency
+- [x] configuration validation
+- [x] deterministic logging/telemetry abstraction
+- [x] bounded concurrency
 
 ### 2. EVM transport
 
@@ -41,6 +45,7 @@ Implemented in the current branch:
 - [x] circuit breaker
 - [x] application-level RPC revert classification
 - [x] provider failure semantics
+- [x] JSON-RPC QUANTITY block-tag validation
 
 ### 3. External verification
 
@@ -50,6 +55,7 @@ Implemented in the current branch:
 - [x] not-configured vs unverified vs API failure
 - [x] no silent downgrade
 - [ ] deeper malformed-response corpus
+- [ ] verified-source evidence beyond the current ABI boundary where justified
 
 ### 4. Bytecode
 
@@ -58,7 +64,7 @@ Implemented in the current branch:
 - [x] PUSH operand handling
 - [x] selector detection fallback
 - [x] regression test for operand false positives
-- [x] regression test for selector collision limitation structure
+- [x] selector collision/ABI hierarchy regression
 - [ ] broader malformed-bytecode corpus
 
 ### 5. Evidence
@@ -78,6 +84,7 @@ Implemented in the current branch:
 - [x] owner() observation
 - [x] renounced ownership handling
 - [x] non-Ownable behavior classified as not-applicable
+- [x] verified ABI negative does not trigger heuristic fallback
 - [x] proxy storage/code address separation preserved in checks
 - [ ] real-chain delegatecall integration test
 
@@ -97,7 +104,7 @@ Implemented in the current branch:
 - [x] mint capability
 - [ ] mint authority evidence model
 - [x] ABI-first exact function signature
-- [x] bytecode fallback
+- [x] bytecode fallback only when stronger ABI evidence is unavailable
 - [x] correct code/storage address separation
 
 ## Required Test Categories
@@ -117,8 +124,9 @@ Implemented in the current branch:
 - [x] ownership
 - [x] pause
 - [x] mint
-- [ ] broader cross-module normalized orchestration tests
+- [x] normalized orchestration
 - [ ] real-chain integration corpus
+- [ ] broader malformed external-response corpus
 
 ## Exit Gate
 
@@ -131,8 +139,8 @@ Phase 01 is complete only when:
 - complete unit suite passes
 - integration tests exist for assumptions requiring a real chain
 - project state and decision log are updated
-- remaining configuration/concurrency/telemetry/security gates are closed
-- normalized Phase 01 orchestration is implemented and tested
+- remaining provider-health/telemetry measurement and evidence gaps are closed
+- Phase 01 security review is complete
 
 ## Explicit Non-Goals
 
