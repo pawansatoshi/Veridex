@@ -1,224 +1,491 @@
-# Veridex UI / UX / Motion Blueprint
+# Veridex UI / UX / Product Experience Blueprint
 
 ## Product Experience Goal
 
-Veridex should feel like an **instrument panel for verifiable on-chain intelligence**, not a generic crypto dashboard or a block-explorer clone.
+Veridex should feel like a **calm, premium instrument for understanding on-chain behavior** — not a scary security scanner, crypto terminal, or block-explorer clone.
 
-The user should always understand:
+The design target is **Apple-grade clarity with technical depth underneath**:
 
-1. what Veridex is checking
-2. what address is being inspected
-3. whether a proxy exists
-4. where the implementation lives
-5. what evidence supports each finding
-6. what is verified vs inferred vs unavailable
-7. how confident the system is
-8. what an agent can consume programmatically
+- beautiful before complicated
+- simple before powerful
+- progressive disclosure instead of information overload
+- confidence without fear
+- visual intelligence without visual noise
+- premium 3D depth used purposefully
+- every animation tied to real system state
 
-## Visual Language
+A child, first-time crypto user, developer, researcher, or senior security engineer should all understand the primary journey:
 
-Direction:
+`paste address → understand what it can do → see why → keep watching`
 
-- dark technical canvas with high legibility
-- restrained accent system
-- crisp typography
+## Core Product Promise
+
+### Human language
+
+**Understand what a contract can do — and know when its powers change.**
+
+### Technical description
+
+Verifiable on-chain intelligence with evidence provenance, proxy-aware analysis, persistent monitoring, and machine-readable outputs.
+
+## Experience Principles
+
+### 1. Five-second comprehension
+
+The landing page must answer immediately:
+
+**What is this?**
+
+> Veridex watches smart contracts and explains what they can actually do.
+
+**Why should I care?**
+
+> If their powers change, Veridex can tell you.
+
+**What do I do?**
+
+> Paste a contract address.
+
+### 2. Progressive disclosure
+
+Default view: plain-language answer.
+
+Next layer: evidence.
+
+Next layer: technical detail.
+
+Deepest layer: raw JSON / provenance / provider diagnostics.
+
+Never force a beginner to understand `delegatecall`, ABI selectors, proxy slots, or RPC semantics before receiving a useful answer.
+
+### 3. Calm security UX
+
+Do not use fear-heavy language such as “DANGER!!!” or “SCAM!!!” without strong evidence.
+
+Use measured states:
+
+- Verified
+- Observed
+- Watching
+- Changed
+- Needs attention
+- Inconclusive
+- Unavailable
+
+A red state must always explain **what changed and why**, with evidence.
+
+## Visual Direction — “Spatial Intelligence”
+
+### Base aesthetic
+
+- warm-neutral/dark or light-neutral foundation
+- exceptionally high text legibility
+- restrained accent colors
+- soft depth and controlled shadows
+- precise typography
+- generous whitespace
+- large rounded surfaces used sparingly
 - thin evidence lines
-- node/graph motifs
-- subtle depth, not excessive glassmorphism
-- no meme-coin aesthetics
-- no fake terminal clutter
+- subtle 3D objects and topology
+- no crypto casino styling
+- no excessive glassmorphism
+- no fake terminal decoration
+- no dense neon dashboard by default
+
+### 3D language
+
+Use 3D as a teaching device, not decoration.
+
+The main 3D metaphor is a **Contract Core**:
+
+```text
+            ┌───────────────┐
+            │   CONTRACT    │
+            │     CORE      │
+            └───────┬───────┘
+                    │
+          ┌─────────┼─────────┐
+          ▼         ▼         ▼
+       OWNER      PAUSE      MINT
+          │         │         │
+          └─────────┼─────────┘
+                    ▼
+                 EVIDENCE
+```
+
+For proxies, the 3D model becomes a transparent outer shell + implementation core. This visually explains the critical concept:
+
+**the address you interact with can differ from the code being executed.**
+
+For capability changes, old and new cores can be compared spatially.
 
 ## Information Architecture
 
-### Landing
+### 1. Landing
 
-Hero:
+Hero headline:
 
-**Verifiable On-Chain Intelligence**
+**Know what a contract can do.**
 
-Subtext:
+Supporting line:
 
-Analyze contract ownership, proxy architecture, capabilities, and evidence provenance — deterministically.
+**Veridex turns on-chain evidence into clear, verifiable intelligence — and keeps watching after you leave.**
 
-Primary CTA: **Analyze a contract**
+Primary CTA:
 
-Secondary CTA: **View Miner**
+**Analyze a contract**
+
+Secondary CTA:
+
+**See how it works**
 
 Trust strip:
 
-`Deterministic · Evidence-first · Proxy-aware · Telegraph Miner`
+`Evidence-first · Proxy-aware · Deterministic · Telegraph Miner`
 
-### Analyzer
+Hero animation:
 
-Input:
+A minimal 3D contract object slowly rotates. Evidence particles travel from chain → proxy → implementation → checks → passport. The animation becomes active only when the user scrolls/engages.
 
-- contract address
-- network selector
-- optional advanced settings
+### 2. Analyzer
 
-After submission, transition into the live analysis view.
+Single dominant input:
 
-### Live Analysis
+`Paste contract address`
 
-Main canvas:
+Network is auto-detected when reliable; manual selection remains available.
+
+Primary action:
+
+**Analyze**
+
+Advanced controls remain collapsed by default.
+
+### 3. First result
+
+Do not immediately show technical cards.
+
+Start with a plain-language summary:
+
+> **This contract is upgradeable and currently has mint capability.**
+>
+> We verified these observations from the implementation contract and its published ABI.
+
+Then provide compact proof chips:
+
+`Proxy · Verified ABI · Mint · High confidence`
+
+### 4. Live analysis
+
+The experience transitions into a **real-time evidence journey**.
 
 ```text
-[CONTRACT]
-    │
-    ├── proxy?
-    │      │
-    │      └── implementation
-    │
-    ├── ownership
-    ├── pause capability
-    ├── mint capability
-    │
-    └── evidence
+Contract
+   ↓
+Understanding structure
+   ↓
+Finding implementation
+   ↓
+Checking published evidence
+   ↓
+Checking powers
+   ↓
+Building passport
 ```
 
-A real event should illuminate each node as backend evidence arrives.
+Each step shows:
 
-### Result Dashboard
+- state
+- elapsed time
+- actual evidence source
+- completed/active/unavailable status
 
-Top summary:
+No arbitrary “72% complete” progress bars.
 
-- contract identity
-- network
-- proxy status
-- implementation
-- overall analysis state
+### 5. Capability Passport
 
-Then cards:
+The core result surface:
 
-- Ownership
-- Upgradeability
-- Pause
-- Mint
-- Evidence quality
-- External dependency state
+```text
+VERIDEX PASSPORT
 
-Each card exposes:
+Contract          0x...
+Network           Ethereum
+Status            Watching ●
 
-`finding → evidence → detection method → confidence → source`
+What it can do
 
-### Evidence Explorer
+Ownership         Controlled
+Upgradeability    Upgradeable
+Pause             Enabled
+Mint              Enabled
 
-A dedicated forensic view:
+Evidence          High confidence
+Last verified     2 min ago
+```
 
-- ABI evidence
-- source verification
-- bytecode evidence
-- RPC state
-- external API evidence
-- timestamps
-- queried address
-- code address
+Every capability has a tap target:
 
-### Proxy Graph
+`What does this mean?`
 
-Interactive graph:
+`Why do you say this?`
 
-`caller → proxy → beacon/admin → implementation`
+### 6. Veridex Watch
 
-Only show edges that are actually established by evidence.
+User can click:
 
-### Developer View
+**Watch this contract**
+
+After that, the default model becomes persistent monitoring rather than one-shot analysis.
+
+Watch card:
+
+```text
+USDC / Ethereum
+
+● Watching
+
+Implementation   unchanged
+Ownership        unchanged
+Pause            unchanged
+Mint             unchanged
+
+Last checked     8 min ago
+Next check       automatic
+
+[ View Passport ]
+```
+
+Change state:
+
+```text
+🔴 CONTROL SURFACE CHANGED
+
+Implementation changed
+0xAAA… → 0xBBB…
+
+Why this matters
+The executed implementation changed.
+
+[ Review change ]
+```
+
+Inconclusive state:
+
+```text
+○ CHECK INCONCLUSIVE
+
+Provider unavailable.
+No capability-change alert was generated.
+```
+
+This distinction is a core trust feature.
+
+### 7. Change Timeline / Time Machine
+
+A chronological view of verified snapshots:
+
+```text
+Today
+  ↓
+Implementation changed
+  ↓
+Owner changed
+  ↓
+Mint capability detected
+  ↓
+Initial passport
+```
+
+A two-snapshot comparison shows only evidence-supported differences.
+
+### 8. Evidence Explorer
+
+Evidence appears in layers:
+
+**Simple:** “Why?”
+
+**Technical:** ABI / source / bytecode / RPC
+
+**Forensic:** queried address, code address, timestamps, provider state, external dependency state
+
+**Raw:** canonical machine-readable JSON
+
+### 9. Proxy Graph
+
+Interactive visual relationship:
+
+```text
+YOU
+ │
+ ▼
+PROXY
+ │
+ ├────────► STORAGE / LIVE STATE
+ │
+ ▼
+IMPLEMENTATION
+ │
+ ├────────► ABI
+ ├────────► BYTECODE
+ └────────► CAPABILITIES
+```
+
+Only render edges established by actual evidence.
+
+### 10. Developer / Agent view
 
 Tabs:
 
 - Human summary
-- JSON
+- Passport
 - Evidence
-- Request/response
-- Miner metadata
+- Change history
+- JSON
+- API
+- Miner
 
-The JSON output should be copyable and suitable for agent consumption.
+JSON must be copyable in one action.
+
+## Accessibility / Simplicity
+
+- large touch targets
+- readable type scale
+- plain-language labels
+- keyboard navigation
+- semantic headings
+- visible focus
+- reduced-motion mode
+- no color-only meaning
+- screen-reader-friendly evidence states
+- mobile-first critical flow
+- avoid unexplained jargon
+
+### Beginner mode
+
+Use language such as:
+
+`Owner` → **Who controls it?**
+
+`Upgradeable` → **Can the code be changed?**
+
+`Mint` → **Can new tokens be created?**
+
+`Pause` → **Can transfers or actions be stopped?**
+
+Advanced users can reveal the technical term alongside it.
 
 ## Motion System
 
-### State machine
+### Signature motion: “Evidence flows”
+
+Evidence travels through a spatial graph rather than a fake loading spinner.
 
 ```text
-IDLE
- ↓
-VALIDATING
- ↓
-RESOLVING_CHAIN
- ↓
-DETECTING_PROXY
- ↓
-RESOLVING_IMPLEMENTATION
- ↓
-VERIFYING_ABI
- ↓
-RUNNING_CHECKS
- ↓
-RECONCILING_EVIDENCE
- ↓
-READY
+CHAIN
+  ●
+  │
+  ▼
+PROXY
+  ●
+  │
+  ▼
+IMPLEMENTATION
+  ●
+  │
+  ├────► ABI
+  ├────► CODE
+  └────► STATE
+          │
+          ▼
+       PASSPORT
 ```
 
-Error states branch explicitly:
+### Motion rules
 
-`DEGRADED`, `UNAVAILABLE`, `UNSUPPORTED`, `FAILED`
+- motion communicates causality
+- evidence arrival creates motion
+- errors collapse/branch rather than simply turn red
+- changed capabilities create a visible delta pulse
+- watch status uses a subtle breathing indicator
+- alerts are noticeable but not anxiety-inducing
+- respect reduced-motion preferences
 
-### Animation rules
+## 3D Performance Rules
 
-- Never fake progress.
-- Never show a successful state before the backend reports it.
-- Animate evidence arrival, not arbitrary percentages.
-- Use latency markers for network operations.
-- Use a different visual treatment for “not applicable” vs “failed”.
-- Use confidence as a measured attribute, not a decorative score.
+3D must degrade gracefully.
 
-## Accessibility
+Preferred stack:
 
-- keyboard-first analyzer flow
-- reduced-motion mode
-- WCAG-conscious contrast
-- semantic headings
-- visible focus
-- no information conveyed only by color
-- screen-reader-readable evidence labels
+- CSS transforms for simple depth
+- lightweight SVG/canvas for graph motion
+- WebGL/Three.js only where it creates real explanatory value
 
-## Mobile
+On low-power/mobile devices:
 
-The analysis timeline becomes a vertical evidence stream.
+- replace heavy 3D with a 2.5D/SVG representation
+- preserve the exact information architecture
+- never sacrifice interaction speed for visual effects
 
-The proxy graph becomes a horizontally scrollable/stacked relationship view.
+## Product Emotional Journey
 
-Raw JSON remains accessible but secondary.
+The intended emotional sequence is:
 
-## Performance UX
+**Curiosity → clarity → trust → confidence → control**
 
-Do not delay visible useful information until every check completes.
+Never:
 
-Stream verified intermediate results where the protocol allows it:
+**confusion → fear → jargon → dashboard overload**
 
-`proxy found → implementation found → ABI verified → check complete → final synthesis`
+## Brand Voice
 
-The final result must still be atomic and machine-readable.
+Veridex speaks like a calm expert:
 
-## Brand Motion
+- precise
+- helpful
+- direct
+- never sensational
+- never shilling
+- never hides uncertainty
 
-Veridex motion motif: **evidence propagates through a graph**.
+Preferred:
 
-A finding should visually travel from:
+> “The implementation changed. Here is the evidence.”
 
-`chain → evidence source → analysis node → result`
+Avoid:
 
-This becomes the signature animation across landing, analyzer, demo, and presentation.
+> “URGENT!!! THIS TOKEN IS RUGGING!!!”
 
-## Judge Demo Mode
+## Judge Demo Experience
 
-Create a controlled demo route that can show:
+The 90-second product story:
 
-1. real contract input
-2. live proxy resolution
-3. evidence acquisition
-4. capability detection
-5. final machine-readable result
-6. Telegraph Miner endpoint
-7. latency and reliability evidence
+1. Paste a real contract.
+2. Watch the spatial evidence analysis.
+3. See the plain-language answer.
+4. Open the capability proof.
+5. Add the contract to Watch.
+6. Trigger/show a verified change scenario only when real evidence or clearly labeled fixture data exists.
+7. Show the alert.
+8. Open the before/after evidence comparison.
+9. Show the same result as machine-readable intelligence for an agent.
+10. Show Telegraph Miner delivery/performance.
 
-Demo mode must not fake production results. If fixture data is shown, label it explicitly.
+The judge should remember one idea:
+
+> **Veridex does not just inspect contracts. It remembers what they can do and tells you when that changes.**
+
+## Future Product Surface
+
+The same design system should support:
+
+- multi-contract watchlists
+- protocol watchspaces
+- team alerts
+- agent subscriptions
+- persistent signal feeds
+- MCP
+- API keys / developer plans
+- historical contract intelligence
+
+These are future layers. Do not build them before the single-contract experience is excellent.
