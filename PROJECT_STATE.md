@@ -193,17 +193,25 @@ H1 focuses on UNDERSTAND, VERIFY, DISCOVER POWERS and CONNECT through the Miner.
 - EVM address validation primitive
 - shared `CheckResult` / analysis type foundation
 - additive detection/fallback provenance fields at the type level
-- basic Vitest setup and two unit-test files
+- Vitest unit-test foundation
+- bounded runtime configuration with validated RPC URL and numeric limits
+- shared circuit-breaker and RPC failure classification primitives
+- resilient JSON-RPC client with timeout, bounded retry, malformed-response handling and circuit protection
+- explicit separation of application-level JSON-RPC errors/reverts from infrastructure failures
+- adversarial regression tests for reverts, provider failures and circuit behavior
 - repository continuity and architecture documents
 - official Telegraph reference hierarchy
 
+### Partially implemented on `main`
+
+- Phase 01 runtime foundation: transport/resilience is implemented; deterministic telemetry and bounded concurrency remain
+- RPC infrastructure: core client exists; real-provider integration and measurement remain
+
 ### Not yet implemented on `main`
 
-- JSON-RPC client
-- timeout/retry/circuit breaker
-- provider failure classification
 - verification client
 - bytecode validation/walker
+- evidence normalization runtime
 - ownership runtime check
 - pause runtime check
 - mint runtime check
@@ -228,13 +236,13 @@ A separate `phase-01-core` branch exists, but **main is the source of truth for 
 
 ### H1_CRITICAL
 
-- Phase 01 runtime foundation
-- resilient RPC and verification infrastructure
+- runtime foundation — **IN PROGRESS; transport/resilience baseline implemented**
+- resilient RPC and verification infrastructure — **RPC baseline implemented; verification pending**
 - evidence hierarchy
 - instruction-aligned bytecode analysis
 - ownership/pause/mint checks
 - minimum proxy-aware semantics
-- adversarial regression tests
+- adversarial regression tests — **RPC/circuit baseline covered; EVM regressions pending**
 - official Telegraph Intent selection/adapter after source verification
 
 ### H1_OPERATIONAL
@@ -326,8 +334,8 @@ When a new chat or agent opens the repository:
 
 ## Next engineering task
 
-**Build the H1 Phase 01 runtime foundation:** strict runtime configuration, shared resilience primitives, and a correctly classified JSON-RPC client, with adversarial tests. Do not start UI, Passport, Watch, Policy, or native mobile work.
+**Build the EVM evidence foundation:** strict bytecode validation and an instruction-boundary walker, with PUSH-data selector-decoy and malformed-bytecode regression tests. Then build verification/evidence normalization before capability checks.
 
 ## Last verified commit
 
-`ecdf25e62ec950632ae16618203a9739a40442b9` — main branch baseline audited before H1 rebaseline documentation changes.
+`70c0beab8cba39479c13758a131781f75fbff9ae` — H1 runtime/RPC foundation with regression tests. GitHub-side CI execution was not available for this milestone; local execution was unavailable because the environment could not resolve github.com, so test status must be re-verified on the next CI-capable run.
