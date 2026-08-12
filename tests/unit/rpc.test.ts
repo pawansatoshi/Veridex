@@ -13,11 +13,14 @@ const config: RuntimeConfig = {
 
 describe("JsonRpcClient", () => {
   it("returns an application-level revert without opening the circuit", async () => {
-    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify({
+    const revert = (id: number) => new Response(JSON.stringify({
       jsonrpc: "2.0",
-      id: 1,
+      id,
       error: { code: -32000, message: "execution reverted" },
-    }), { status: 200, headers: { "content-type": "application/json" } }));
+    }), { status: 200, headers: { "content-type": "application/json" } });
+    const fetchImpl = vi.fn<typeof fetch>()
+      .mockResolvedValueOnce(revert(1))
+      .mockResolvedValueOnce(revert(2));
 
     const client = new JsonRpcClient(config, fetchImpl);
     const first = await client.call("eth_call", []);
