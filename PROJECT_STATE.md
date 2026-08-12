@@ -77,7 +77,12 @@ User/Application → Telegraph Intent → Contract Address → Strict Validation
 - verification provider abstraction with explicit verified/unverified/not-configured/API-failure/timeout/malformed-response semantics
 - verification evidence normalization with ABI/source provenance and rate-limit metadata
 - verification timeout/exception/provenance regression tests
-- CI-verified typecheck and complete Vitest suite on current main
+- deterministic owner() observation with active-owner, renounced, non-applicable and unavailable outcomes
+- ABI-encoded address return validation for ownership observations
+- EIP-1967 implementation/beacon/admin slot inspection
+- beacon implementation resolution with explicit unresolved state
+- contractAddress/codeAddress separation in proxy resolution
+- adversarial ownership/proxy regression tests
 
 ### Partially implemented
 
@@ -85,20 +90,20 @@ User/Application → Telegraph Intent → Contract Address → Strict Validation
 - EVM bytecode: structural walker implemented; capability semantics and selector-collision evaluation remain
 - RPC: core client implemented; real-provider integration and latency measurement remain
 - verification: abstraction/normalization complete; concrete external verification provider remains
+- ownership/proxy: deterministic primitives implemented; real-chain integration and broader proxy classification remain
 
 ### Not yet implemented on `main`
 
 - concrete verification client/provider
-- ownership runtime check
 - pause runtime check
 - mint runtime check
-- proxy resolver
 - analysis orchestrator
 - normalized Miner response runtime
 - ground-truth corpus
 - Telegraph adapter
 - live Miner endpoint
 - performance harness
+- broader transparent/UUPS/beacon classification beyond EIP-1967 resolution
 - Passport / Watch / Change Intelligence / Policy
 - alerts/email/webhook/mobile
 - web/PWA/native mobile
@@ -112,8 +117,8 @@ A separate `phase-01-core` branch exists, but **main is the source of truth**. D
 - runtime/resilience foundation — **IN PROGRESS**
 - verification/evidence hierarchy — **FOUNDATION IMPLEMENTED**
 - instruction-aligned bytecode analysis — **STRUCTURAL FOUNDATION IMPLEMENTED**
-- ownership/pause/mint
-- minimum proxy-aware semantics
+- ownership + minimum proxy semantics — **IMPLEMENTED, CI VERIFICATION PENDING**
+- pause/mint
 - adversarial regression tests
 - official Telegraph Intent selection/adapter after source verification
 
@@ -175,14 +180,14 @@ Preserved post-H1 architecture includes Capability Passport, Watch, Change Intel
 
 ## Next engineering task
 
-**Build ownership + minimum proxy semantics:** deterministic `owner()` observation, explicit renounced/non-Ownable outcomes, and safe separation of `contractAddress` from `codeAddress`, then integrate supported transparent/UUPS resolution without fabricating constants.
+**Complete ownership/proxy gate after CI verification, then build pause capability + live paused-state observation and mint capability/authority using verified ABI first with bytecode fallback only when provenance is explicit.**
 
 ## Verification status
 
-Current `main` CI is green after the verification/evidence foundation work: typecheck and the complete Vitest suite pass in GitHub Actions.
+The verification/evidence foundation is CI-green on commit `0a10d18218ce5833468305da1b0698105ada287f`.
 
-Latest verified commit: `0a10d18218ce5833468305da1b0698105ada287f`.
+The ownership/proxy implementation is on `main` at commit `d9ce5969a13465a0e6b4e03e94fdc8d41715fe4d`; its CI verification is the current gate before marking this milestone complete.
 
 ## Last verified milestone
 
-**Verification/evidence foundation complete.** The next gate is ownership + minimum proxy semantics; pause/mint capability checks follow that gate.
+**Verification/evidence foundation complete.** Ownership + minimum proxy semantics are implemented and awaiting the next CI result.
