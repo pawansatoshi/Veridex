@@ -28,6 +28,19 @@ describe("JsonRpcClient", () => {
     expect(fetchImpl).toHaveBeenCalledTimes(2);
   });
 
+  it("returns non-revert JSON-RPC errors without opening the circuit", async () => {
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify({
+      jsonrpc: "2.0",
+      id: 1,
+      error: { code: -32601, message: "method not found" },
+    }), { status: 200, headers: { "content-type": "application/json" } }));
+
+    const client = new JsonRpcClient(config, fetchImpl);
+    const result = await client.call("unknown_method", []);
+
+    expect(result).toMatchObject({ kind: "failure", failure: { class: "rpc_application_error", countsTowardCircuit: false } });
+  });
+
   it("opens the circuit after an infrastructure failure", async () => {
     const fetchImpl = vi.fn<typeof fetch>().mockRejectedValue(new Error("network unavailable"));
     const client = new JsonRpcClient(config, fetchImpl);
