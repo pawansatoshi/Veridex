@@ -1,6 +1,6 @@
 # Veridex Architecture Decision Log
 
-Durable decisions live here so a future chat does not reopen settled questions without new evidence.
+Durable decisions live here so a future chat/agent does not reopen settled questions without new evidence.
 
 ## D001 — Product Name
 
@@ -68,11 +68,25 @@ Durable decisions live here so a future chat does not reopen settled questions w
 
 **Rationale:** blockchain constants are high-risk correctness inputs and must not be copied from memory or unofficial sources.
 
-## D012 — Autonomous Agent Workflow
+## D012 — Autonomous Engineering Workflow
 
-**Decision:** agents are expected to reason through implementation details autonomously within the documented constraints.
+**Decision:** implementation decisions are made from repository state, official sources, documented constraints, and measured evidence rather than requiring the user to dictate individual files/tests.
 
-**Rationale:** the user wants continuity across chats and agents without manually dictating every file/test/change.
+**Rationale:** Veridex is being built as a serious product and must retain continuity across chats and future agents.
+
+## D013 — Multi-Hackathon Product Strategy
+
+**Date:** 2026-08-13
+
+**Context:** Telegraph is running a multi-round ecosystem in which early Miner performance and application demand feed into later rounds and eventual mainnet incentives.
+
+**Decision:** Veridex architecture is optimized for Hackathon 1 performance without becoming a one-round prototype. The core analysis engine remains Telegraph-independent; Telegraph integration is a replaceable adapter; evaluation is isolated; future H2/H3 capabilities are added only from measured demand and benchmark evidence.
+
+**Alternatives considered:** optimize solely for the current hackathon; build a broad feature-heavy security scanner before establishing evaluation fit; tightly couple the domain to Telegraph transport.
+
+**Evidence:** official Telegraph hackathon rules/site and official documentation emphasize Miner performance, real application usage, verified intelligence, and an evolving multi-round ecosystem.
+
+**Consequences:** current work prioritizes correctness, exact Intent compatibility, latency/reliability and real utility before UI breadth or speculative features. The product can evolve without rewriting the analysis core if Telegraph changes an Intent or transport.
 
 ## How to Add a Decision
 
