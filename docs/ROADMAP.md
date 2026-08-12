@@ -8,7 +8,15 @@ Build **Veridex — Verifiable On-Chain Intelligence** into a production-grade, 
 
 Telegraph's current hackathon model rewards Miner performance and real demand. Veridex therefore optimizes for **correctness → evaluation alignment → latency/reliability → real utility/demand → UX → differentiation → transparent growth**.
 
-Veridex is not a generic scanner or LLM wrapper. Its wedge is evidence-backed contract intelligence: ownership/admin authority, proxy/implementation semantics, pause and mint capabilities, verified ABI/source provenance, deterministic fallback evidence, and explicit degradation.
+Veridex is not a generic scanner or LLM wrapper. Its initial wedge is evidence-backed contract intelligence: ownership/admin authority, proxy/implementation semantics, pause and mint capabilities, verified ABI/source provenance, deterministic fallback evidence, and explicit degradation.
+
+### Strategic differentiator — Capability Passport + Change Intelligence
+
+Veridex will evolve beyond one-shot analysis into a provenance-backed **Capability Passport**: a versioned snapshot of what a contract is demonstrably capable of doing and how that conclusion was established.
+
+The next layer is **Change Intelligence**: safely distinguishing a real control/capability change from an evidence-quality change or infrastructure failure.
+
+This is deliberately staged after the deterministic analysis foundation. It is a product moat, not an excuse to overbuild the first Miner release. Full design: `docs/VERIDEX-MOAT.md`.
 
 The full competitive strategy is maintained in `docs/WINNING-STRATEGY.md`.
 
@@ -20,6 +28,7 @@ The full competitive strategy is maintained in `docs/WINNING-STRATEGY.md`.
 | 1 | EVM analysis core | 🔵 current | deterministic transport, evidence and checks are implemented and tested |
 | 2 | Proxy-aware composition | ⏳ planned | direct, transparent/UUPS and supported beacon flows have correct code/state semantics |
 | 3 | Contract intelligence engine | ⏳ planned | normalized machine-readable analysis result with provenance |
+| 3.5 | Capability Passport & Change Intelligence | ⏳ planned | safe versioned snapshots and conclusive/inconclusive comparison semantics |
 | 4 | Telegraph compatibility | ⏳ planned | current official Intent/Miner contract is verified and adapter is live |
 | 5 | Evaluation & performance | ⏳ planned | benchmark corpus, canonical evaluation alignment and latency/reliability budgets |
 | 6 | Product application | ⏳ planned | polished web/API experience consuming the same analysis result |
@@ -37,6 +46,7 @@ The full competitive strategy is maintained in `docs/WINNING-STRATEGY.md`.
 - [x] official Telegraph reference hierarchy
 - [x] UI/UX and motion blueprint
 - [x] winning strategy
+- [x] capability-passport/change-intelligence strategy
 
 ## Phase 1 — EVM Analysis Core — CURRENT
 
@@ -114,6 +124,36 @@ Do not introduce proprietary risk scoring until the chosen Telegraph Intent/eval
 
 Build a versioned ground-truth corpus alongside the engine.
 
+## Phase 3.5 — Capability Passport & Change Intelligence
+
+Build only after the normalized analysis result is stable.
+
+### Passport
+
+- [ ] versioned analysis snapshot
+- [ ] explicit freshness metadata
+- [ ] serializable evidence provenance
+- [ ] deterministic snapshot identity/hash where justified
+- [ ] clear distinction between observation and interpretation
+
+### Comparison
+
+- [ ] compare compatible snapshots
+- [ ] implementation/control-plane change detection
+- [ ] capability change detection
+- [ ] evidence-quality change detection
+- [ ] `conclusive` vs `inconclusive` comparison status
+- [ ] never infer removal from degraded/missing evidence
+
+### Product use
+
+- [ ] capability timeline
+- [ ] explainable change event
+- [ ] machine-readable change signal
+- [ ] agent preflight query
+
+Do not add persistence or alerts until comparison semantics are proven with adversarial tests.
+
 ## Phase 4 — Telegraph compatibility
 
 Before coding the adapter, re-verify the current official Telegraph documentation, supported intents and hackathon specifications.
@@ -126,6 +166,7 @@ Verify:
 - evaluation behavior
 - x402/payment path if required
 - official addresses/constants
+- whether Capability Change Intelligence maps to an existing Intent or should remain an application-level signal
 
 Then implement a thin adapter that owns Telegraph protocol concerns while the analysis engine remains protocol-independent.
 
@@ -143,6 +184,7 @@ Measure:
 - false-positive/false-negative rates
 - concurrency behavior
 - safe cache effectiveness
+- comparison correctness for change intelligence
 
 Optimize only against measurements.
 
@@ -152,7 +194,7 @@ Build the web experience from the normalized backend result.
 
 Primary journey:
 
-`address → chain → live analysis → proxy/implementation graph → evidence → result → machine-readable output`
+`address → chain → live analysis → proxy/implementation graph → evidence → capability passport → result → change history → machine-readable output`
 
 No fake progress. Analysis animation represents actual events.
 
@@ -166,14 +208,20 @@ Core views:
 6. proxy graph
 7. individual check detail
 8. provenance/confidence
-9. raw result/API
-10. Miner information
+9. capability passport
+10. change timeline
+11. raw result/API
+12. Miner information
 
 ## Phase 7 — Brand & judge demo
 
 Brand: **VERIDEX**
 
 Descriptor: **Verifiable On-Chain Intelligence**
+
+Core differentiator:
+
+> **Don't just analyze a contract. Know when its powers change.**
 
 Demo must prove, in a short live flow:
 
@@ -184,9 +232,11 @@ Demo must prove, in a short live flow:
 5. capability findings
 6. provenance/degradation
 7. deterministic result
-8. Telegraph Miner path
-9. latency/performance evidence
-10. downstream agent utility
+8. capability passport
+9. meaningful change or controlled historical comparison when real data exists
+10. Telegraph Miner path
+11. latency/performance evidence
+12. downstream agent utility
 
 ## Phase 8 — Hackathon operations
 
@@ -213,6 +263,7 @@ Use real H1 evidence to prioritize:
 - source/AST analysis if justified
 - multi-chain support where demand exists
 - persistent signals
+- capability change feeds
 - MCP/agent integrations
 - SDKs
 - historical contract intelligence
@@ -238,6 +289,7 @@ Use real H1 evidence to prioritize:
 - never treat selector scanning as stronger than verified ABI/source
 - never claim beacon implementation resolution without resolving it
 - never hide fallback reasons
+- never infer a capability change from degraded evidence
 - never invent scoring before evaluation requirements are known
 - never sacrifice correctness for animation
 - never fake usage, engagement or demand
