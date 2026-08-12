@@ -2,17 +2,17 @@
 
 ## 1. Architectural Goal
 
-Veridex is a layered system that separates deterministic contract observation from orchestration, Telegraph transport, and presentation.
+Veridex is a layered system that separates deterministic contract observation from orchestration, Telegraph transport, evaluation, and presentation. The core must remain useful even if Telegraph changes an Intent or transport mechanism.
 
 ```text
                     ┌──────────────────────────────┐
                     │        Veridex Web UI         │
-                    │  visual analysis + evidence   │
+                    │ visual analysis + evidence    │
                     └──────────────┬───────────────┘
-                                   │
+                                   │ normalized result/events
                     ┌──────────────▼───────────────┐
-                    │      Veridex Application      │
-                    │ API / Miner / request policy  │
+                    │     Veridex Product API       │
+                    │ request policy + UX adapter   │
                     └──────────────┬───────────────┘
                                    │
                     ┌──────────────▼───────────────┐
@@ -41,15 +41,33 @@ Veridex is a layered system that separates deterministic contract observation fr
                     │ Normalized Intelligence │
                     └────────────┬────────────┘
                                  │
-                   ┌─────────────┴─────────────┐
-                   ▼                           ▼
-          Telegraph Miner                Product API
-                   │                           │
-                   ▼                           ▼
-              Telegraph                  Web / Agents
+                ┌────────────────┴────────────────┐
+                ▼                                 ▼
+        Telegraph Adapter                    Product API
+                │                                 │
+                ▼                                 ▼
+           Telegraph                        Web / Agents
+
+             ┌─────────────────────────────────────┐
+             │ Evaluation Harness / Ground Truth   │
+             │ independent from production logic   │
+             └─────────────────────────────────────┘
 ```
 
-## 2. Trust Boundaries
+## 2. Core architectural principles
+
+1. Evidence before interpretation.
+2. Deterministic observation before probabilistic reasoning.
+3. Explicit address semantics.
+4. Infrastructure failure must never become a contract finding.
+5. Every fallback is observable.
+6. Core analysis is independent of Telegraph transport.
+7. Evaluation code is independent of production scoring/analysis.
+8. UI consumes backend truth; it does not invent security conclusions.
+9. Network work is bounded, measurable and minimized.
+10. New capabilities require a real use case, evidence contract, and regression corpus.
+
+## 3. Trust boundaries
 
 ### External inputs
 
@@ -65,19 +83,19 @@ Every external input is untrusted until validated.
 
 ### Internal trust model
 
-The analysis engine does not trust an external explanation to establish a contract fact. Facts should be tied to evidence objects.
+The analysis engine does not trust an external explanation to establish a contract fact. Facts are tied to evidence objects with source and address provenance.
 
-## 3. Address Model
+## 4. Address model
 
-Never conflate these concepts:
+Never conflate:
 
-- `requestedAddress`: address supplied by the caller
+- `requestedAddress`: caller supplied address
 - `contractAddress`: address whose storage/live state is queried
 - `codeAddress`: address whose bytecode/ABI is inspected
 - `implementationAddress`: resolved implementation behind a proxy
 - `beaconAddress`: beacon contract address
 
-For a delegatecall proxy:
+For delegatecall proxies:
 
 ```text
 requestedAddress = proxy
@@ -85,9 +103,9 @@ contractAddress  = proxy
 codeAddress      = implementation
 ```
 
-Live state calls must normally use the proxy context; code/ABI inspection may use the implementation.
+Live state calls normally use proxy context; code/ABI inspection may use implementation context.
 
-For a beacon proxy:
+For a supported beacon proxy:
 
 ```text
 requestedAddress = proxy
@@ -97,27 +115,27 @@ implementation   = beacon.implementation()
 codeAddress      = implementation
 ```
 
-Only set the implementation after it has actually been resolved and validated.
+Only populate implementation after actual validated resolution.
 
-## 4. Evidence Hierarchy
+## 5. Evidence hierarchy
 
 For capability/function existence:
 
 ```text
 Tier 1: verified ABI
        ↓
-Tier 2: verified source / AST (future)
+Tier 2: verified source / AST (future, only if justified)
        ↓
 Tier 3: instruction-aligned bytecode fallback
 ```
 
-Selector presence alone does not prove semantic identity because multiple function signatures can collide on the 4-byte selector.
+Selector presence alone does not prove semantic identity because different signatures can collide on four bytes.
 
-The system must expose which evidence tier produced a result.
+Every finding must preserve the method/tier that produced it.
 
-## 5. Error Semantics
+## 6. Error semantics
 
-Classify failures into at least:
+Classify at least:
 
 - invalid caller input
 - contract/data state
@@ -132,9 +150,9 @@ Classify failures into at least:
 
 Expected contract behavior must not increment infrastructure circuit-breaker failure counters.
 
-## 6. Proxy Composition
+## 7. Proxy composition
 
-The composition layer is responsible for resolving what should be inspected, not for scoring risk.
+The composition layer resolves **what should be inspected**; it does not score risk.
 
 ```text
 requested contract
@@ -154,16 +172,14 @@ none  implementation  beacon
  │                     │
  └──────────┬──────────┘
             ▼
-     analysis target
+     analysis context
 ```
 
-If resolution fails, the result must say so. Never silently inspect proxy bytecode as though it were the implementation and present that as equivalent evidence.
+If resolution fails, return explicit degraded evidence. Never silently inspect proxy bytecode as if it were the implementation.
 
-## 7. Check Module Contract
+## 8. Check module contract
 
-Each check should accept an explicit context and return a normalized result.
-
-Conceptually:
+Each check accepts an explicit context and returns a normalized result.
 
 ```ts
 interface AnalysisContext {
@@ -175,9 +191,9 @@ interface AnalysisContext {
 }
 ```
 
-Checks remain independently testable and should not know about Telegraph transport.
+Checks remain independently testable and know nothing about Telegraph transport.
 
-## 8. Evidence Object
+## 9. Evidence object
 
 Evidence should answer:
 
@@ -185,16 +201,16 @@ Evidence should answer:
 - where was it observed?
 - which address was queried?
 - which address supplied code?
-- what method detected it?
+- which method detected it?
 - what fallback occurred?
 - did an external dependency fail?
 - how confident is the observation?
 
-Avoid adding fields merely for symmetry. Evidence fields should have a downstream consumer or clear audit value.
+Avoid fields added only for visual symmetry. Each field needs audit value or a downstream consumer.
 
-## 9. Normalized Result
+## 10. Normalized result contract
 
-The result should support both human and machine consumers:
+The result supports both machine and human consumers:
 
 ```text
 request
@@ -207,14 +223,14 @@ errors[]
 metadata
 ```
 
-The machine response must remain deterministic for identical on-chain/external inputs within a defined freshness window.
+The result is deterministic for identical inputs and equivalent evidence within a declared freshness window.
 
-## 10. Telegraph Adapter Boundary
+## 11. Telegraph adapter boundary
 
-The Telegraph adapter owns:
+The adapter owns:
 
+- current official Intent mapping
 - request/response protocol
-- Intent mapping
 - Miner lifecycle/configuration
 - authentication/payment path where required
 - deadline handling
@@ -222,22 +238,47 @@ The Telegraph adapter owns:
 
 It must not contain ownership/proxy/mint/pause detection logic.
 
-## 11. Performance Architecture
+The adapter must be replaceable if Telegraph changes the selected Intent or transport.
 
-The Miner should minimize sequential network calls.
+## 12. Evaluation architecture
 
-Preferred pattern:
+Production analysis and evaluation are separate systems.
+
+```text
+production engine ────────┐
+                          ├──→ normalized result
+versioned ground truth ──→ evaluator ──→ benchmark metrics
+```
+
+The evaluation harness may know expected answers; the production engine must not contain hidden test-specific branches.
+
+Ground truth should cover:
+
+- direct/non-proxy contracts
+- transparent/UUPS proxies
+- supported beacon proxies
+- verified/unverified contracts
+- expected-negative cases
+- selector collisions
+- PUSH-data decoys
+- malformed data
+- RPC reverts
+- provider/API failures
+- unavailable implementations
+
+## 13. Performance architecture
+
+Network calls dominate latency. Preferred request flow:
 
 ```text
 validate
   ↓
 resolve proxy
   ↓
-fetch required evidence
+fetch prerequisite evidence
   ├── bytecode
-  ├── ABI
-  ├── state
-  └── external metadata
+  ├── ABI/source
+  └── required state
   ↓
 parallel independent checks
   ↓
@@ -246,14 +287,43 @@ normalize
 respond
 ```
 
-Concurrency must be bounded. Caching must never cause stale evidence to be presented as live state without an explicit freshness policy.
+Rules:
 
-## 12. UI Architecture
+- bounded concurrency
+- strict deadlines
+- no unbounded retries
+- reuse evidence inside a request
+- cache only with explicit freshness semantics
+- measure p50/p95/p99
+- optimize after profiling
 
-The UI consumes the same normalized result as an agent wherever practical.
+## 14. Analysis event model
+
+The same normalized event model can drive observability and the UI without duplicating analysis logic.
+
+Events include:
 
 ```text
-analysis event stream
+INTAKE
+CHAIN_RESOLUTION
+PROXY_SCAN
+IMPLEMENTATION_RESOLUTION
+ABI_VERIFICATION
+SOURCE_VERIFICATION
+BYTECODE_FALLBACK
+OWNERSHIP_CHECK
+PAUSE_CHECK
+MINT_CHECK
+EVIDENCE_RECONCILIATION
+RESULT_READY
+```
+
+Each event may carry start/end timestamps, status, evidence references, latency and degradation information. Sensitive provider credentials and secrets must never enter events.
+
+## 15. UI architecture
+
+```text
+analysis events
       ↓
 state machine
       ↓
@@ -264,66 +334,68 @@ evidence graph
 result dashboard
 ```
 
-The UI should not infer security conclusions independently from the backend.
+Animation is a visualization of actual backend state transitions. No fake percentage completion.
 
-## 13. Dynamic Analysis Animation
+## 16. Official contract registry
 
-Animation states correspond to real backend events:
+Veridex maintains an explicit registry for official Telegraph addresses/constants only when required by integration.
 
-1. `INTAKE` — address accepted
-2. `CHAIN_RESOLUTION`
-3. `PROXY_SCAN`
-4. `IMPLEMENTATION_RESOLUTION`
-5. `ABI_VERIFICATION`
-6. `SOURCE_VERIFICATION` when supported
-7. `BYTECODE_FALLBACK` only when needed
-8. `OWNERSHIP_CHECK`
-9. `PAUSE_CHECK`
-10. `MINT_CHECK`
-11. `EVIDENCE_RECONCILIATION`
-12. `RESULT_READY`
+Each entry requires:
 
-Each event can have:
-
-- start time
-- end time
+- source URL
+- network
+- address
+- verification date
+- purpose
+- ABI/reference where relevant
 - status
-- evidence references
-- latency
-- error/degradation state.
 
-This creates meaningful animation rather than decorative loading.
+Unofficial or stale addresses are never silently promoted to production configuration.
 
-## 14. Official Contract Registry
+## 17. Product and domain separation
 
-Veridex will maintain an explicit registry for official Telegraph smart-contract addresses and protocol constants when the integration requires them.
+The domain should own concepts such as:
 
-Registry rules:
+- analysis context
+- evidence
+- findings
+- proxy resolution
+- normalized result
 
-- source URL required
-- network required
-- address required
-- verification date required
-- purpose required
-- ABI/reference required when relevant
-- no address is copied from memory or an unofficial post
-- stale addresses must be marked deprecated rather than silently replaced
+Infrastructure owns:
 
-The registry is an integration artifact, not a generic EVM constants dump.
+- HTTP/RPC clients
+- Etherscan or equivalent provider clients
+- retries/timeouts/circuit breakers
+- serialization
 
-## 15. Future Extension Points
+Telegraph owns:
 
-Potential future modules:
+- Miner protocol integration
+- Intent adapter
+- payment/auth path
+- lifecycle/configuration
 
-- blacklist/sanctions intelligence only if a reliable standardized source exists
-- ownership/admin role depth
-- upgrade authority analysis
-- pause/mint/burn/blacklist capabilities
-- proxy admin analysis
+Presentation owns:
+
+- visual state
+- interaction
+- accessibility
+- formatting
+
+This prevents a provider or hackathon-specific integration from becoming the core product architecture.
+
+## 18. Future extension points
+
+Potential modules:
+
+- upgrade authority depth
 - timelock/multisig analysis
+- pause/mint/burn/blacklist capability analysis when reliable evidence exists
 - source/AST access-control analysis
 - historical change detection
 - persistent signals
-- MCP interface
+- MCP/SDK integrations
+- multi-chain support
 
-Each requires a separate evidence contract and benchmark before becoming part of the core Miner.
+Each extension requires a real user need, evidence model, regression corpus, and performance measurement before becoming core.
