@@ -2,59 +2,98 @@
 
 ## 1. Architectural Goal
 
-Veridex is a layered system that separates deterministic contract observation from orchestration, Telegraph transport, evaluation, and presentation. The core must remain useful even if Telegraph changes an Intent or transport mechanism.
+Veridex is a layered system that separates deterministic contract observation from orchestration, Telegraph transport, evaluation, persistence, notification, and presentation. The core must remain useful if Telegraph changes an Intent or transport mechanism.
+
+## 2. H1 vs Post-H1 boundary
+
+H1 is intentionally a **Miner-first execution slice**, not the complete Veridex product.
 
 ```text
-                    ┌──────────────────────────────┐
-                    │        Veridex Web UI         │
-                    │ visual analysis + evidence    │
-                    └──────────────┬───────────────┘
-                                   │ normalized result/events
-                    ┌──────────────▼───────────────┐
-                    │     Veridex Product API       │
-                    │ request policy + UX adapter   │
-                    └──────────────┬───────────────┘
-                                   │
-                    ┌──────────────▼───────────────┐
-                    │      Analysis Orchestrator    │
-                    │ chain → proxy → checks →     │
-                    │ evidence → normalized result │
-                    └───────┬───────────┬──────────┘
-                            │             │
-               ┌────────────▼───┐   ┌────▼─────────────┐
-               │ Proxy Resolver │   │ Check Modules    │
-               │ implementation │   │ ownership        │
-               │ beacon path    │   │ pause            │
-               │ proxy evidence │   │ mint             │
-               └───────┬────────┘   └────┬─────────────┘
-                       │                  │
-                       └────────┬─────────┘
-                                ▼
-                    ┌─────────────────────────┐
-                    │ Evidence / Provenance   │
-                    │ ABI / source / bytecode │
-                    │ RPC / external status   │
-                    └────────────┬────────────┘
-                                 │
-                                 ▼
-                    ┌─────────────────────────┐
-                    │ Normalized Intelligence │
-                    └────────────┬────────────┘
-                                 │
-                ┌────────────────┴────────────────┐
-                ▼                                 ▼
-        Telegraph Adapter                    Product API
-                │                                 │
-                ▼                                 ▼
-           Telegraph                        Web / Agents
+                         H1 MINER CORE
 
-             ┌─────────────────────────────────────┐
-             │ Evaluation Harness / Ground Truth   │
-             │ independent from production logic   │
-             └─────────────────────────────────────┘
+Telegraph Intent
+      ↓
+request validation
+      ↓
+chain / RPC
+      ↓
+verification evidence
+      ↓
+proxy / code-address context
+      ↓
+ownership / upgradeability / pause / mint
+      ↓
+evidence normalization
+      ↓
+conclusive / inconclusive result
+      ↓
+Telegraph adapter
+      ↓
+live Miner
+
+                         POST-H1 PLATFORM
+
+normalized intelligence
+      ↓
+Capability Passport
+      ↓
+shared Watch observations
+      ↓
+Capability Diff / Change Intelligence
+      ↓
+Policy Engine
+      ↓
+Alert Event
+      ↓
+Notification Router
+      ├── Web
+      ├── Email
+      ├── Webhook
+      └── Mobile Push
+      ↓
+Agents / SDK / MCP / Telegraph applications
 ```
 
-## 2. Core architectural principles
+Post-H1 concepts must remain architecturally represented but must not be mistaken for H1 implementation.
+
+## 3. H1 critical pipeline
+
+```text
+User/Application
+        ↓
+Telegraph Intent
+        ↓
+Contract Address
+        ↓
+Strict Validation
+        ↓
+Chain / RPC
+        ↓
+Verification Evidence
+        ↓
+Proxy / Code Address Resolution
+        ↓
+Capability Analysis
+        ↓
+Evidence Normalization
+        ↓
+Conclusive / Inconclusive State
+        ↓
+Machine-Readable Miner Response
+        ↓
+Performance Measurement
+        ↓
+Telegraph Miner
+```
+
+H1 capability scope is deliberately narrow:
+
+- ownership / control
+- upgradeability / proxy surface
+- pause capability/state
+- mint capability/authority where evidence permits
+
+## 4. Core architectural principles
 
 1. Evidence before interpretation.
 2. Deterministic observation before probabilistic reasoning.
@@ -62,14 +101,15 @@ Veridex is a layered system that separates deterministic contract observation fr
 4. Infrastructure failure must never become a contract finding.
 5. Every fallback is observable.
 6. Core analysis is independent of Telegraph transport.
-7. Evaluation code is independent of production scoring/analysis.
+7. Evaluation code is independent from production analysis.
 8. UI consumes backend truth; it does not invent security conclusions.
 9. Network work is bounded, measurable and minimized.
-10. New capabilities require a real use case, evidence contract, and regression corpus.
+10. New capabilities require a real use case, evidence contract, regression corpus, and performance measurement.
+11. H1 prioritizes a real Miner over post-H1 UI breadth.
 
-## 3. Trust boundaries
+## 5. Trust boundaries
 
-### External inputs
+### H1 external inputs
 
 - contract address
 - requested chain/network
@@ -81,11 +121,37 @@ Veridex is a layered system that separates deterministic contract observation fr
 
 Every external input is untrusted until validated.
 
-### Internal trust model
+### Post-H1 production boundaries
 
-The analysis engine does not trust an external explanation to establish a contract fact. Facts are tied to evidence objects with source and address provenance.
+The future application architecture must evolve toward:
 
-## 4. Address model
+```text
+Internet
+  ↓
+Edge / rate limiting / WAF
+  ↓
+Authentication
+  ↓
+Authorization
+  ↓
+Bounded API
+  ↓
+Analysis / Watch orchestration
+  ↓
+Domain engine
+  ↓
+Evidence store
+  ↓
+Policy Engine
+  ↓
+Notification Router
+  ↓
+Email / Webhook / Mobile
+```
+
+The exact production stack is deferred until the web/API phase; the H1 Miner must not expose secrets or accept client data as canonical evidence.
+
+## 6. Address model
 
 Never conflate:
 
@@ -117,67 +183,86 @@ codeAddress      = implementation
 
 Only populate implementation after actual validated resolution.
 
-## 5. Evidence hierarchy
+If H1 cannot safely resolve a beacon implementation, return an honest unsupported/inconclusive state. Never inspect the beacon address as though it were the implementation.
+
+## 7. Evidence hierarchy
 
 For capability/function existence:
 
 ```text
-Tier 1: verified ABI
+Tier 1: verified ABI / verified source information
        ↓
-Tier 2: verified source / AST (future, only if justified)
+Tier 2: verified source / structural analysis where actually supported
        ↓
 Tier 3: instruction-aligned bytecode fallback
 ```
 
 Selector presence alone does not prove semantic identity because different signatures can collide on four bytes.
 
-Every finding must preserve the method/tier that produced it.
+Every finding must preserve method/tier, queried address, code address where relevant, fallback reason, provider status, and conclusive/inconclusive semantics.
 
-## 6. Error semantics
+## 8. Error semantics
 
-Classify at least:
+At minimum distinguish:
 
 - invalid caller input
 - contract/data state
 - expected application-level RPC revert
-- external API unavailability
+- external API not configured
+- unverified contract
+- external API failure
 - external API rate limit
 - timeout
 - malformed external data
 - unsupported proxy pattern
 - unresolved implementation
+- insufficient evidence
+- conclusive positive
+- conclusive negative
+- inconclusive
 - internal programming error
 
 Expected contract behavior must not increment infrastructure circuit-breaker failure counters.
 
-## 7. Proxy composition
+## 9. Resilience architecture
 
-The composition layer resolves **what should be inspected**; it does not score risk.
+RPC and verification providers use a shared resilience abstraction rather than duplicated retry/timeout logic.
+
+Required semantics:
+
+- strict timeout
+- bounded retry only for retryable transport/provider failures
+- circuit breaker for infrastructure failures
+- application-level contract reverts do not trip the breaker
+- rate-limit awareness
+- explicit provider health state
+- safe fallback only when evidence semantics permit it
+- no infrastructure failure → capability absence
+
+Regression requirement:
 
 ```text
-requested contract
-       │
-       ▼
-proxy detection
-       │
- ┌─────┼───────────────┐
- │     │               │
-none  implementation  beacon
- │     │               │
- │     ▼               ▼
- │   code address   beacon contract
- │                     │
- │                     ▼
- │              implementation()
- │                     │
- └──────────┬──────────┘
-            ▼
-     analysis context
+5 expected contract reverts → circuit remains CLOSED
+real repeated network/provider failures → circuit eventually OPEN
 ```
 
-If resolution fails, return explicit degraded evidence. Never silently inspect proxy bytecode as if it were the implementation.
+## 10. Bytecode safety architecture
 
-## 8. Check module contract
+Bytecode is hostile input.
+
+The scanner must:
+
+- require valid `0x`-prefixed even-length hex
+- enforce a maximum bytecode size
+- walk actual EVM instruction boundaries
+- treat PUSH1–PUSH32 operands as data
+- never scan arbitrary byte offsets for selectors
+- reject truncated PUSH instructions safely
+- return structured errors instead of uncaught parser exceptions
+
+Verified ABI/source evidence is always stronger than selector fallback.
+
+## 11. Check module contract
 
 Each check accepts an explicit context and returns a normalized result.
 
@@ -193,7 +278,7 @@ interface AnalysisContext {
 
 Checks remain independently testable and know nothing about Telegraph transport.
 
-## 9. Evidence object
+## 12. Evidence object
 
 Evidence should answer:
 
@@ -204,13 +289,14 @@ Evidence should answer:
 - which method detected it?
 - what fallback occurred?
 - did an external dependency fail?
-- how confident is the observation?
+- is the observation conclusive?
+- what provider/API state affected the observation?
 
 Avoid fields added only for visual symmetry. Each field needs audit value or a downstream consumer.
 
-## 10. Normalized result contract
+## 13. Normalized result contract
 
-The result supports both machine and human consumers:
+H1 requires a machine-readable result capable of supporting the Miner adapter and later clients:
 
 ```text
 request
@@ -225,7 +311,9 @@ metadata
 
 The result is deterministic for identical inputs and equivalent evidence within a declared freshness window.
 
-## 11. Telegraph adapter boundary
+The post-H1 Passport may persist compatible normalized observations, but Passport persistence is not an H1 prerequisite.
+
+## 14. Telegraph adapter boundary
 
 The adapter owns:
 
@@ -238,9 +326,9 @@ The adapter owns:
 
 It must not contain ownership/proxy/mint/pause detection logic.
 
-The adapter must be replaceable if Telegraph changes the selected Intent or transport.
+Before implementation, the current official supported-intent request/response/evaluation contract must be verified. If the correct path is custom/other, that choice must be justified from official rules/docs.
 
-## 12. Evaluation architecture
+## 15. Evaluation architecture
 
 Production analysis and evaluation are separate systems.
 
@@ -250,30 +338,32 @@ production engine ────────┐
 versioned ground truth ──→ evaluator ──→ benchmark metrics
 ```
 
-The evaluation harness may know expected answers; the production engine must not contain hidden test-specific branches.
+The evaluation harness may know expected answers; production analysis must not contain hidden test-specific branches.
 
-Ground truth should cover:
+H1 corpus should cover:
 
-- direct/non-proxy contracts
-- transparent/UUPS proxies
-- supported beacon proxies
+- Ownable
+- non-Ownable
+- pausable/non-pausable
+- mintable/non-mintable
+- direct/non-proxy
+- transparent/UUPS proxy where safely supported
 - verified/unverified contracts
-- expected-negative cases
 - selector collisions
 - PUSH-data decoys
-- malformed data
+- malformed bytecode
 - RPC reverts
 - provider/API failures
 - unavailable implementations
 
-## 13. Performance architecture
+## 16. Performance architecture
 
-Network calls dominate latency. Preferred request flow:
+Network calls dominate latency.
 
 ```text
 validate
   ↓
-resolve proxy
+resolve required proxy context
   ↓
 fetch prerequisite evidence
   ├── bytecode
@@ -292,51 +382,132 @@ Rules:
 - bounded concurrency
 - strict deadlines
 - no unbounded retries
-- reuse evidence inside a request
+- reuse evidence within a request
 - cache only with explicit freshness semantics
+- coalesce duplicate work where justified
 - measure p50/p95/p99
-- optimize after profiling
+- optimize only after profiling
 
-## 14. Analysis event model
+Do not add unnecessary Vercel/cloud jobs or expensive background infrastructure during H1.
 
-The same normalized event model can drive observability and the UI without duplicating analysis logic.
+## 17. H1 security boundary
 
-Events include:
+H1 must implement real controls for:
 
-```text
-INTAKE
-CHAIN_RESOLUTION
-PROXY_SCAN
-IMPLEMENTATION_RESOLUTION
-ABI_VERIFICATION
-SOURCE_VERIFICATION
-BYTECODE_FALLBACK
-OWNERSHIP_CHECK
-PAUSE_CHECK
-MINT_CHECK
-EVIDENCE_RECONCILIATION
-RESULT_READY
-```
+- strict address/hex/bytecode/ABI validation
+- bounded parser and network work
+- RPC timeout/retry/circuit breaker
+- failure classification
+- no provider failure → contract finding
+- no client data → canonical evidence
+- no secrets in client-visible responses
+- dependency/CI security basics
+- adversarial regression coverage
 
-Each event may carry start/end timestamps, status, evidence references, latency and degradation information. Sensitive provider credentials and secrets must never enter events.
+Future API/web/mobile controls such as IDOR, authz, SSRF, XSS, webhook replay, email abuse and account security become explicit production milestones without changing the evidence trust model.
 
-## 15. UI architecture
+## 18. Post-H1 Capability Platform
+
+After H1, the normalized intelligence result expands into:
 
 ```text
-analysis events
+Capability Passport
       ↓
-state machine
+Shared Observation / Watch
       ↓
-visual timeline
+Capability Diff / Change Intelligence
       ↓
-evidence graph
+Capability Policy Engine
       ↓
-result dashboard
+Normalized Alert Event
+      ↓
+Notification Router
+      ├── in-app
+      ├── email
+      ├── webhook
+      └── mobile push
 ```
 
-Animation is a visualization of actual backend state transitions. No fake percentage completion.
+### Capability Passport
 
-## 16. Official contract registry
+Canonical evolving representation of:
+
+- chain/network
+- contract address
+- code address
+- proxy status
+- implementation
+- ownership/control
+- upgradeability
+- pause
+- mint
+- verification
+- evidence provenance
+- detection method
+- confidence/quality semantics
+- observation timestamp/block
+- conclusive/inconclusive state
+- schema version
+
+### Watch
+
+One contract observation should support many subscribers:
+
+```text
+contract
+  ↓
+shared observation
+  ↓
+capability diff
+  ↓
+subscriber policies
+```
+
+Future Watch requires deduplication, adaptive polling, provider-health awareness, budgets, cooldowns, retention and no false change alerts from provider failure.
+
+### Policy Engine
+
+Dedicated post-H1 Phase 3.7. Outputs:
+
+- `COMPLIANT`
+- `VIOLATION`
+- `INCONCLUSIVE`
+
+No invented numerical security mathematics before calibration/evaluation data exists.
+
+## 19. Product clients
+
+The future platform exposes the same versioned intelligence contract to:
+
+```text
+Web
+Mobile
+Agents
+Third-party API / SDK / MCP
+Telegraph
+```
+
+Business logic remains outside mobile/web presentation code.
+
+## 20. UX architecture
+
+The future product retains five pillars:
+
+1. UNDERSTAND
+2. VERIFY
+3. DISCOVER POWERS
+4. WATCH
+5. CONNECT
+
+Future hero:
+
+> **Know what a contract can do.**
+>
+> **Know when its powers change.**
+
+The 3D Contract Core remains a post-H1 proof surface concept. Animation must represent real analysis events and never fabricate certainty.
+
+## 21. Official contract registry
 
 Veridex maintains an explicit registry for official Telegraph addresses/constants only when required by integration.
 
@@ -352,22 +523,24 @@ Each entry requires:
 
 Unofficial or stale addresses are never silently promoted to production configuration.
 
-## 17. Product and domain separation
+## 22. Product/domain/infrastructure separation
 
-The domain should own concepts such as:
+The domain owns:
 
 - analysis context
 - evidence
 - findings
 - proxy resolution
 - normalized result
+- future Passport/Policy concepts
 
 Infrastructure owns:
 
 - HTTP/RPC clients
-- Etherscan or equivalent provider clients
+- verification provider clients
 - retries/timeouts/circuit breakers
 - serialization
+- persistence adapters
 
 Telegraph owns:
 
@@ -385,17 +558,18 @@ Presentation owns:
 
 This prevents a provider or hackathon-specific integration from becoming the core product architecture.
 
-## 18. Future extension points
+## 23. Future extension points
 
-Potential modules:
+Potential modules remain:
 
-- upgrade authority depth
+- Capability Passport
+- persistent Watch
+- capability change feeds
 - timelock/multisig analysis
-- pause/mint/burn/blacklist capability analysis when reliable evidence exists
+- pause/mint/burn/blacklist analysis when reliable evidence exists
 - source/AST access-control analysis
-- historical change detection
-- persistent signals
 - MCP/SDK integrations
 - multi-chain support
+- enterprise observability
 
 Each extension requires a real user need, evidence model, regression corpus, and performance measurement before becoming core.

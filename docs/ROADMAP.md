@@ -2,354 +2,313 @@
 
 ## North Star
 
-Build **Veridex — Verifiable On-Chain Intelligence** into a production-grade, deterministic-first Telegraph Miner that can compete on canonical performance, serve real applications, and remain extensible for future Telegraph hackathons and mainnet.
+Build **Veridex — Verifiable On-Chain Intelligence** into a production-grade, deterministic-first intelligence layer for smart contracts, Telegraph, applications, and autonomous agents.
 
-## Winning thesis
+Core promise:
 
-Telegraph's current hackathon model rewards Miner performance and real demand. Veridex therefore optimizes for **correctness → evaluation alignment → latency/reliability → real utility/demand → UX → differentiation → transparent growth**.
+> **Know what a contract can do — and know when its powers change.**
 
-Veridex is not a generic scanner or LLM wrapper. Its initial wedge is evidence-backed contract intelligence: ownership/admin authority, proxy/implementation semantics, pause and mint capabilities, verified ABI/source provenance, deterministic fallback evidence, and explicit degradation.
+Core trust principle:
 
-### Strategic differentiator — Capability Passport + Change Intelligence
+> **No evidence → no certainty.**
 
-Veridex will evolve beyond one-shot analysis into a provenance-backed **Capability Passport**: a versioned snapshot of what a contract is demonstrably capable of doing and how that conclusion was established.
+Veridex is not a generic one-shot scanner. Its long-term lifecycle is:
 
-The next layer is **Change Intelligence**: safely distinguishing a real control/capability change from an evidence-quality change or infrastructure failure.
+```text
+Analyze → Verify → Discover Powers → Passport → Watch → Detect Change
+→ Explain Change → Policy → Alert → Agent/API → Telegraph
+```
 
-The product will support **persistent Capability Watch**: after a user adds a contract once, Veridex can continue observing it, surface meaningful changes automatically, maintain its passport/history, and alert the user without requiring another Analyze click. Monitoring is an explicitly resource-bounded service, not an unlimited free polling promise.
+The integrated moat is evidence-backed Capability Passport + continuous observation + Change Intelligence + policy + alerting, not any isolated feature.
 
-The full competitive strategy is maintained in `docs/WINNING-STRATEGY.md`.
+## H1 REBASELINE — CURRENT PRIORITY
 
-## Phase map
+The long-term product roadmap remains intact. H1 introduces a temporary execution overlay so the team can prioritize the official Hackathon 1 Miner window without deleting or prematurely implementing post-H1 product work.
 
-| Phase | Name | Status | Exit condition |
+### Official H1 timeline
+
+| Window | Objective | Priority |
+|---|---|---|
+| **Aug 13–16, 2026** | Foundation sprint: audit, rebaseline, Phase 01 runtime/evidence/security | **H1_CRITICAL** |
+| **Aug 17–31, 2026** | Track 1 Miner + Track 2 Script Author window; ship and operate real Miner | **H1_CRITICAL** |
+| **Aug 31–Sep 7, 2026** | Track 3 applications/agents consume live Miners; maintain reliability and measure real usage | **H1_OPERATIONAL** |
+| **Sep 7, 2026** | H1 final boundary | **H1_EXIT** |
+| **Post-Sep 7** | Full Veridex product expansion | **POST_H1** |
+
+Official rules say Track 1 and Track 2 run Aug 17–Aug 31, Track 3 runs Aug 31–Sep 7, and Miner judging is 75% Normalized Performance within the chosen Intent plus 25% X engagement/updates. Track 3 applications must use real Miners, and Miners must remain live throughout Track 3. See `docs/TELEGRAPH_REFERENCE.md` and the official rules before protocol-specific implementation.
+
+## CURRENT PHASE: H1 Miner Critical Path
+
+**Phase identity:** Phase 01 — EVM Analysis Core, accelerated and scoped as the H1 Miner foundation.
+
+### H1 objective
+
+Ship a **real, deterministic, measurable, reliable Veridex Miner**. H1 is not the deadline for the complete commercial Veridex product.
+
+### H1 critical pipeline
+
+```text
+User/Application
+      ↓
+Telegraph Intent
+      ↓
+Contract Address
+      ↓
+Strict Validation
+      ↓
+Chain / RPC
+      ↓
+Verification Evidence
+      ↓
+Proxy / Code Address Resolution
+      ↓
+Capability Analysis
+      ↓
+Evidence Normalization
+      ↓
+Conclusive / Inconclusive State
+      ↓
+Machine-Readable Miner Response
+      ↓
+Performance Measurement
+      ↓
+Telegraph Miner
+```
+
+### H1 capability wedge
+
+Only these capabilities are H1 core:
+
+1. ownership / control
+2. upgradeability / proxy surface
+3. pause capability/state
+4. mint capability/authority where evidence permits
+
+Do not expand into dozens of capabilities before these are reliable and benchmarked.
+
+### H1 classification
+
+| Work | Classification | Dependency | Exit condition |
 |---|---|---|---|
-| 0 | Constitution & continuity | 🟢 complete | persistent project memory and operating rules are established |
-| 1 | EVM analysis core | 🔵 current | deterministic transport, evidence and checks are implemented and tested |
-| 2 | Proxy-aware composition | ⏳ planned | direct, transparent/UUPS and supported beacon flows have correct code/state semantics |
-| 3 | Contract intelligence engine | ⏳ planned | normalized machine-readable analysis result with provenance |
-| 3.5 | Capability Passport & Persistent Watch | ⏳ planned | safe versioned snapshots, monitoring, change detection and alert semantics |
-| 4 | Telegraph compatibility | ⏳ planned | current official Intent/Miner contract is verified and adapter is live |
-| 5 | Evaluation & performance | ⏳ planned | benchmark corpus, canonical evaluation alignment and latency/reliability budgets |
-| 6 | Product application | ⏳ planned | polished web/API experience consuming the same analysis result |
-| 7 | Brand & judge demo | ⏳ planned | compelling live proof of intelligence, provenance, performance and utility |
-| 8 | Hackathon operations | ⏳ planned | live Miner, legitimate application demand, monitoring and submission |
-| 9 | H2/H3 evolution | ⏳ planned | evidence-driven expansion for future Telegraph rounds and mainnet |
-
-## Phase 0 — Constitution & continuity — COMPLETE
-
-- [x] repository and product identity
-- [x] persistent project state
-- [x] agent operating contract
-- [x] roadmap and architecture
-- [x] decision log
-- [x] official Telegraph reference hierarchy
-- [x] UI/UX and motion blueprint
-- [x] winning strategy
-- [x] capability-passport/change-intelligence strategy
-
-## Phase 1 — EVM Analysis Core — CURRENT
-
-### Runtime and transport
-
-- [ ] strict runtime/configuration foundation
-- [ ] resilient JSON-RPC client
-- [ ] timeout and bounded retry policy
-- [ ] circuit breaker with application-level revert classification
-- [ ] provider configuration validation
-- [ ] bounded concurrency
-- [ ] deterministic telemetry abstraction
-
-### Evidence and validation
-
-- [ ] strict address/hex validation
-- [ ] bytecode validation and instruction walker
-- [ ] typed ABI representation
-- [ ] evidence provenance model
-- [ ] detection method/fallback semantics
-- [ ] structured error provenance
+| Strict address/hex/bytecode validation | H1_CRITICAL | none | adversarial tests pass |
+| RPC transport + timeout/retry | H1_CRITICAL | runtime | deterministic failure semantics |
+| Circuit breaker + revert classification | H1_CRITICAL | RPC | reverts never trip transport breaker |
+| Verification provider abstraction | H1_CRITICAL | resilience | configured/unconfigured/unverified/API failure distinct |
+| Instruction-aligned bytecode walker | H1_CRITICAL | validation | PUSH-data decoys cannot create findings |
+| Evidence/provenance model | H1_CRITICAL | domain types | every finding auditable |
+| Ownership check | H1_CRITICAL | RPC/evidence | positive/negative/inapplicable deterministic |
+| Pause check | H1_CRITICAL | RPC/evidence | capability + state semantics tested |
+| Mint check | H1_CRITICAL | RPC/evidence | capability/authority uncertainty explicit |
+| Minimum proxy-aware semantics | H1_CRITICAL | RPC/bytecode | contractAddress/codeAddress never confused |
+| Ground-truth corpus | H1_CRITICAL | checks | expected results independently defined |
+| Telegraph Intent adapter | H1_CRITICAL | core result | official schema verified and adapter tested |
+| Miner deployment/live operation | H1_OPERATIONAL | adapter | endpoint remains live through Track 3 |
+| Performance measurement | H1_OPERATIONAL | live Miner | p50/p95/p99 and failure metrics recorded |
+| X progress/transparency | H1_OPERATIONAL | real progress | meaningful, non-spam updates |
+| Track 3 application/agent validation | H1_OPERATIONAL | live Miner | real requests, no mocked demand |
+| Capability Passport | POST_H1 | stable normalized result | versioned persistent snapshot |
+| Continuous Watch | POST_H1 | Passport | shared observations/resource budgets |
+| Change Intelligence | POST_H1 | Watch + Passport | evidence-backed before/after diff |
+| Capability Time Machine | POST_H1 | Change Intelligence | stored observation timeline |
+| Policy Engine | POST_H1 | normalized capabilities | COMPLIANT/VIOLATION/INCONCLUSIVE |
+| Email/Webhook/Mobile alerts | POST_H1 | policy/events | channel-agnostic notification router |
+| Web/PWA | POST_H1 | API/result contract | thin client of intelligence core |
+| Premium 3D Contract Core | POST_H1 | product API | semantic, accessible visual layer |
+| Native mobile | POST_H1 | versioned API | separate client, same intelligence |
+| Agent API/SDK/MCP expansion | POST_H1 | stable intelligence contract | machine-consumable provenance |
+
+## H1 EXECUTION PLAN
+
+### Aug 13–16 — Foundation sprint
+
+- repository/source-of-truth audit
+- roadmap/state rebaseline
+- strict runtime/test foundation
+- resilience abstraction
+- RPC transport
+- evidence hierarchy
+- bytecode correctness
+- ownership/pause/mint
+- minimum proxy semantics
+- security baseline
+- adversarial tests
 
-### Checks
-
-- [ ] ownership observation and renounced ownership
-- [ ] expected non-Ownable behavior
-- [ ] proxy detection and implementation resolution
-- [ ] beacon detection with explicit unresolved state
-- [ ] pause capability and live paused state
-- [ ] mint capability and authority
-- [ ] ABI-first exact signature detection
-- [ ] instruction-aligned bytecode fallback
-
-### Adversarial regression coverage
-
-- [ ] selector collision limitation
-- [ ] PUSH-data selector decoy
-- [ ] malformed bytecode
-- [ ] RPC application revert
-- [ ] timeout
-- [ ] circuit breaker
-- [ ] provider/API failure classification
-
-## Phase 2 — Proxy-aware composition
-
-Resolve the correct analysis context before running capability checks.
-
-Required semantics:
+### Aug 17 — Track 1 opens
 
-1. direct contract → direct code and storage
-2. transparent/UUPS proxy → implementation code + proxy storage/state
-3. supported beacon proxy → beacon contract → verified implementation + proxy storage/state
-4. unresolved implementation → explicit degraded result, never misleading direct analysis
+Target: Veridex Miner is runnable/integration-ready, with the deterministic core and verified Telegraph adapter path prioritized over UI polish.
 
-Exit only after real-chain assumptions have integration coverage or an explicit documented reason why verification is unavailable.
+### Aug 17–20 — Telegraph integration hardening
 
-## Phase 3 — Contract Intelligence Engine
+- verify chosen official Intent
+- request/response contract
+- Miner configuration/registration
+- error/deadline behavior
+- live endpoint
+- independent protocol tests
 
-Create one normalized analysis object consumed by both agents and UI.
+### Aug 20–24 — Ground truth + correctness
 
-Layers:
+- curated contract corpus
+- positive/negative/inconclusive cases
+- proxy cases
+- malformed/adversarial fixtures
+- false-positive/false-negative analysis
 
-```text
-request
-identity
-proxy
-checks
- evidence
-quality
-errors
-metadata
-```
+### Aug 24–27 — Performance
 
-Do not introduce proprietary risk scoring until the chosen Telegraph Intent/evaluation contract requires it.
+- latency instrumentation
+- evidence reuse
+- safe caching where freshness is explicit
+- duplicate request coalescing where justified
+- bounded concurrency
+- provider resilience
 
-Build a versioned ground-truth corpus alongside the engine.
+### Aug 27–30 — Reliability / deployment / demo
 
-## Phase 3.5 — Capability Passport & Persistent Watch
+- edge cases
+- deployment readiness
+- operational observability
+- documentation
+- reproducible demo
+- public technical progress
 
-Build only after the normalized analysis result is stable.
+### Aug 31 — Track 1 submission gate
 
-### Passport
+Do not treat this as the end of engineering.
 
-- [ ] versioned analysis snapshot
-- [ ] explicit freshness metadata
-- [ ] serializable evidence provenance
-- [ ] deterministic snapshot identity/hash where justified
-- [ ] clear distinction between observation and interpretation
+### Aug 31–Sep 7 — Track 3 operational window
 
-### Continuous observation
+- keep Miner live
+- accept real requests
+- support real applications/agents
+- measure latency/reliability
+- fix critical issues
+- publish transparent progress
+- collect legitimate evidence of utility
 
-- [ ] watch registration for a contract/network pair
-- [ ] initial observation and baseline passport
-- [ ] adaptive polling schedule
-- [ ] event/log driven observation where reliable
-- [ ] provider-aware batching and caching
-- [ ] bounded concurrency and per-watch resource budgets
-- [ ] pause/resume watch
-- [ ] observation retention policy
+### Sep 7 — H1 final boundary
 
-### Change intelligence
+H1 evaluation boundary. After this, return to the full product roadmap.
 
-- [ ] compare compatible snapshots
-- [ ] implementation/control-plane change detection
-- [ ] capability change detection
-- [ ] evidence-quality change detection
-- [ ] `conclusive` vs `inconclusive` comparison status
-- [ ] never infer removal from degraded/missing evidence
-- [ ] severity classification with explainable evidence
-- [ ] alert deduplication
+## LONG-TERM PRODUCT ROADMAP
 
-### Live user experience
+### Phase 0 — Constitution & continuity
+**Status: COMPLETE**
 
-A user should be able to:
+### Phase 1 — EVM Analysis Core
+**Status: H1 CRITICAL / CURRENT**
 
-`add contract → watch active → leave → return later → see current state + change timeline`
+The existing Phase 01 contract remains the engineering foundation. H1 adds urgency, not weaker correctness requirements.
 
-No repeated Analyze action is required while a watch is active.
+### Phase 2 — Proxy-Aware Composition
+**Status: POST-H1 / NEXT**
 
-Potential alert channels:
+Correctly compose direct, transparent/UUPS and supported beacon flows while preserving live proxy storage semantics.
 
-- in-app notifications
-- browser push
-- email
-- Telegram/webhook integrations where appropriate
-- agent/MCP event consumption
+### Phase 3 — Capability Intelligence
+**Status: POST-H1 / PLANNED**
 
-Every alert must contain:
+Normalize deterministic observations into a machine-readable intelligence object.
 
-```text
-what changed
-previous state
-current state
-evidence
-confidence
-observed at
-comparison status
-```
+### Phase 3.5 — Capability Passport + Persistent Watch
+**Status: POST-H1 / PLANNED**
 
-### Ranking and scoring
+Build versioned Passport snapshots, continuous shared observation, change detection and historical timeline.
 
-Veridex may maintain an internal, versioned intelligence/risk profile for watched contracts, but raw evidence remains separate from interpretation. A score must never be presented as an official Telegraph ranking unless the official Telegraph evaluation system explicitly defines it.
+### Phase 3.7 — Capability Policy Engine
+**Status: POST-H1 / PLANNED — NEW EXPLICIT MILESTONE**
 
-When a score exists it must be reproducible, timestamped, evidence-linked and explainable.
+Make policy evaluation a first-class phase rather than an implicit part of alert architecture.
 
-### Capability Time Machine
+Required states:
 
-Every meaningful passport version can become a timeline point:
+- `COMPLIANT`
+- `VIOLATION`
+- `INCONCLUSIVE`
 
-```text
-v1 ── v2 ── v3 ── v4 ── CURRENT
-      ↑             ↑
-   pause added   implementation changed
-```
+No premature numerical policy/confidence mathematics.
 
-The UI can replay the evidence transition that produced a change event.
+### Phase 4 — Telegraph Integration
+**Status: H1 adapter work / POST-H1 expansion**
 
-Full monitoring design: `docs/CAPABILITY-MONITOR.md`.
+The H1 adapter is the minimal protocol boundary. Broader Telegraph integrations remain post-H1.
 
-## Phase 4 — Telegraph compatibility
+### Phase 5 — Evaluation / Performance / Ground Truth
+**Status: H1 operational requirement + POST-H1 expansion**
 
-Before coding the adapter, re-verify the current official Telegraph documentation, supported intents and hackathon specifications.
+H1 requires enough evaluation to prove correctness/performance. The mature evaluation platform remains a continuing phase.
 
-Verify:
+### Phase 6 — Production Web Application
+**Status: POST-H1 / PLANNED**
 
-- exact Intent request/response schema
-- Miner registration/lifecycle
-- current configuration
-- evaluation behavior
-- x402/payment path if required
-- official addresses/constants
-- whether Capability Change Intelligence maps to an existing Intent or should remain an application-level signal
+Responsive web/PWA proof surface over the same intelligence API.
 
-Then implement a thin adapter that owns Telegraph protocol concerns while the analysis engine remains protocol-independent.
+### Phase 7 — Premium UX / Brand / 3D Product Experience
+**Status: POST-H1 / PLANNED**
 
-## Phase 5 — Evaluation & performance
+Apple-grade calm UX, Contract Core, progressive disclosure and evidence visualization.
 
-Treat performance as a product feature.
+### Phase 8 — Hackathon Demo / Submission / Validation
+**Status: H1 operational work now; broader lifecycle remains ongoing**
 
-Measure:
+### Phase 9 — Mobile / Agent / Enterprise Evolution
+**Status: POST-H1 / PLANNED**
 
-- canonical correctness
-- deterministic repeatability
-- p50/p95/p99 latency
-- timeout/error rate
-- provider failure behavior
-- false-positive/false-negative rates
-- concurrency behavior
-- safe cache effectiveness
-- comparison correctness for change intelligence
-- monitoring freshness and resource cost
+Native mobile, agent APIs/SDKs/MCP, enterprise policy tooling and broader integrations.
 
-Optimize only against measurements.
+## Five long-term product pillars
 
-## Phase 6 — Product application
+1. **UNDERSTAND** — What is this contract?
+2. **VERIFY** — Why should I believe the result?
+3. **DISCOVER POWERS** — What can this contract do?
+4. **WATCH** — What changes after I leave?
+5. **CONNECT** — Can humans, applications, agents and Telegraph consume this intelligence?
 
-Build the web experience from the normalized backend result.
+H1 focuses on UNDERSTAND + VERIFY + DISCOVER POWERS and CONNECT through the Miner. WATCH remains post-H1.
 
-Primary journey:
+## Long-term product architecture preserved
 
-`address → chain → live analysis → proxy/implementation graph → evidence → capability passport → watch active → live change alerts → change history → machine-readable output`
+The following remain explicitly planned and must not be deleted because H1 is narrower:
 
-No fake progress. Analysis animation represents actual events.
+- Capability Passport
+- continuous Watch
+- Capability Change Intelligence
+- Capability Time Machine
+- Policy Engine
+- live posture/ranking with evidence/calibration requirements
+- email/webhook/mobile notification routing
+- PWA/native mobile
+- Apple-grade web application
+- 3D Contract Core
+- five-pillar UX
+- agent API/SDK/MCP
+- broader Telegraph integrations
+- enterprise policy tooling
 
-Core views:
+## Quality gates
 
-1. landing
-2. analyze
-3. live analysis timeline
-4. intelligence dashboard
-5. evidence explorer
-6. proxy graph
-7. individual check detail
-8. provenance/confidence
-9. capability passport
-10. watch center / active watches
-11. change timeline / Capability Time Machine
-12. alert detail
-13. raw result/API
-14. Miner information
-
-## Phase 7 — Brand & judge demo
-
-Brand: **VERIDEX**
-
-Descriptor: **Verifiable On-Chain Intelligence**
-
-Core differentiator:
-
-> **Don't just analyze a contract. Know when its powers change.**
-
-Demo must prove, in a short live flow:
-
-1. real contract input
-2. proxy discovery
-3. implementation resolution
-4. evidence hierarchy
-5. capability findings
-6. provenance/degradation
-7. deterministic result
-8. persistent watch activation
-9. evidence-backed capability change alert
-10. Capability Passport / timeline
-11. Telegraph Miner path
-12. latency/performance evidence
-13. downstream agent utility
-
-## Phase 8 — Hackathon operations
-
-For the active Telegraph round:
-
-- [ ] confirm current Track 1 dates from official rules
-- [ ] register Miner
-- [ ] confirm Intent
-- [ ] confirm evaluation behavior
-- [ ] deploy live endpoint
-- [ ] monitor latency and errors
-- [ ] obtain legitimate application usage
-- [ ] remain live through the required application window
-- [ ] publish meaningful progress updates
-- [ ] avoid artificial metric inflation
-- [ ] submit reproducible demo/package
-
-## Phase 9 — H2/H3 evolution
-
-Use real H1 evidence to prioritize:
-
-- additional high-value risk capabilities
-- broader proxy standards
-- source/AST analysis if justified
-- multi-chain support where demand exists
-- persistent signals
-- capability change feeds
-- MCP/agent integrations
-- SDKs
-- historical contract intelligence
-- provider/caching strategy
-- enterprise observability
-
-## Quality gates for every phase
+Every milestone:
 
 - strict typecheck
 - complete test suite
-- regression coverage
+- adversarial/regression coverage
 - no fabricated blockchain/Telegraph constants
 - explicit external dependency failure semantics
 - security review of new trust boundaries
-- measured network latency where applicable
+- measured latency for network paths
 - documentation/state update
-- coherent commits; avoid unnecessary CI-triggering micro-commits
+- coherent commits; avoid unnecessary micro-commits
 
-## Never-do list
+## Never-do
 
 - never fabricate official addresses, ABI values, selectors or Intent schemas
 - never treat RPC reverts as provider outages
 - never treat selector scanning as stronger than verified ABI/source
 - never claim beacon implementation resolution without resolving it
 - never hide fallback reasons
-- never infer a capability change from degraded evidence
+- never infer capability removal from degraded evidence
 - never invent scoring before evaluation requirements are known
 - never sacrifice correctness for animation
 - never fake usage, engagement or demand
-- never couple core analysis logic to Telegraph transport
-- never optimize only for one hackathon and make H2/H3 evolution impossible
-- never treat a failed monitoring observation as evidence of a contract change
-- never promise unlimited/free monitoring without an explicit resource model
+- never couple core analysis to Telegraph transport
+- never build post-H1 UI/mobile/watch work at the expense of the H1 Miner critical path

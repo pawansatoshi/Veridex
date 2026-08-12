@@ -6,25 +6,100 @@
 
 ## Mission
 
-Build **Veridex — Verifiable On-Chain Intelligence** into a production-grade, deterministic-first Telegraph Miner that can compete on canonical performance, serve real applications, and remain extensible for future Telegraph hackathons and mainnet.
+Build **Veridex — Verifiable On-Chain Intelligence** into a production-grade, deterministic-first smart-contract intelligence layer that can compete in Telegraph Hackathon 1, serve real applications/agents, and evolve into a persistent product for future Telegraph rounds and mainnet.
 
-Veridex is a real product, not a disposable hackathon demo. Engineering decisions must optimize for correctness, evaluation alignment, performance, real utility, UX, differentiation, and long-term extensibility in that order.
+Core promise:
+
+> **Know what a contract can do — and know when its powers change.**
+
+Core trust principle:
+
+> **No evidence → no certainty.**
 
 ## Operating ownership
 
-The project is now built and directed directly in this repository. Do not assume Claude Code or another external agent is the project owner. Any future agent must read this file and the repository instructions before acting.
+The project is built and directed directly in this repository. Do not assume Claude Code or another external agent is the project owner. Any future agent must read this file and repository instructions before acting.
 
-## Current status
+## Source-of-truth policy
 
-**Stage: Phase 01 — EVM Analysis Core**
+Priority:
+
+1. live repository implementation
+2. `PROJECT_STATE.md`
+3. `AGENTS.md` / `CLAUDE.md`
+4. roadmap documents
+5. architecture / decision documents
+6. phase documents
+7. tests
+8. previous-chat claims
+
+Documentation describes intent. Code/tests prove implementation.
+
+## Current phase
+
+**CURRENT PHASE: H1 Miner Critical Path / Phase 01 — EVM Analysis Core**
 
 Repository: `pawansatoshi/Veridex`
 Default branch: `main`
 Visibility: public
 
-Phase 00 is complete. Phase 01 is the current implementation milestone.
+Phase 00 is complete. Phase 01 remains the implementation foundation. H1 rebaseline does not lower Phase 01 correctness/security requirements; it prioritizes the smallest reliable deterministic Miner path.
 
-The repository was created as a clean Veridex codebase. Earlier Sentinel work is architectural prior art only; never claim historical test counts or modules exist here unless verified in GitHub.
+## Official H1 dates
+
+- **Aug 13–16, 2026:** foundation sprint
+- **Aug 17–31, 2026:** Track 1 Miner + Track 2 Script Author window
+- **Aug 31–Sep 7, 2026:** Track 3 Applications/Agents window
+- **Sep 7, 2026:** H1 final boundary
+
+Official rules currently state Miner judging is 75% Normalized Performance within the chosen Intent and 25% X Engagement & Updates. Track 3 must use real Miners, and Miners must remain live through Track 3. Re-check official sources before protocol-specific implementation because facts may change.
+
+## Immediate objective
+
+**Competitive Telegraph Miner.**
+
+The H1 Miner must answer:
+
+> **What important capabilities does this smart contract expose, and what evidence supports that conclusion?**
+
+H1 capability wedge:
+
+1. ownership / control
+2. upgradeability / proxy surface
+3. pause capability/state
+4. mint capability/authority where evidence permits
+
+Do not expand capability count until these are reliable and benchmarked.
+
+## H1 critical pipeline
+
+```text
+User/Application
+      ↓
+Telegraph Intent
+      ↓
+Contract Address
+      ↓
+Strict Validation
+      ↓
+Chain / RPC
+      ↓
+Verification Evidence
+      ↓
+Proxy / Code Address Resolution
+      ↓
+Capability Analysis
+      ↓
+Evidence Normalization
+      ↓
+Conclusive / Inconclusive State
+      ↓
+Machine-Readable Miner Response
+      ↓
+Performance Measurement
+      ↓
+Telegraph Miner
+```
 
 ## Accepted product decisions
 
@@ -39,14 +114,15 @@ The repository was created as a clean Veridex codebase. Earlier Sentinel work is
 - Domain checks remain independently testable.
 - Telegraph integration remains separated from core analysis logic.
 - Shared result/evidence fields are additive and provenance-aware.
-- Scoring is deferred until the actual Telegraph Intent/evaluation contract requires it.
+- Scoring is deferred until actual Telegraph evaluation requirements justify it.
 - Beacon proxy resolution is explicit; a beacon address is not an implementation address.
 - Evaluation code remains independent from production analysis logic.
 - UI consumes backend truth and visualizes real analysis events.
+- Future Passport/Watch/Policy/Alert/Mobile/Agent ideas remain preserved but must not block H1 Miner delivery.
 
 ## Historical Sentinel lessons to preserve
 
-These lessons are prior art, not proof of current Veridex implementation:
+Prior art, not proof of current implementation:
 
 1. Selector clashing makes bytecode selector detection weaker than verified ABI/source evidence.
 2. Bytecode scanners must walk actual EVM instruction boundaries; arbitrary byte scanning can false-positive inside PUSH operands.
@@ -56,7 +132,7 @@ These lessons are prior art, not proof of current Veridex implementation:
 6. Delegatecall proxies require implementation code/ABI inspection while live state remains in proxy storage context.
 7. Beacon detection is not implementation resolution; the beacon's implementation interface must be called before capability inspection.
 
-## Official Telegraph reference hierarchy
+## Telegraph reference hierarchy
 
 Use sources in this order:
 
@@ -67,66 +143,159 @@ Use sources in this order:
 5. official Telegraph repositories linked from those sources
 6. external references only when necessary and explicitly labeled
 
-Never invent Telegraph addresses, ABI values, Intent schemas, Miner protocol details, or contract constants. Re-verify current official sources before implementation when facts may have changed.
+Never invent Telegraph addresses, ABI values, Intent schemas, Miner protocol details, or contract constants.
 
-## Current hackathon strategy
+## Long-term product vision — preserved
 
-The official Hackathon 1 site currently describes a three-round ecosystem: Miners/Scripts first, applications next, then evaluation/results. The current rules emphasize Miner ranking/performance and real application demand. The project therefore targets a narrow, high-confidence deterministic intelligence wedge first and avoids feature-count-driven development.
+Veridex must eventually evolve:
 
-The complete strategy is in `docs/WINNING-STRATEGY.md`.
+```text
+Analyze → Verify → Discover Powers → Capability Passport → Watch
+→ Capability Change Intelligence → Policy → Alert → Agent/API → Telegraph
+```
 
-## Phase roadmap
+The long-term product is **continuous smart-contract capability intelligence**, not a generic one-shot scanner.
 
-### Phase 0 — Constitution & continuity
-**Status: COMPLETE**
+Preserved strategic capabilities:
 
-### Phase 1 — EVM Analysis Core
-**Status: CURRENT**
+- Capability Passport
+- continuous Watch
+- shared observation / deduplication / bounded polling
+- Change Intelligence
+- Capability Time Machine
+- Capability Policy Engine
+- evidence-backed posture/ranking after ground-truth calibration
+- email/webhook/mobile notification router
+- responsive/PWA web
+- native mobile
+- Apple-grade UX
+- 3D Contract Core
+- five product pillars
+- agent/API/SDK/MCP interfaces
+- broader Telegraph integrations
+- enterprise policy tooling
 
-- runtime/configuration foundation
-- resilient JSON-RPC transport
-- external verification boundary
-- evidence/provenance model
-- strict validation
-- ownership
-- proxy
-- pause/mint capabilities
-- adversarial/regression tests
+## Five product pillars
 
-### Phase 2 — Proxy-Aware Composition
-**Status: PLANNED**
+1. **UNDERSTAND** — What is this contract?
+2. **VERIFY** — Why should I believe the result?
+3. **DISCOVER POWERS** — What can this contract do?
+4. **WATCH** — What changes after I leave?
+5. **CONNECT** — Can humans, applications, agents and Telegraph consume this intelligence?
 
-### Phase 3 — Contract Intelligence Engine
-**Status: PLANNED**
+H1 focuses on UNDERSTAND, VERIFY, DISCOVER POWERS and CONNECT through the Miner. WATCH is post-H1.
 
-### Phase 4 — Telegraph Compatibility
-**Status: PLANNED**
+## Current implementation state
 
-### Phase 5 — Evaluation & Performance
-**Status: PLANNED**
+### Implemented on `main`
 
-### Phase 6 — Product Application
-**Status: PLANNED**
+- strict TypeScript compiler settings
+- EVM address validation primitive
+- shared `CheckResult` / analysis type foundation
+- additive detection/fallback provenance fields at the type level
+- basic Vitest setup and two unit-test files
+- repository continuity and architecture documents
+- official Telegraph reference hierarchy
 
-### Phase 7 — Brand & Judge Demo
-**Status: PLANNED**
+### Not yet implemented on `main`
 
-### Phase 8 — Hackathon Operations
-**Status: PLANNED**
+- JSON-RPC client
+- timeout/retry/circuit breaker
+- provider failure classification
+- verification client
+- bytecode validation/walker
+- ownership runtime check
+- pause runtime check
+- mint runtime check
+- proxy resolver
+- analysis orchestrator
+- normalized Miner response runtime
+- ground-truth corpus
+- Telegraph adapter
+- live Miner endpoint
+- performance harness
+- Passport
+- Watch
+- Change Intelligence runtime
+- Policy Engine runtime
+- alert router/email/webhook/mobile
+- web UI/PWA
+- native mobile
 
-### Phase 9 — H2/H3 Evolution
-**Status: PLANNED**
+A separate `phase-01-core` branch exists, but **main is the source of truth for current implementation**. Do not claim code from that branch is merged or present on main without verifying it.
 
-See `docs/ROADMAP.md` for the complete task-level plan.
+## Current H1 task status
 
-## Architecture authority
+### H1_CRITICAL
 
-- `docs/ARCHITECTURE.md` — current system architecture
-- `docs/DECISIONS.md` — durable architectural decisions
-- `docs/WINNING-STRATEGY.md` — competitive/product strategy
-- `docs/TELEGRAPH_REFERENCE.md` — official protocol reference map
-- `docs/UI-UX-BLUEPRINT.md` — product and motion design
-- `docs/phases/` — phase-specific implementation contracts
+- Phase 01 runtime foundation
+- resilient RPC and verification infrastructure
+- evidence hierarchy
+- instruction-aligned bytecode analysis
+- ownership/pause/mint checks
+- minimum proxy-aware semantics
+- adversarial regression tests
+- official Telegraph Intent selection/adapter after source verification
+
+### H1_OPERATIONAL
+
+- live Miner deployment
+- performance measurement
+- operational reliability
+- ground-truth evaluation
+- legitimate Track 3 usage
+- X transparency/progress
+
+### POST_H1
+
+- Phase 2 proxy-aware composition beyond H1 minimum
+- Capability Intelligence expansion
+- Capability Passport
+- Watch
+- Change Intelligence
+- Time Machine
+- Policy Engine
+- alert channels
+- production web/PWA
+- premium UX/3D
+- native mobile
+- agent/enterprise evolution
+
+### BLOCKED UNTIL VERIFIED
+
+- choosing a Telegraph Intent until the official supported-intents contract is inspected
+- adding official Telegraph addresses/constants until verified from current official sources
+- numerical Veridex scoring until evaluation requirements and ground truth justify it
+- beacon implementation claims without actual resolution
+
+## Security requirements
+
+H1 security is mandatory:
+
+- strict input validation
+- malformed bytecode/ABI safety
+- bounded parser work
+- instruction-boundary scanning
+- RPC timeout
+- bounded retries
+- circuit breaker
+- application-level revert classification
+- provider failure cannot become contract evidence
+- client input cannot become canonical evidence
+- bounded resource consumption
+- no secrets in client code
+- dependency/CI security basics
+- adversarial regression tests
+
+Future API/web/mobile security remains a later production architecture milestone, but its trust boundaries must remain compatible with the H1 core.
+
+## Known roadmap clarification
+
+The original roadmap did not give Policy Engine a dedicated phase. The H1 rebaseline now establishes:
+
+**Phase 3.7 — Capability Policy Engine — POST-H1 / PLANNED**
+
+Required policy outputs are `COMPLIANT`, `VIOLATION`, and `INCONCLUSIVE` with evidence-backed reasoning and no premature scoring mathematics.
 
 ## Global quality gates
 
@@ -134,7 +303,7 @@ Every meaningful milestone must include, as applicable:
 
 - strict typecheck
 - complete test suite
-- regression coverage
+- regression/adversarial coverage
 - no fabricated protocol/blockchain constants
 - explicit external dependency failure semantics
 - security review of new trust boundaries
@@ -147,14 +316,18 @@ Every meaningful milestone must include, as applicable:
 When a new chat or agent opens the repository:
 
 1. Read `PROJECT_STATE.md`.
-2. Read `AGENTS.md` and `CLAUDE.md` for repository operating rules.
-3. Read the current phase document.
+2. Read `AGENTS.md` and `CLAUDE.md`.
+3. Read `docs/ROADMAP.md`, `docs/ARCHITECTURE.md`, `docs/DECISIONS.md`, and the current H1 phase document.
 4. Inspect the actual source tree before assuming any module exists.
-5. Read `docs/DECISIONS.md` before changing an accepted architectural decision.
-6. Re-check official Telegraph sources for current protocol facts.
-7. Continue from the first incomplete task; do not restart completed work.
-8. Update this state after meaningful milestones.
+5. Re-check official Telegraph sources for current protocol facts.
+6. Continue from the first incomplete H1 task.
+7. Never start post-H1 work merely because it is documented.
+8. After a meaningful milestone, update this state with actual implementation/test evidence.
 
-## Current next action
+## Next engineering task
 
-**Implement Phase 01 — EVM Analysis Core.** Inspect the current minimal source tree, establish the strict TypeScript/test/runtime foundation, then implement the smallest correct deterministic EVM primitives and their adversarial tests. Do not jump to UI polish or speculative Telegraph integration.
+**Build the H1 Phase 01 runtime foundation:** strict runtime configuration, shared resilience primitives, and a correctly classified JSON-RPC client, with adversarial tests. Do not start UI, Passport, Watch, Policy, or native mobile work.
+
+## Last verified commit
+
+`ecdf25e62ec950632ae16618203a9739a40442b9` — main branch baseline audited before H1 rebaseline documentation changes.
