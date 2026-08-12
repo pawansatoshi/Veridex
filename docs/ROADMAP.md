@@ -2,323 +2,244 @@
 
 ## North Star
 
-Build the most credible **verifiable on-chain intelligence Miner** in the Telegraph ecosystem: deterministic where possible, explicit about uncertainty, resilient under infrastructure failure, proxy-aware, fast enough to compete on canonical performance, and polished enough to become a real developer product.
+Build **Veridex — Verifiable On-Chain Intelligence** into a production-grade, deterministic-first Telegraph Miner that can compete on canonical performance, serve real applications, and remain extensible for future Telegraph hackathons and mainnet.
 
-## Winning Thesis
+## Winning thesis
 
-Telegraph's current hackathon rules say the Miner track is primarily a performance competition within each Intent: 75% normalized performance and 25% X engagement/transparency. The rules also emphasize on-chain intelligence, autonomous agents, multi-intent intelligence, confidence thresholds, signal verification, and persistent intelligence.
+Telegraph's current hackathon model rewards Miner performance and real demand. Veridex therefore optimizes for **correctness → evaluation alignment → latency/reliability → real utility/demand → UX → differentiation → transparent growth**.
 
-Therefore the roadmap optimizes in this order:
+Veridex is not a generic scanner or LLM wrapper. Its wedge is evidence-backed contract intelligence: ownership/admin authority, proxy/implementation semantics, pause and mint capabilities, verified ABI/source provenance, deterministic fallback evidence, and explicit degradation.
 
-1. correctness
-2. evaluation alignment
-3. latency/reliability
-4. real utility and demand
-5. UX/product quality
-6. differentiation and brand
-7. transparent growth
+The full competitive strategy is maintained in `docs/WINNING-STRATEGY.md`.
 
-## Phase Map
+## Phase map
 
 | Phase | Name | Status | Exit condition |
 |---|---|---|---|
-| 0 | Constitution & continuity | 🟢 active | all persistent docs exist and agents can resume safely |
-| 1 | EVM analysis core | ⏳ | deterministic checks + evidence contract + tests |
-| 2 | Proxy-aware composition | ⏳ | correct implementation/state semantics including supported beacon path |
-| 3 | Intelligence engine | ⏳ | normalized, explainable machine result |
-| 4 | Telegraph Miner | ⏳ | verified official Intent/Miner contract and live endpoint |
-| 5 | Evaluation & performance | ⏳ | benchmarked canonical performance and failure budgets |
-| 6 | Application/UI | ⏳ | production-quality interactive analysis experience |
-| 7 | Brand/demo | ⏳ | judge-ready product narrative and live proof |
-| 8 | Hackathon operations | ⏳ | live through Track 3 with legitimate usage |
-| 9 | Post-hackathon | ⏳ | durable platform roadmap |
+| 0 | Constitution & continuity | 🟢 complete | persistent project memory and operating rules are established |
+| 1 | EVM analysis core | 🔵 current | deterministic transport, evidence and checks are implemented and tested |
+| 2 | Proxy-aware composition | ⏳ planned | direct, transparent/UUPS and supported beacon flows have correct code/state semantics |
+| 3 | Contract intelligence engine | ⏳ planned | normalized machine-readable analysis result with provenance |
+| 4 | Telegraph compatibility | ⏳ planned | current official Intent/Miner contract is verified and adapter is live |
+| 5 | Evaluation & performance | ⏳ planned | benchmark corpus, canonical evaluation alignment and latency/reliability budgets |
+| 6 | Product application | ⏳ planned | polished web/API experience consuming the same analysis result |
+| 7 | Brand & judge demo | ⏳ planned | compelling live proof of intelligence, provenance, performance and utility |
+| 8 | Hackathon operations | ⏳ planned | live Miner, legitimate application demand, monitoring and submission |
+| 9 | H2/H3 evolution | ⏳ planned | evidence-driven expansion for future Telegraph rounds and mainnet |
 
-## Phase 0 — Constitution & Continuity
+## Phase 0 — Constitution & continuity — COMPLETE
 
-- [x] repository created
-- [x] Veridex positioning established
-- [x] persistent state file
+- [x] repository and product identity
+- [x] persistent project state
 - [x] agent operating contract
-- [x] Claude context
-- [x] roadmap
-- [x] architecture blueprint
+- [x] roadmap and architecture
 - [x] decision log
-- [x] Telegraph reference map
-- [x] UI/UX blueprint
-- [ ] phase-specific implementation docs
+- [x] official Telegraph reference hierarchy
+- [x] UI/UX and motion blueprint
+- [x] winning strategy
 
-## Phase 1 — EVM Analysis Core
+## Phase 1 — EVM Analysis Core — CURRENT
 
-### Transport
+### Runtime and transport
 
+- [ ] strict runtime/configuration foundation
 - [ ] resilient JSON-RPC client
-- [ ] request timeout
-- [ ] circuit breaker with application-level error classification
-- [ ] provider configuration and validation
-- [ ] concurrency limits
+- [ ] timeout and bounded retry policy
+- [ ] circuit breaker with application-level revert classification
+- [ ] provider configuration validation
+- [ ] bounded concurrency
+- [ ] deterministic telemetry abstraction
 
-### Evidence
+### Evidence and validation
 
-- [ ] strict address validation
-- [ ] bytecode validation
-- [ ] ABI model
-- [ ] evidence provenance
-- [ ] detection method
-- [ ] fallback reason/detail
-- [ ] structured error semantics
+- [ ] strict address/hex validation
+- [ ] bytecode validation and instruction walker
+- [ ] typed ABI representation
+- [ ] evidence provenance model
+- [ ] detection method/fallback semantics
+- [ ] structured error provenance
 
-### Ownership
+### Checks
 
-- [ ] direct ownership inspection
-- [ ] renounced ownership detection
-- [ ] expected non-applicable behavior
-- [ ] proxy delegatecall semantics test
-
-### Proxy
-
-- [ ] supported proxy pattern detection
-- [ ] implementation resolution
-- [ ] beacon detection
-- [ ] explicit unresolved implementation state
-- [ ] proxy evidence graph
-
-### Capabilities
-
-- [ ] pause capability
-- [ ] live paused-state read
-- [ ] mint capability
-- [ ] mint authority evidence
+- [ ] ownership observation and renounced ownership
+- [ ] expected non-Ownable behavior
+- [ ] proxy detection and implementation resolution
+- [ ] beacon detection with explicit unresolved state
+- [ ] pause capability and live paused state
+- [ ] mint capability and authority
 - [ ] ABI-first exact signature detection
-- [ ] bytecode fallback only when stronger evidence unavailable
-- [ ] selector-clash regression coverage
-- [ ] instruction-boundary regression coverage
+- [ ] instruction-aligned bytecode fallback
 
-## Phase 2 — Proxy-Aware Composition
+### Adversarial regression coverage
 
-Principle:
+- [ ] selector collision limitation
+- [ ] PUSH-data selector decoy
+- [ ] malformed bytecode
+- [ ] RPC application revert
+- [ ] timeout
+- [ ] circuit breaker
+- [ ] provider/API failure classification
 
-> capability detection uses the correct code address; live state uses the original contract/storage context.
+## Phase 2 — Proxy-aware composition
 
-Implement only after experimental verification of the required EVM/proxy assumptions.
+Resolve the correct analysis context before running capability checks.
 
-### Required paths
+Required semantics:
 
-1. direct contract → direct code/state
-2. transparent/UUPS proxy → implementation code + proxy state
-3. beacon proxy → beacon contract → implementation code + proxy state, if supported
-4. proxy detected but implementation unavailable → explicit degraded result
-5. malformed/unreachable implementation → explicit failure provenance
+1. direct contract → direct code and storage
+2. transparent/UUPS proxy → implementation code + proxy storage/state
+3. supported beacon proxy → beacon contract → verified implementation + proxy storage/state
+4. unresolved implementation → explicit degraded result, never misleading direct analysis
 
-### Exit tests
-
-- proxy ownership delegatecall behavior
-- implementation capability inspection
-- proxy live-state preservation
-- beacon resolution behavior
-- no silent fallback from unresolved proxy to misleading direct analysis
+Exit only after real-chain assumptions have integration coverage or an explicit documented reason why verification is unavailable.
 
 ## Phase 3 — Contract Intelligence Engine
 
-The engine turns independent evidence into a normalized contract intelligence object.
+Create one normalized analysis object consumed by both agents and UI.
 
-### Result layers
+Layers:
 
 ```text
+request
 identity
-  ├── requested address
-  ├── chain
-  └── code address
-
 proxy
-  ├── detected
-  ├── type
-  ├── beacon
-  └── implementation
-
 checks
-  ├── ownership
-  ├── pause
-  ├── mint
-  └── future checks
-
-evidence
-  ├── source
-  ├── ABI
-  ├── bytecode
-  ├── RPC state
-  └── external dependency status
-
+ evidence
 quality
-  ├── confidence
-  ├── detection method
-  └── fallback provenance
+errors
+metadata
 ```
 
-Do not create a complex risk score until the Telegraph Intent/evaluation contract requires it.
+Do not introduce proprietary risk scoring until the chosen Telegraph Intent/evaluation contract requires it.
 
-## Phase 4 — Telegraph Miner
+Build a versioned ground-truth corpus alongside the engine.
 
-### Before implementation
+## Phase 4 — Telegraph compatibility
 
-- verify official Miner lifecycle
-- verify current YAML/configuration requirements
-- verify registration requirements
-- verify exact Intent request/response contract
-- verify x402 path required for the chosen integration
-- verify current official contract addresses from official sources
+Before coding the adapter, re-verify the current official Telegraph documentation, supported intents and hackathon specifications.
 
-### Miner responsibilities
+Verify:
 
-- validate request
-- enforce deadline/timeout budget
-- resolve chain/network
-- run deterministic analysis
-- return canonical machine-readable result
-- expose health/readiness
-- expose useful diagnostics without leaking secrets
-- remain operational throughout Track 3
+- exact Intent request/response schema
+- Miner registration/lifecycle
+- current configuration
+- evaluation behavior
+- x402/payment path if required
+- official addresses/constants
 
-## Phase 5 — Evaluation & Performance
+Then implement a thin adapter that owns Telegraph protocol concerns while the analysis engine remains protocol-independent.
 
-### Benchmark dimensions
+## Phase 5 — Evaluation & performance
+
+Treat performance as a product feature.
+
+Measure:
 
 - canonical correctness
 - deterministic repeatability
 - p50/p95/p99 latency
-- provider failure rate
-- timeout rate
-- false-positive rate
-- false-negative rate
-- cache effectiveness where safe
+- timeout/error rate
+- provider failure behavior
+- false-positive/false-negative rates
 - concurrency behavior
+- safe cache effectiveness
 
-### Adversarial corpus
+Optimize only against measurements.
 
-Include:
+## Phase 6 — Product application
 
-- non-proxy contracts
-- transparent proxies
-- UUPS proxies
-- beacon proxies
-- unverified contracts
-- verified contracts
-- selector collisions
-- PUSH-data selector decoys
-- malformed bytecode
-- RPC revert responses
-- Etherscan API failures
-- missing API configuration
-- contracts without expected functions
-- contracts with multiple capability paths
+Build the web experience from the normalized backend result.
 
-## Phase 6 — Application & UI/UX
+Primary journey:
 
-### Primary journey
+`address → chain → live analysis → proxy/implementation graph → evidence → result → machine-readable output`
 
-```text
-landing
-  ↓
-enter contract
-  ↓
-select/confirm chain
-  ↓
-Analyzing...
-  ↓
-proxy resolution
-  ↓
-implementation verification
-  ↓
-capability checks
-  ↓
-evidence synthesis
-  ↓
-Veridex result
-```
+No fake progress. Analysis animation represents actual events.
 
-### Core screens
+Core views:
 
-1. Landing / value proposition
-2. Analyze contract
-3. Live analysis timeline
-4. Contract intelligence dashboard
-5. Evidence explorer
-6. Proxy graph
-7. Check details
-8. Confidence/provenance panel
-9. Raw machine-readable result
-10. Telegraph Miner/API information
+1. landing
+2. analyze
+3. live analysis timeline
+4. intelligence dashboard
+5. evidence explorer
+6. proxy graph
+7. individual check detail
+8. provenance/confidence
+9. raw result/API
+10. Miner information
 
-### Motion principle
+## Phase 7 — Brand & judge demo
 
-Every animation represents a real state transition. Use subtle graph pulses, evidence arrival, implementation-link animation, verification badges, and progressive disclosure. No fake progress bars.
+Brand: **VERIDEX**
 
-## Phase 7 — Brand & Demo
+Descriptor: **Verifiable On-Chain Intelligence**
 
-### Brand
+Demo must prove, in a short live flow:
 
-**VERIDEX**
+1. real contract input
+2. proxy discovery
+3. implementation resolution
+4. evidence hierarchy
+5. capability findings
+6. provenance/degradation
+7. deterministic result
+8. Telegraph Miner path
+9. latency/performance evidence
+10. downstream agent utility
 
-Tagline: **Verifiable On-Chain Intelligence**
+## Phase 8 — Hackathon operations
 
-Brand attributes:
+For the active Telegraph round:
 
-- precise
-- technical
-- trustworthy
-- modern
-- infrastructure-grade
-- calm rather than hype-driven
-
-### Demo narrative
-
-1. Start with a real contract.
-2. Show proxy detection.
-3. Show implementation resolution.
-4. Show verified ABI evidence.
-5. Show capability evidence.
-6. Show provenance and confidence.
-7. Show deterministic machine result.
-8. Show Telegraph Miner interface.
-9. Show performance/latency proof.
-10. Show how an agent can consume the result.
-
-## Phase 8 — Hackathon Operations
-
-Track 1 Miner window currently listed by official rules: **Aug 17–Aug 31, 2026**.
-Track 3 applications: **Aug 31–Sep 7, 2026**.
-
-Operational checklist:
-
+- [ ] confirm current Track 1 dates from official rules
 - [ ] register Miner
-- [ ] confirm chosen Intent
+- [ ] confirm Intent
 - [ ] confirm evaluation behavior
-- [ ] deploy production endpoint
-- [ ] monitor latency/errors
+- [ ] deploy live endpoint
+- [ ] monitor latency and errors
 - [ ] obtain legitimate application usage
-- [ ] remain live through Track 3
-- [ ] publish meaningful tagged X updates
+- [ ] remain live through the required application window
+- [ ] publish meaningful progress updates
 - [ ] avoid artificial metric inflation
-- [ ] final submission/demo
+- [ ] submit reproducible demo/package
 
-## Phase 9 — Post-Hackathon
+## Phase 9 — H2/H3 evolution
 
-- additional contract-risk capabilities
+Use real H1 evidence to prioritize:
+
+- additional high-value risk capabilities
+- broader proxy standards
 - source/AST analysis if justified
-- multi-chain strategy
-- persistent signal feeds
-- MCP integration
-- SDK
-- agent integrations
-- enterprise API
+- multi-chain support where demand exists
+- persistent signals
+- MCP/agent integrations
+- SDKs
 - historical contract intelligence
+- provider/caching strategy
+- enterprise observability
 
-## Never-Do List
+## Quality gates for every phase
 
-- never fabricate an official address
-- never treat RPC reverts as outages
-- never use selector scanning as stronger evidence than verified ABI/source
-- never claim beacon implementation resolution without actually resolving it
+- strict typecheck
+- complete test suite
+- regression coverage
+- no fabricated blockchain/Telegraph constants
+- explicit external dependency failure semantics
+- security review of new trust boundaries
+- measured network latency where applicable
+- documentation/state update
+- coherent commits; avoid unnecessary CI-triggering micro-commits
+
+## Never-do list
+
+- never fabricate official addresses, ABI values, selectors or Intent schemas
+- never treat RPC reverts as provider outages
+- never treat selector scanning as stronger than verified ABI/source
+- never claim beacon implementation resolution without resolving it
 - never hide fallback reasons
-- never build scoring math before understanding evaluation requirements
-- never sacrifice correctness for visual effects
-- never fake live usage or engagement
+- never invent scoring before evaluation requirements are known
+- never sacrifice correctness for animation
+- never fake usage, engagement or demand
+- never couple core analysis logic to Telegraph transport
+- never optimize only for one hackathon and make H2/H3 evolution impossible
