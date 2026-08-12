@@ -40,11 +40,11 @@ runtime/resilience
 
 ### 3. External verification
 
-- [ ] verified ABI/source client abstraction
-- [ ] timeout
-- [ ] rate-limit handling
-- [ ] not-configured vs unverified vs API failure
-- [ ] no silent downgrade
+- [x] verified ABI/source client abstraction
+- [x] bounded timeout semantics
+- [x] rate-limit metadata preserved
+- [x] not-configured vs unverified vs API failure
+- [x] no silent downgrade
 
 ### 4. Bytecode
 
@@ -57,14 +57,14 @@ runtime/resilience
 
 ### 5. Evidence
 
-- [ ] common evidence model
-- [ ] detection method
-- [ ] fallback reason
-- [ ] fallback detail
-- [ ] queried address
-- [ ] code address where relevant
-- [ ] source provenance
-- [ ] structured error provenance
+- [x] common verification evidence model
+- [x] detection/provenance method
+- [x] fallback-safe status semantics
+- [x] provider detail/error provenance
+- [x] queried contract address
+- [x] verified ABI/source availability
+- [x] rate-limit metadata
+- [ ] code address integration where relevant
 
 ### 6. Ownership
 
@@ -99,9 +99,11 @@ runtime/resilience
 - [x] bounded configuration
 - [x] malformed bytecode
 - [x] PUSH-data selector decoy
+- [x] verification status/provenance semantics
+- [x] verification timeout semantics
 - [ ] happy path capability checks
 - [ ] expected negative capability checks
-- [ ] timeout regression with controlled clock/fetch
+- [ ] timeout regression with controlled clock/fetch for RPC
 - [ ] selector collision semantics
 - [ ] proxy/non-proxy
 - [ ] implementation unavailable
@@ -121,9 +123,9 @@ Phase 01 is complete only when:
 
 ## Current milestone
 
-**Runtime + RPC resilience and structural EVM bytecode foundations are implemented on `main`.**
+**Runtime + RPC resilience, structural EVM bytecode foundations, and the verification/evidence foundation are implemented on `main`.**
 
-The next implementation milestone is the verification/evidence foundation. No UI, Passport, Watch, Policy, mobile or other post-H1 product work is permitted to block this phase.
+The next implementation milestone is ownership + minimum proxy semantics, followed by pause/mint capability checks. No UI, Passport, Watch, Policy, mobile or other post-H1 product work is permitted to block this phase.
 
 ## Explicit Non-Goals
 
