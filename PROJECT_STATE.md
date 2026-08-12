@@ -74,17 +74,21 @@ User/Application → Telegraph Intent → Contract Address → Strict Validation
 - instruction-boundary EVM walker with correct PUSH operand handling
 - PUSH4 selector candidate extraction only from real instruction boundaries
 - regression coverage for PUSH-data selector decoys and truncated/malformed bytecode
+- verification provider abstraction with explicit verified/unverified/not-configured/API-failure/timeout/malformed-response semantics
+- verification evidence normalization with ABI/source provenance and rate-limit metadata
+- verification timeout/exception/provenance regression tests
+- CI-verified typecheck and complete Vitest suite on current main
 
 ### Partially implemented
 
 - runtime foundation: transport/resilience implemented; telemetry and bounded concurrency remain
 - EVM bytecode: structural walker implemented; capability semantics and selector-collision evaluation remain
 - RPC: core client implemented; real-provider integration and latency measurement remain
+- verification: abstraction/normalization complete; concrete external verification provider remains
 
 ### Not yet implemented on `main`
 
-- verification client
-- evidence normalization runtime
+- concrete verification client/provider
 - ownership runtime check
 - pause runtime check
 - mint runtime check
@@ -106,7 +110,7 @@ A separate `phase-01-core` branch exists, but **main is the source of truth**. D
 ### H1_CRITICAL
 
 - runtime/resilience foundation — **IN PROGRESS**
-- verification/evidence hierarchy
+- verification/evidence hierarchy — **FOUNDATION IMPLEMENTED**
 - instruction-aligned bytecode analysis — **STRUCTURAL FOUNDATION IMPLEMENTED**
 - ownership/pause/mint
 - minimum proxy-aware semantics
@@ -171,12 +175,14 @@ Preserved post-H1 architecture includes Capability Passport, Watch, Change Intel
 
 ## Next engineering task
 
-**Build the verification/evidence foundation:** a provider abstraction that distinguishes `not_configured`, `unverified_contract`, `api_failure`, `timeout`, and `malformed_response`, then normalize provenance without silently downgrading evidence.
+**Build ownership + minimum proxy semantics:** deterministic `owner()` observation, explicit renounced/non-Ownable outcomes, and safe separation of `contractAddress` from `codeAddress`, then integrate supported transparent/UUPS resolution without fabricating constants.
 
 ## Verification status
 
-Tests have been authored for the implemented runtime and bytecode primitives. The available environment could not execute the repository locally because outbound GitHub DNS resolution failed, and the existing CI connector does not expose a push-run for this commit. Therefore **do not claim CI-passing status yet**; the next CI-capable run must verify typecheck and the complete Vitest suite.
+Current `main` CI is green after the verification/evidence foundation work: typecheck and the complete Vitest suite pass in GitHub Actions.
 
-## Last verified commit
+Latest verified commit: `0a10d18218ce5833468305da1b0698105ada287f`.
 
-`3d81d7a8aa5f842f73a1929f4db68dda23421e23` — H1 runtime/RPC resilience plus EVM instruction-boundary bytecode foundation and regression tests.
+## Last verified milestone
+
+**Verification/evidence foundation complete.** The next gate is ownership + minimum proxy semantics; pause/mint capability checks follow that gate.
