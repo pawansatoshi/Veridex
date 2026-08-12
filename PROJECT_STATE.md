@@ -8,23 +8,50 @@
 
 Build **Veridex — Verifiable On-Chain Intelligence** into a production-grade, deterministic-first Telegraph Miner that can compete on canonical performance, serve real applications, and remain extensible for future Telegraph hackathons and mainnet.
 
-Veridex is a real product, not a disposable hackathon demo. Engineering decisions must optimize for correctness, evaluation alignment, performance, real utility, UX, differentiation, and long-term extensibility in that order.
+Veridex is a real product, not a disposable hackathon demo. Engineering decisions optimize for correctness, evaluation alignment, performance, real utility, UX, differentiation, and long-term extensibility in that order.
 
 ## Operating ownership
 
-The project is now built and directed directly in this repository. Do not assume Claude Code or another external agent is the project owner. Any future agent must read this file and the repository instructions before acting.
+The project is built and directed directly in this repository. Do not assume Claude Code or another external agent is the project owner. Any future agent must read this file and the repository instructions before acting.
 
 ## Current status
 
-**Stage: Phase 01 — EVM Analysis Core**
+**Stage: Phase 01 — EVM Analysis Core (implementation in progress)**
 
 Repository: `pawansatoshi/Veridex`
 Default branch: `main`
+Working implementation branch: `phase-01-core`
 Visibility: public
 
-Phase 00 is complete. Phase 01 is the current implementation milestone.
+Phase 00 is complete. Phase 01 remains open. Phase 02 has not started.
 
-The repository was created as a clean Veridex codebase. Earlier Sentinel work is architectural prior art only; never claim historical test counts or modules exist here unless verified in GitHub.
+## Verified implementation completed in Phase 01 so far
+
+- strict EVM address/hex validation and bounded bytecode size
+- instruction-aligned EVM bytecode walker with correct PUSH operand handling
+- selector fallback restricted to actual PUSH4 instruction boundaries
+- shared timeout/retry/circuit-breaker foundation for external calls
+- JSON-RPC client with explicit application-revert vs provider-failure semantics
+- JSON-RPC quantity block-tag validation
+- Etherscan-compatible verification boundary with verified/unverified/unavailable separation
+- preservation of `not_configured`, unverified, rate-limit, malformed-response and provider-failure distinctions
+- bounded ABI parsing
+- evidence provenance, fallback reason, certainty status and additive result fields
+- ERC-1967 implementation/beacon observation with explicit unresolved beacon semantics
+- ownership observation and renounced-owner detection
+- verified-ABI negative ownership result does not fall back to selector heuristics
+- pause capability and live paused-state checks
+- mint capability detection with authority explicitly left unknown without stronger evidence
+- bounded concurrency utility
+- validated runtime configuration boundary
+- deterministic in-memory analysis event/telemetry abstraction
+- normalized Phase 01 analysis orchestration preserving `contractAddress` vs `codeAddress`
+- fail-closed unresolved-beacon orchestration; no beacon address is treated as an implementation
+- adversarial unit tests and optional live-RPC integration-test structure
+- synchronized npm lockfile
+- read-only CI with `npm ci`, strict typecheck, full tests and high-severity dependency audit
+
+These are implementation facts verified from the live branch; they are not Phase 01 completion claims.
 
 ## Accepted product decisions
 
@@ -46,8 +73,6 @@ The repository was created as a clean Veridex codebase. Earlier Sentinel work is
 
 ## Historical Sentinel lessons to preserve
 
-These lessons are prior art, not proof of current Veridex implementation:
-
 1. Selector clashing makes bytecode selector detection weaker than verified ABI/source evidence.
 2. Bytecode scanners must walk actual EVM instruction boundaries; arbitrary byte scanning can false-positive inside PUSH operands.
 3. Malformed bytecode must become structured error evidence rather than crash a check.
@@ -58,8 +83,6 @@ These lessons are prior art, not proof of current Veridex implementation:
 
 ## Official Telegraph reference hierarchy
 
-Use sources in this order:
-
 1. `https://docs.telegraphprotocol.com/docs`
 2. `https://hackathon.telegraphprotocol.com/rules`
 3. `https://hackathon.telegraphprotocol.com/supported-intents`
@@ -69,29 +92,13 @@ Use sources in this order:
 
 Never invent Telegraph addresses, ABI values, Intent schemas, Miner protocol details, or contract constants. Re-verify current official sources before implementation when facts may have changed.
 
-## Current hackathon strategy
-
-The official Hackathon 1 site currently describes a three-round ecosystem: Miners/Scripts first, applications next, then evaluation/results. The current rules emphasize Miner ranking/performance and real application demand. The project therefore targets a narrow, high-confidence deterministic intelligence wedge first and avoids feature-count-driven development.
-
-The complete strategy is in `docs/WINNING-STRATEGY.md`.
-
 ## Phase roadmap
 
 ### Phase 0 — Constitution & continuity
 **Status: COMPLETE**
 
 ### Phase 1 — EVM Analysis Core
-**Status: CURRENT**
-
-- runtime/configuration foundation
-- resilient JSON-RPC transport
-- external verification boundary
-- evidence/provenance model
-- strict validation
-- ownership
-- proxy
-- pause/mint capabilities
-- adversarial/regression tests
+**Status: CURRENT / IN PROGRESS**
 
 ### Phase 2 — Proxy-Aware Composition
 **Status: PLANNED**
@@ -121,33 +128,37 @@ See `docs/ROADMAP.md` for the complete task-level plan.
 
 ## Architecture authority
 
-- `docs/ARCHITECTURE.md` — current system architecture
-- `docs/DECISIONS.md` — durable architectural decisions
-- `docs/WINNING-STRATEGY.md` — competitive/product strategy
-- `docs/TELEGRAPH_REFERENCE.md` — official protocol reference map
-- `docs/UI-UX-BLUEPRINT.md` — product and motion design
-- `docs/phases/` — phase-specific implementation contracts
+- `docs/ARCHITECTURE.md`
+- `docs/DECISIONS.md`
+- `docs/WINNING-STRATEGY.md`
+- `docs/TELEGRAPH_REFERENCE.md`
+- `docs/UI-UX-BLUEPRINT.md`
+- `docs/phases/`
 
-## Global quality gates
+## Remaining Phase 01 work
 
-Every meaningful milestone must include, as applicable:
+- verified-source evidence depth beyond the current ABI boundary where a correctness gap justifies it
+- explicit mint-authority evidence model beyond capability presence
+- fuller transparent/UUPS classification
+- beacon `implementation()` resolution integration coverage (Phase 02 owns the composition layer)
+- real-chain integration corpus when a verified test network/fixture is available
+- stronger provider-health metrics/telemetry and measured network latency
+- final Phase 01 exit review against every documented gate
 
-- strict typecheck
-- complete test suite
-- regression coverage
-- no fabricated protocol/blockchain constants
-- explicit external dependency failure semantics
-- security review of new trust boundaries
-- measured latency for network paths
-- documentation/state update
-- coherent commits; avoid unnecessary CI-triggering micro-commits
+## Must not be implemented yet
+
+- Phase 2 proxy-aware composition as a separate orchestration layer
+- Telegraph Miner adapter/payment/auth lifecycle
+- web/mobile UI
+- persistent Watch runtime
+- email/webhook notification delivery
+- proprietary risk scoring
+- LLM explanation layer
 
 ## Continuation rule
 
-When a new chat or agent opens the repository:
-
 1. Read `PROJECT_STATE.md`.
-2. Read `AGENTS.md` and `CLAUDE.md` for repository operating rules.
+2. Read `AGENTS.md` and `CLAUDE.md`.
 3. Read the current phase document.
 4. Inspect the actual source tree before assuming any module exists.
 5. Read `docs/DECISIONS.md` before changing an accepted architectural decision.
@@ -157,4 +168,4 @@ When a new chat or agent opens the repository:
 
 ## Current next action
 
-**Implement Phase 01 — EVM Analysis Core.** Inspect the current minimal source tree, establish the strict TypeScript/test/runtime foundation, then implement the smallest correct deterministic EVM primitives and their adversarial tests. Do not jump to UI polish or speculative Telegraph integration.
+**Close the remaining Phase 01 evidence/security gaps and perform the formal Phase 01 exit review.** Do not begin Phase 02 until every exit criterion is verified rather than inferred.
