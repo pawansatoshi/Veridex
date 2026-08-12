@@ -11,8 +11,9 @@ describe("EVM bytecode walker", () => {
   });
 
   it("does not report a selector hidden inside PUSH data", () => {
-    const analysis = walkEvmBytecode("0x7f112233445566778899aabbccddeeff00112233445566778899aabbccddeeff");
-    const selectors = findPush4Constants("0x7f112233445566778899aabbccddeeff00112233445566778899aabbccddeeff");
+    const bytecode = "0x7f112233445566778899aabbccddeeff00112233445566778899aabbccddeeff00";
+    const analysis = walkEvmBytecode(bytecode);
+    const selectors = findPush4Constants(bytecode);
 
     expect(analysis.instructions).toHaveLength(1);
     expect(selectors).toEqual([]);
