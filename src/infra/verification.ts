@@ -9,10 +9,8 @@ export type VerificationResult =
 export interface VerificationClient { getContract(address: string): Promise<VerificationResult>; }
 interface EtherscanResponse { status?: string; message?: string; result?: unknown; }
 
-function isUnverified(message: string | undefined, result: unknown): boolean {
-  const resultText = typeof result === "string" ? result : "";
-  return /(?:not verified|source code.*not verified)/i.test(`${message ?? ""} ${resultText}`);
-}
+function isUnverified(message: string | undefined, result: unknown): boolean { const resultText = typeof result === "string" ? result : ""; return /(?:not verified|source code.*not verified)/i.test(`${message ?? ""} ${resultText}`); }
+function resultDetail(response: EtherscanResponse, fallback: string): string { if (typeof response.result === "string" && response.result.length > 0) return response.result; return response.message ?? fallback; }
 
 function parseAbi(value: unknown): readonly VerifiedFunction[] {
   if (typeof value !== "string") throw new Error("Verification ABI result must be a JSON string");
@@ -44,9 +42,7 @@ function parseAbi(value: unknown): readonly VerifiedFunction[] {
 
 export class EtherscanVerificationClient implements VerificationClient {
   private readonly breaker = new CircuitBreaker({ failureThreshold: 3, cooldownMs: 10_000 });
-  constructor(private readonly baseUrl: string, private readonly apiKey?: string, private readonly chainId?: number, private readonly fetcher: typeof fetch = fetch) {
-    if (!/^https?:\/\//i.test(baseUrl)) throw new Error("Verification API URL must use http or https");
-  }
+  constructor(private readonly baseUrl: string, private readonly apiKey?: string, private readonly chainId?: number, private readonly fetcher: typeof fetch = fetch) { if (!/^https?:\/\//i.test(baseUrl)) throw new Error("Verification API URL must use http or https"); }
   async getContract(address: string): Promise<VerificationResult> {
     assertEvmAddress(address, "verification address");
     if (!this.apiKey) return { status: "unavailable", detail: "not_configured" };
@@ -63,13 +59,12 @@ export class EtherscanVerificationClient implements VerificationClient {
         return body as EtherscanResponse;
       }, { timeoutMs: 5_000, retry: { maxAttempts: 2, baseDelayMs: 100, maxDelayMs: 500 } }, (error) => error instanceof ExternalCallError ? error.failure : { kind: "provider_failure", message: error instanceof Error ? error.message : "Verification provider request failed", retryable: true });
       if (result.status === "1") return { status: "verified", abi: parseAbi(result.result) };
-      if (isUnverified(result.message, result.result)) return { status: "unverified", detail: typeof result.result === "string" ? result.result : result.message ?? "Contract source code is not verified" };
-      return { status: "unavailable", detail: result.message ?? "verification provider returned an unsuccessful response" };
+      if (isUnverified(result.message, result.result)) return { status: "unverified", detail: resultDetail(result, "Contract source code is not verified") };
+      return { status: "unavailable", detail: resultDetail(result, "verification provider returned an unsuccessful response") };
     } catch (error) {
       if (error instanceof ExternalCallError) return { status: "unavailable", detail: error.failure.kind };
       return { status: "unavailable", detail: "external_api_failure" };
     }
   }
 }
-
 export function findExactFunction(abi: readonly VerifiedFunction[], name: string, inputTypes: readonly string[]): VerifiedFunction | undefined { return abi.find((item) => item.name === name && item.inputs.length === inputTypes.length && item.inputs.every((input, index) => input.type === inputTypes[index])); }

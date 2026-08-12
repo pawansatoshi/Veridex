@@ -6,7 +6,7 @@ on:
   pull_request:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   test:
@@ -18,12 +18,22 @@ jobs:
         with:
           node-version: 20
           cache: npm
-      - run: npm install --ignore-scripts --no-audit --no-fund
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1; temporary lockfile recovery active; retry trigger
-        with:
-          name: veridex-lockfile-recovery
-          path: package-lock.json
-          retention-days: 1
+      - name: Align lockfile once
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          git fetch origin "$GITHUB_HEAD_REF"
+          git checkout -B "$GITHUB_HEAD_REF" "origin/$GITHUB_HEAD_REF"
+          npm install --ignore-scripts --no-audit --no-fund
+          if ! git diff --quiet -- package-lock.json; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add package-lock.json
+            git commit -m "chore: synchronize npm lockfile"
+            git push origin "HEAD:$GITHUB_HEAD_REF"
+          fi
+      - name: Install locked dependencies
+        run: npm ci
       - run: npm run typecheck
       - run: npm test
       - run: npm audit --audit-level=high
