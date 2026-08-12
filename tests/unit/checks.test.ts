@@ -14,51 +14,48 @@ describe("deterministic capability checks", () => {
   it("uses verified ABI before bytecode fallback", async () => {
     const verification: VerificationClient = { getContract: async () => ({ status: "verified", abi: [{ type: "function", name: "paused", inputs: [] }] }) };
     const result = await checkPauseCapability(context(rpc("0x"), verification));
-    expect(result.status).toBe("positive");
-    expect(result.detectionMethod).toBe("verified_abi");
-    expect(result.provenance?.tier).toBe("verified_abi");
+    expect(result.status).toBe("positive"); expect(result.detectionMethod).toBe("verified_abi"); expect(result.provenance?.tier).toBe("verified_abi");
   });
-
   it("uses instruction-aligned fallback for an unverified contract", async () => {
     const verification: VerificationClient = { getContract: async () => ({ status: "unverified", detail: "source unavailable" }) };
     const rpcClient: RpcTransport = { ...rpc("0x"), getCode: async () => "0x635c975abb00" };
     const result = await checkPauseCapability(context(rpcClient, verification));
-    expect(result.status).toBe("positive");
-    expect(result.detectionMethod).toBe("bytecode_fallback");
-    expect(result.provenance?.failure).toBe("unverified_contract");
+    expect(result.status).toBe("positive"); expect(result.detectionMethod).toBe("bytecode_fallback"); expect(result.provenance?.failure).toBe("unverified_contract");
   });
-
+  it("preserves not-configured verification as a distinct fallback reason", async () => {
+    const verification: VerificationClient = { getContract: async () => ({ status: "unavailable", detail: "not_configured" }) };
+    const rpcClient: RpcTransport = { ...rpc("0x"), getCode: async () => "0x" };
+    const result = await checkPauseCapability(context(rpcClient, verification));
+    expect(result.provenance?.failure).toBe("not_configured");
+  });
+  it("does not fall back to bytecode after a conclusive verified ABI negative", async () => {
+    const verification: VerificationClient = { getContract: async () => ({ status: "verified", abi: [{ type: "function", name: "transfer", inputs: [{ type: "address" }, { type: "uint256" }] }] }) };
+    const rpcClient: RpcTransport = { ...rpc("0x"), getCode: async () => { throw new Error("bytecode fallback must not run"); } };
+    const result = await checkOwnership(context(rpcClient, verification));
+    expect(result.status).toBe("inapplicable"); expect(result.provenance?.tier).toBe("verified_abi");
+  });
   it("keeps a contract-level owner revert inconclusive", async () => {
     const verification: VerificationClient = { getContract: async () => ({ status: "verified", abi: [{ type: "function", name: "owner", inputs: [] }] }) };
     const rpcClient: RpcTransport = { ...rpc("0x"), call: async () => { throw new RpcApplicationRevert("execution reverted"); } };
     const result = await checkOwnership(context(rpcClient, verification));
-    expect(result.status).toBe("unavailable");
-    expect(result.certaintyStatus).toBe("inconclusive");
-    expect(result.failure).toBe("rpc_revert");
+    expect(result.status).toBe("unavailable"); expect(result.certaintyStatus).toBe("inconclusive"); expect(result.failure).toBe("rpc_revert");
   });
-
   it("reads live owner state from contractAddress", async () => {
     const verification: VerificationClient = { getContract: async () => ({ status: "verified", abi: [{ type: "function", name: "owner", inputs: [] }] }) };
     const calls: string[] = [];
     const rpcClient: RpcTransport = { ...rpc(wordAddress(owner)), call: async (to) => { calls.push(to); return wordAddress(owner); } };
     const result = await checkOwnership({ ...context(rpcClient, verification), codeAddress: "0x3333333333333333333333333333333333333333" });
-    expect(result.status).toBe("negative");
-    expect(calls).toEqual([contractAddress]);
+    expect(result.status).toBe("negative"); expect(calls).toEqual([contractAddress]);
   });
-
   it("separates pause capability from live paused state", async () => {
     const verification: VerificationClient = { getContract: async () => ({ status: "verified", abi: [{ type: "function", name: "paused", inputs: [] }] }) };
     const capability = await checkPauseCapability(context(rpc("0x"), verification));
     const state = await checkPausedState({ ...context(rpc(wordBool(true)), verification) }, capability);
-    expect(capability.status).toBe("positive");
-    expect(state.status).toBe("positive");
-    expect(state.passed).toBe(false);
+    expect(capability.status).toBe("positive"); expect(state.status).toBe("positive"); expect(state.passed).toBe(false);
   });
-
   it("does not claim mint authority from function presence alone", async () => {
     const verification: VerificationClient = { getContract: async () => ({ status: "verified", abi: [{ type: "function", name: "mint", inputs: [{ type: "address" }, { type: "uint256" }] }] }) };
     const result = await checkMintCapability(context(rpc("0x"), verification));
-    expect(result.status).toBe("positive");
-    expect(result.evidence.authority).toBe("unknown");
+    expect(result.status).toBe("positive"); expect(result.evidence.authority).toBe("unknown");
   });
 });

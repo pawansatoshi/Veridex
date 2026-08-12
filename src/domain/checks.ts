@@ -8,7 +8,6 @@ import type { CheckResult } from "../types/analysis.js";
 const OWNER_SELECTOR = "0x8da5cb5b";
 const PAUSED_SELECTOR = "0x5c975abb";
 const DEFAULT_MINT_SELECTORS = ["0x40c10f19", "0xa0712d68"] as const;
-
 export interface AnalysisContext { requestedAddress: string; contractAddress: string; codeAddress?: string; chain: string; rpc: RpcTransport; verification?: VerificationClient; }
 
 function provenance(input: { tier: EvidenceProvenance["tier"]; method: string; queriedAddress?: string; codeAddress?: string; source?: string; failure?: EvidenceFailureKind; detail?: string }): EvidenceProvenance {
@@ -20,40 +19,21 @@ function provenance(input: { tier: EvidenceProvenance["tier"]; method: string; q
   if (input.detail !== undefined) result.detail = input.detail;
   return result;
 }
-
-function baseResult<E>(checkName: string, evidence: E, status: CheckResult["status"], passed: boolean, p: EvidenceProvenance): CheckResult<E> {
-  return { checkName, evidence, status, passed, confidence: 1, certaintyStatus: status === "positive" || status === "negative" ? "conclusive" : "inconclusive", provenance: p, detectionMethod: p.tier };
-}
-
+function baseResult<E>(checkName: string, evidence: E, status: CheckResult["status"], passed: boolean, p: EvidenceProvenance): CheckResult<E> { return { checkName, evidence, status, passed, confidence: 1, certaintyStatus: status === "positive" || status === "negative" ? "conclusive" : "inconclusive", provenance: p, detectionMethod: p.tier }; }
 type VerificationObservation = { abi?: readonly VerifiedFunction[]; reason?: "not_configured" | "unverified_contract" | "api_failure"; detail?: string };
-
 async function loadVerification(context: AnalysisContext): Promise<VerificationObservation> {
   if (!context.verification) return { reason: "not_configured" };
   const result = await context.verification.getContract(context.codeAddress ?? context.contractAddress);
   if (result.status === "verified") return { abi: result.abi };
   if (result.status === "unverified") return { reason: "unverified_contract", detail: result.detail };
-  return { reason: "api_failure", detail: result.detail };
+  return result.detail === "not_configured" ? { reason: "not_configured", detail: result.detail } : { reason: "api_failure", detail: result.detail };
 }
-
-function decodeWordAddress(data: string): string {
-  if (!/^0x[0-9a-fA-F]{64,}$/.test(data)) throw new Error("RPC address return is malformed");
-  const address = `0x${data.slice(-40)}`;
-  assertEvmAddress(address, "RPC returned address");
-  return address;
-}
-
-function decodeBool(data: string): boolean {
-  if (!/^0x[0-9a-fA-F]{64}$/.test(data)) throw new Error("RPC boolean return is malformed");
-  const value = BigInt(`0x${data.slice(2)}`);
-  if (value !== 0n && value !== 1n) throw new Error("RPC boolean return is not canonical");
-  return value === 1n;
-}
-
+function decodeWordAddress(data: string): string { if (!/^0x[0-9a-fA-F]{64,}$/.test(data)) throw new Error("RPC address return is malformed"); const address = `0x${data.slice(-40)}`; assertEvmAddress(address, "RPC returned address"); return address; }
+function decodeBool(data: string): boolean { if (!/^0x[0-9a-fA-F]{64}$/.test(data)) throw new Error("RPC boolean return is malformed"); const value = BigInt(`0x${data.slice(2)}`); if (value !== 0n && value !== 1n) throw new Error("RPC boolean return is not canonical"); return value === 1n; }
 function fallbackProvenance(codeAddress: string, verification: VerificationObservation): EvidenceProvenance {
   const failure = verification.reason === "api_failure" ? "external_api_failure" : verification.reason;
   return provenance({ tier: "bytecode_fallback", method: "instruction_aligned_push4", codeAddress, ...(failure !== undefined ? { failure } : {}), ...(verification.detail !== undefined ? { detail: verification.detail } : {}) });
 }
-
 async function capabilityEvidence(context: AnalysisContext, checkName: string, abiName: string, abiTypes: readonly string[], fallbackSelectors: readonly string[]): Promise<CheckResult> {
   const codeAddress = context.codeAddress ?? context.contractAddress;
   const verification = await loadVerification(context);
@@ -70,6 +50,7 @@ export async function checkOwnership(context: AnalysisContext): Promise<CheckRes
   const codeAddress = context.codeAddress ?? context.contractAddress;
   const verification = await loadVerification(context);
   const exact = verification.abi ? findExactFunction(verification.abi, "owner", []) : undefined;
+  if (verification.abi !== undefined && exact === undefined) return baseResult("ownership", { ownable: false, evidenceBasis: "verified_abi_without_owner" }, "inapplicable", true, provenance({ tier: "verified_abi", method: "verified_abi_negative", queriedAddress: context.contractAddress, codeAddress, source: "verification_provider" }));
   const bytecode = exact ? undefined : await context.rpc.getCode(codeAddress);
   const detected = exact !== undefined || (bytecode !== undefined && findPush4Selectors(bytecode, [OWNER_SELECTOR]).length > 0);
   if (!detected) return baseResult("ownership", { ownable: false }, "inapplicable", true, fallbackProvenance(codeAddress, verification));
@@ -83,23 +64,10 @@ export async function checkOwnership(context: AnalysisContext): Promise<CheckRes
     return { ...baseResult("ownership", { ownable: true }, "unavailable", false, p), error: error instanceof Error ? error.message : "unknown RPC failure", failure };
   }
 }
-
 export async function checkPauseCapability(context: AnalysisContext): Promise<CheckResult> { return capabilityEvidence(context, "pause_capability", "paused", [], [PAUSED_SELECTOR]); }
-
 export async function checkPausedState(context: AnalysisContext, capability: CheckResult): Promise<CheckResult> {
   if (capability.status !== "positive") return baseResult("paused_state", { reason: "pause capability not established" }, "inapplicable", true, capability.provenance ?? provenance({ tier: "direct_onchain", method: "pause_capability_unavailable", queriedAddress: context.contractAddress, codeAddress: context.codeAddress ?? context.contractAddress }));
-  try {
-    const paused = decodeBool(await context.rpc.call(context.contractAddress, PAUSED_SELECTOR));
-    return baseResult("paused_state", { paused }, paused ? "positive" : "negative", !paused, provenance({ tier: capability.provenance?.tier ?? "direct_onchain", method: "live_paused_call", queriedAddress: context.contractAddress, codeAddress: context.codeAddress ?? context.contractAddress }));
-  } catch (error) {
-    const failure: EvidenceFailureKind = error instanceof RpcApplicationRevert ? "rpc_revert" : "provider_failure";
-    const p = provenance({ tier: capability.provenance?.tier ?? "direct_onchain", method: "live_paused_call", queriedAddress: context.contractAddress, codeAddress: context.codeAddress ?? context.contractAddress, failure, detail: error instanceof Error ? error.message : "unknown RPC failure" });
-    return { ...baseResult("paused_state", {}, "unavailable", false, p), failure, error: error instanceof Error ? error.message : "unknown RPC failure" };
-  }
+  try { const paused = decodeBool(await context.rpc.call(context.contractAddress, PAUSED_SELECTOR)); return baseResult("paused_state", { paused }, paused ? "positive" : "negative", !paused, provenance({ tier: capability.provenance?.tier ?? "direct_onchain", method: "live_paused_call", queriedAddress: context.contractAddress, codeAddress: context.codeAddress ?? context.contractAddress })); }
+  catch (error) { const failure: EvidenceFailureKind = error instanceof RpcApplicationRevert ? "rpc_revert" : "provider_failure"; const p = provenance({ tier: capability.provenance?.tier ?? "direct_onchain", method: "live_paused_call", queriedAddress: context.contractAddress, codeAddress: context.codeAddress ?? context.contractAddress, failure, detail: error instanceof Error ? error.message : "unknown RPC failure" }); return { ...baseResult("paused_state", {}, "unavailable", false, p), failure, error: error instanceof Error ? error.message : "unknown RPC failure" }; }
 }
-
-export async function checkMintCapability(context: AnalysisContext): Promise<CheckResult> {
-  const result = await capabilityEvidence(context, "mint_capability", "mint", ["address", "uint256"], DEFAULT_MINT_SELECTORS);
-  if (result.status === "positive") return { ...result, evidence: { ...result.evidence, authority: "unknown", authorityConclusion: "capability presence does not establish who may call mint" } };
-  return result;
-}
+export async function checkMintCapability(context: AnalysisContext): Promise<CheckResult> { const result = await capabilityEvidence(context, "mint_capability", "mint", ["address", "uint256"], DEFAULT_MINT_SELECTORS); if (result.status === "positive") return { ...result, evidence: { ...result.evidence, authority: "unknown", authorityConclusion: "capability presence does not establish who may call mint" } }; return result; }
