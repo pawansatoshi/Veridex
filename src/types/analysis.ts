@@ -1,3 +1,5 @@
+import type { CertaintyStatus, EvidenceFailureKind, EvidenceProvenance } from "../domain/evidence.js";
+
 export type DetectionMethod =
   | "verified_abi"
   | "verified_source"
@@ -11,22 +13,15 @@ export type CheckStatus =
   | "unavailable"
   | "error";
 
-/**
- * Shared contract for deterministic Veridex checks.
- *
- * `passed` means that the check found no risk signal for its own domain;
- * it does not mean that the request or RPC operation succeeded.
- *
- * Confidence is a [0, 1] value expressing confidence in the check's
- * conclusion given its evidence. Existing checks should retain their
- * calibrated values until an explicit scoring model is designed.
- */
 export interface CheckResult<Evidence = Record<string, unknown>> {
   checkName: string;
   passed: boolean;
   status: CheckStatus;
   confidence: number;
   evidence: Evidence;
+  certaintyStatus?: CertaintyStatus;
+  failure?: EvidenceFailureKind;
+  provenance?: EvidenceProvenance;
   error?: string;
   detectionMethod?: DetectionMethod;
   fallbackReason?: string;
