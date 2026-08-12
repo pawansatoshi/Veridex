@@ -88,6 +88,20 @@ Durable decisions live here so a future chat/agent does not reopen settled quest
 
 **Consequences:** current work prioritizes correctness, exact Intent compatibility, latency/reliability and real utility before UI breadth or speculative features. The product can evolve without rewriting the analysis core if Telegraph changes an Intent or transport.
 
+## D014 — Capability Passport & Change Intelligence
+
+**Date:** 2026-08-13
+
+**Context:** A one-shot scanner is easy to imitate and only answers what a contract appears to expose at one observation point. Telegraph's positioning emphasizes verifiable and persistent intelligence, creating an opportunity to make the intelligence durable without weakening deterministic evidence semantics.
+
+**Decision:** Veridex will develop a versioned Capability Passport and a safe Change Intelligence layer. A passport records the evidence-backed capability/control surface at an observation point. Comparisons classify control/capability changes separately from evidence-quality changes and infrastructure failures. A degraded observation can never imply that a capability was removed.
+
+**Alternatives considered:** remain a one-shot scanner; build a generic alerting system; infer changes from missing data; add a broad vulnerability engine instead.
+
+**Evidence:** current Veridex evidence/provenance architecture; Telegraph's public emphasis on verifiable signals and persistent intelligence; engineering need to distinguish contract changes from provider/verification failures.
+
+**Consequences:** this becomes a strategic product moat while remaining staged after the deterministic analysis engine. It enables future agent preflight queries, historical intelligence and Telegraph signal use without forcing persistence into the first implementation.
+
 ## How to Add a Decision
 
 Use:
