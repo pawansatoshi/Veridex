@@ -76,12 +76,12 @@ describe("verification evidence", () => {
   it("maps a slow provider to a deterministic timeout", async () => {
     const provider: VerificationProvider = {
       lookup: async () => {
-        await new Promise<void>((resolve) => setTimeout(resolve, 50));
+        await new Promise<void>((resolve) => setTimeout(resolve, 150));
         return { status: "verified", data: { sourceCode: "contract Slow {}" } };
       },
     };
     const result = await new VerificationClient(provider, 100).lookup("0x0000000000000000000000000000000000000001");
 
-    expect(result).toMatchObject({ status: "verified", verified: true, provenance: "verified_source" });
+    expect(result).toMatchObject({ status: "timeout", verified: false, provenance: "none" });
   });
 });
