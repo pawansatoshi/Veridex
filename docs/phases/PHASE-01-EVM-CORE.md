@@ -48,11 +48,11 @@ runtime/resilience
 
 ### 4. Bytecode
 
-- [ ] strict `0x`/hex/length validation
-- [ ] EVM instruction walker
-- [ ] PUSH operand handling
-- [ ] selector detection fallback
-- [ ] regression test for operand false positives
+- [x] strict `0x`/hex/length validation
+- [x] bounded EVM instruction walker
+- [x] PUSH operand handling
+- [x] PUSH4 selector candidate extraction at instruction boundaries
+- [x] regression test for PUSH-data selector false positives
 - [ ] regression test for selector collision limitation
 
 ### 5. Evidence
@@ -97,12 +97,12 @@ runtime/resilience
 - [x] provider failure
 - [x] circuit breaker
 - [x] bounded configuration
-- [ ] happy path
-- [ ] expected negative
-- [ ] malformed input
+- [x] malformed bytecode
+- [x] PUSH-data selector decoy
+- [ ] happy path capability checks
+- [ ] expected negative capability checks
 - [ ] timeout regression with controlled clock/fetch
-- [ ] selector collision
-- [ ] PUSH-data decoy
+- [ ] selector collision semantics
 - [ ] proxy/non-proxy
 - [ ] implementation unavailable
 - [ ] beacon unresolved
@@ -121,9 +121,9 @@ Phase 01 is complete only when:
 
 ## Current milestone
 
-**Runtime + RPC resilience foundation implemented on `main`.**
+**Runtime + RPC resilience and structural EVM bytecode foundations are implemented on `main`.**
 
-The next implementation milestone is the EVM bytecode/evidence foundation. No UI, Passport, Watch, Policy, mobile or other post-H1 product work is permitted to block this phase.
+The next implementation milestone is the verification/evidence foundation. No UI, Passport, Watch, Policy, mobile or other post-H1 product work is permitted to block this phase.
 
 ## Explicit Non-Goals
 
