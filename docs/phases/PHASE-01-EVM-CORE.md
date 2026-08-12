@@ -2,25 +2,41 @@
 
 ## Objective
 
-Build the deterministic observation layer that every future Veridex feature depends on.
+Build the deterministic observation layer that every future Veridex feature depends on. H1 implementation is strictly prioritized around the competitive Miner path; future product systems remain architectural only.
+
+## H1 exit sequence
+
+```text
+runtime/resilience
+→ bytecode/evidence
+→ verification
+→ ownership/proxy
+→ pause/mint
+→ normalized result
+→ ground truth
+→ Telegraph adapter
+→ live Miner
+```
 
 ## Scope
 
 ### 1. Runtime foundation
 
-- [ ] TypeScript strictness
-- [ ] configuration validation
+- [x] TypeScript strictness
+- [x] configuration validation
 - [ ] deterministic logging/telemetry abstraction
 - [ ] bounded concurrency
 
 ### 2. EVM transport
 
-- [ ] JSON-RPC client
-- [ ] timeout
-- [ ] retry policy
-- [ ] circuit breaker
-- [ ] application-level RPC revert classification
-- [ ] provider failure semantics
+- [x] JSON-RPC client
+- [x] timeout
+- [x] bounded retry policy
+- [x] circuit breaker
+- [x] application-level RPC revert classification
+- [x] provider failure semantics
+- [x] malformed JSON-RPC response classification
+- [x] JSON-RPC application-error classification separate from infrastructure failure
 
 ### 3. External verification
 
@@ -77,18 +93,19 @@ Build the deterministic observation layer that every future Veridex feature depe
 
 ## Required Test Categories
 
-- happy path
-- expected negative
-- malformed input
-- external dependency failure
-- RPC revert
-- timeout
-- circuit breaker
-- selector collision
-- PUSH-data decoy
-- proxy/non-proxy
-- implementation unavailable
-- beacon unresolved
+- [x] RPC revert
+- [x] provider failure
+- [x] circuit breaker
+- [x] bounded configuration
+- [ ] happy path
+- [ ] expected negative
+- [ ] malformed input
+- [ ] timeout regression with controlled clock/fetch
+- [ ] selector collision
+- [ ] PUSH-data decoy
+- [ ] proxy/non-proxy
+- [ ] implementation unavailable
+- [ ] beacon unresolved
 
 ## Exit Gate
 
@@ -102,11 +119,17 @@ Phase 01 is complete only when:
 - integration tests exist for assumptions requiring a real chain
 - project state and decision log are updated
 
+## Current milestone
+
+**Runtime + RPC resilience foundation implemented on `main`.**
+
+The next implementation milestone is the EVM bytecode/evidence foundation. No UI, Passport, Watch, Policy, mobile or other post-H1 product work is permitted to block this phase.
+
 ## Explicit Non-Goals
 
 Do not implement here:
 
-- Telegraph Miner adapter
+- Telegraph Miner adapter before the core analysis result is deterministic and benchmarked
 - UI
 - LLM explanation layer
 - proprietary risk scoring
