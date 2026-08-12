@@ -18,7 +18,12 @@ jobs:
         with:
           node-version: 20
           cache: npm
-      - run: npm ci
+      - run: npm install --ignore-scripts --no-audit --no-fund
+      - uses: actions/upload-artifact@043fb46 # v7.0.1; temporary lockfile recovery
+        with:
+          name: veridex-lockfile-recovery
+          path: package-lock.json
+          retention-days: 1
       - run: npm run typecheck
       - run: npm test
       - run: npm audit --audit-level=high
