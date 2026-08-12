@@ -16,15 +16,37 @@ The project is now built and directed directly in this repository. Do not assume
 
 ## Current status
 
-**Stage: Phase 01 — EVM Analysis Core**
+**Stage: Phase 01 — EVM Analysis Core (implementation in progress)**
 
 Repository: `pawansatoshi/Veridex`
 Default branch: `main`
+Working implementation branch: `phase-01-core`
 Visibility: public
 
-Phase 00 is complete. Phase 01 is the current implementation milestone.
+Phase 00 is complete. Phase 01 is the current implementation milestone. Phase 02 has not started.
 
-The repository was created as a clean Veridex codebase. Earlier Sentinel work is architectural prior art only; never claim historical test counts or modules exist here unless verified in GitHub.
+## Verified implementation completed in Phase 01 so far
+
+- strict EVM address validation retained
+- strict even-length hex validation and bytecode size bound
+- instruction-aligned EVM bytecode walker with PUSH operand handling
+- selector fallback that only inspects PUSH4 instruction boundaries
+- shared evidence provenance and explicit failure/certainty semantics
+- bounded timeout/retry/circuit-breaker foundation for external calls
+- JSON-RPC client with separate application-revert classification
+- `eth_getCode`, `eth_getStorageAt`, and `eth_call` validation boundaries
+- Etherscan-compatible verification boundary with verified/unverified/unavailable separation
+- ABI structural validation with bounded entry/input counts
+- ERC-1967 implementation/beacon slot observation
+- explicit unresolved beacon semantics; beacon address is never treated as implementation
+- ownership observation and renounced-owner detection
+- pause capability and live paused-state checks
+- mint capability detection with authority explicitly left unknown unless stronger evidence exists
+- adversarial unit coverage for malformed bytecode, PUSH-data decoys, reverts, timeouts, circuit breaking, verification states, provenance, ownership, pause, mint and ERC-1967 proxy evidence
+- optional live-RPC integration-test structure
+- CI strict typecheck/test/audit baseline with read-only workflow permissions and pinned action revisions
+
+These are implementation facts verified from the live branch; they are not Phase 01 completion claims.
 
 ## Accepted product decisions
 
@@ -81,17 +103,7 @@ The complete strategy is in `docs/WINNING-STRATEGY.md`.
 **Status: COMPLETE**
 
 ### Phase 1 — EVM Analysis Core
-**Status: CURRENT**
-
-- runtime/configuration foundation
-- resilient JSON-RPC transport
-- external verification boundary
-- evidence/provenance model
-- strict validation
-- ownership
-- proxy
-- pause/mint capabilities
-- adversarial/regression tests
+**Status: CURRENT / IN PROGRESS**
 
 ### Phase 2 — Proxy-Aware Composition
 **Status: PLANNED**
@@ -142,6 +154,30 @@ Every meaningful milestone must include, as applicable:
 - documentation/state update
 - coherent commits; avoid unnecessary CI-triggering micro-commits
 
+## Remaining Phase 01 work
+
+- bounded concurrency abstraction for orchestrated checks
+- deterministic telemetry/event abstraction
+- stronger provider-health classification and metrics
+- verified source boundary where justified by current architecture
+- explicit mint-authority evidence model beyond capability presence
+- fuller proxy-pattern classification and implementation-resolution integration coverage
+- malformed external-response regression depth
+- real-chain integration corpus when a verified test network/fixture is available
+- cross-module normalized analysis orchestration/result contract
+- complete Phase 01 exit-gate verification and measured network latency
+
+## Must not be implemented yet
+
+- Phase 2 proxy-aware composition as a separate orchestration layer
+- Telegraph Miner adapter
+- Telegraph payment/auth lifecycle
+- web/mobile UI
+- persistent Watch runtime
+- email/webhook notification delivery
+- proprietary risk scoring
+- LLM explanation layer
+
 ## Continuation rule
 
 When a new chat or agent opens the repository:
@@ -157,4 +193,4 @@ When a new chat or agent opens the repository:
 
 ## Current next action
 
-**Implement Phase 01 — EVM Analysis Core.** Inspect the current minimal source tree, establish the strict TypeScript/test/runtime foundation, then implement the smallest correct deterministic EVM primitives and their adversarial tests. Do not jump to UI polish or speculative Telegraph integration.
+**Finish the remaining Phase 01 correctness/security gates without starting Phase 02.** The immediate engineering target is the normalized Phase 01 orchestration boundary plus remaining adversarial/provider-failure coverage, followed by strict CI verification and a Phase 01 exit review. Phase 02 must remain blocked until the documented exit criteria are genuinely satisfied.

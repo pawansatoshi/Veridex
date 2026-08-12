@@ -2,7 +2,7 @@
 
 **Verifiable On-Chain Intelligence**
 
-Veridex is a deterministic smart-contract intelligence Miner being engineered for Telegraph Protocol.
+Veridex is a deterministic smart-contract intelligence system being engineered for Telegraph Protocol.
 
 It turns on-chain contract observations into auditable, machine-readable signals with explicit evidence provenance, confidence, and failure semantics.
 
@@ -28,7 +28,10 @@ Build a high-performance, evidence-first intelligence layer that agents can trus
 contract address
       |
       v
-proxy / implementation resolution
+validated transport + evidence acquisition
+      |
+      v
+proxy / implementation evidence
       |
       v
 independent deterministic checks
@@ -61,15 +64,25 @@ If you are a new agent, start here:
 6. [`docs/DECISIONS.md`](docs/DECISIONS.md) — durable architecture decisions
 7. [`docs/TELEGRAPH_REFERENCE.md`](docs/TELEGRAPH_REFERENCE.md) — official Telegraph reference map
 8. [`docs/UI-UX-BLUEPRINT.md`](docs/UI-UX-BLUEPRINT.md) — product, motion, and UX blueprint
-9. [`docs/phases/PHASE-00-CONSTITUTION.md`](docs/phases/PHASE-00-CONSTITUTION.md) — current phase
+9. [`docs/phases/PHASE-01-EVM-CORE.md`](docs/phases/PHASE-01-EVM-CORE.md) — current implementation phase
 
 These files are part of the product architecture. Keep them updated after meaningful milestones so another chat or agent can continue without reconstructing history.
 
 ## Status
 
-**Phase 0 — Constitution & continuity**
+**Phase 01 — EVM Analysis Core (in progress)**
 
-The repository is intentionally being built around verifiability and evaluation performance rather than demo-only functionality.
+The repository is being built around deterministic evidence, explicit uncertainty and measurable evaluation performance rather than demo-only functionality.
+
+## Development
+
+Node.js 20+ and npm are recommended.
+
+```bash
+npm ci
+npm run typecheck
+npm test
+```
 
 ## Official Telegraph references
 
@@ -77,16 +90,6 @@ The repository is intentionally being built around verifiability and evaluation 
 - [Hackathon Rules](https://hackathon.telegraphprotocol.com/rules)
 - [Supported Intents](https://hackathon.telegraphprotocol.com/supported-intents)
 - [Official Use Cases](https://github.com/telegraphprotocol/telegraph-usecases)
-
-## Development
-
-Node.js 20+ and npm are recommended.
-
-```bash
-npm install
-npm test
-npm run typecheck
-```
 
 ## License
 

@@ -102,6 +102,20 @@ Durable decisions live here so a future chat/agent does not reopen settled quest
 
 **Consequences:** this becomes a strategic product moat while remaining staged after the deterministic analysis engine. It enables future agent preflight queries, historical intelligence and Telegraph signal use without forcing persistence into the first implementation.
 
+## D015 — Shared External Resilience Boundary
+
+**Date:** 2026-08-13
+
+**Context:** Phase 01 introduces RPC and verification-provider calls that must fail safely under timeouts, outages and rate limits while preserving application-level contract outcomes.
+
+**Decision:** external RPC/HTTP integrations use a shared bounded timeout/retry/circuit-breaker abstraction. Contract-level RPC reverts are explicitly classified as application outcomes and never contribute to provider-health circuit state.
+
+**Alternatives considered:** duplicate retry logic per provider; classify all JSON-RPC errors as infrastructure failures; omit circuit breaking until the Watch subsystem exists.
+
+**Evidence:** Phase 01 architecture and regression requirements; the distinction between contract execution outcomes and transport/provider health is a correctness boundary.
+
+**Consequences:** future providers and Watch observation workers can reuse one bounded resilience policy without coupling domain checks to infrastructure implementations. Application-level failures remain auditable and do not cause false provider degradation.
+
 ## How to Add a Decision
 
 Use:
