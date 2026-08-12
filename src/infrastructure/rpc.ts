@@ -1,4 +1,4 @@
-import { CircuitBreaker, classifyRpcFailure, type Failure } from "./resilience.js";
+import { CircuitBreaker, classifyJsonRpcError, classifyRpcFailure, type Failure } from "./resilience.js";
 import type { RuntimeConfig } from "./config.js";
 
 interface JsonRpcSuccess<T> {
@@ -119,9 +119,8 @@ export class JsonRpcClient {
         }
 
         if ("error" in payload) {
-          const message = payload.error.message;
-          const failure = classifyRpcFailure(undefined, new Error(message));
-          if (payload.error.data !== undefined) failure.message = `${message}: ${JSON.stringify(payload.error.data)}`;
+          const failure = classifyJsonRpcError(payload.error.message);
+          if (payload.error.data !== undefined) failure.message = `${payload.error.message}: ${JSON.stringify(payload.error.data)}`;
           this.circuit.recordFailure(failure);
           return { kind: "failure", failure };
         }
