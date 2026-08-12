@@ -9,7 +9,10 @@ export type VerificationResult =
 export interface VerificationClient { getContract(address: string): Promise<VerificationResult>; }
 interface EtherscanResponse { status?: string; message?: string; result?: unknown; }
 
-function isUnverified(message: string | undefined): boolean { return /(?:not verified|source code.*not verified)/i.test(message ?? ""); }
+function isUnverified(message: string | undefined, result: unknown): boolean {
+  const resultText = typeof result === "string" ? result : "";
+  return /(?:not verified|source code.*not verified)/i.test(`${message ?? ""} ${resultText}`);
+}
 
 function parseAbi(value: unknown): readonly VerifiedFunction[] {
   if (typeof value !== "string") throw new Error("Verification ABI result must be a JSON string");
@@ -44,29 +47,23 @@ export class EtherscanVerificationClient implements VerificationClient {
   constructor(private readonly baseUrl: string, private readonly apiKey?: string, private readonly chainId?: number, private readonly fetcher: typeof fetch = fetch) {
     if (!/^https?:\/\//i.test(baseUrl)) throw new Error("Verification API URL must use http or https");
   }
-
   async getContract(address: string): Promise<VerificationResult> {
     assertEvmAddress(address, "verification address");
     if (!this.apiKey) return { status: "unavailable", detail: "not_configured" };
     try {
-      const result = await withResilience(
-        this.breaker,
-        async (signal) => {
-          const params = new URLSearchParams({ module: "contract", action: "getabi", address, apikey: this.apiKey as string });
-          if (this.chainId !== undefined) params.set("chainid", String(this.chainId));
-          const response = await this.fetcher(`${this.baseUrl}?${params.toString()}`, { headers: { accept: "application/json" }, signal });
-          if (response.status === 429) throw new ExternalCallError({ kind: "rate_limited", message: "Verification provider rate limited the request", retryable: true });
-          if (!response.ok) throw new ExternalCallError({ kind: "provider_failure", message: `Verification provider returned HTTP ${response.status}`, retryable: response.status >= 500 });
-          let body: unknown;
-          try { body = await response.json(); } catch { throw new ExternalCallError({ kind: "malformed_response", message: "Verification provider returned invalid JSON", retryable: false }); }
-          if (typeof body !== "object" || body === null) throw new ExternalCallError({ kind: "malformed_response", message: "Verification provider returned a non-object response", retryable: false });
-          return body as EtherscanResponse;
-        },
-        { timeoutMs: 5_000, retry: { maxAttempts: 2, baseDelayMs: 100, maxDelayMs: 500 } },
-        (error) => error instanceof ExternalCallError ? error.failure : { kind: "provider_failure", message: error instanceof Error ? error.message : "Verification provider request failed", retryable: true },
-      );
+      const result = await withResilience(this.breaker, async (signal) => {
+        const params = new URLSearchParams({ module: "contract", action: "getabi", address, apikey: this.apiKey as string });
+        if (this.chainId !== undefined) params.set("chainid", String(this.chainId));
+        const response = await this.fetcher(`${this.baseUrl}?${params.toString()}`, { headers: { accept: "application/json" }, signal });
+        if (response.status === 429) throw new ExternalCallError({ kind: "rate_limited", message: "Verification provider rate limited the request", retryable: true });
+        if (!response.ok) throw new ExternalCallError({ kind: "provider_failure", message: `Verification provider returned HTTP ${response.status}`, retryable: response.status >= 500 });
+        let body: unknown;
+        try { body = await response.json(); } catch { throw new ExternalCallError({ kind: "malformed_response", message: "Verification provider returned invalid JSON", retryable: false }); }
+        if (typeof body !== "object" || body === null) throw new ExternalCallError({ kind: "malformed_response", message: "Verification provider returned a non-object response", retryable: false });
+        return body as EtherscanResponse;
+      }, { timeoutMs: 5_000, retry: { maxAttempts: 2, baseDelayMs: 100, maxDelayMs: 500 } }, (error) => error instanceof ExternalCallError ? error.failure : { kind: "provider_failure", message: error instanceof Error ? error.message : "Verification provider request failed", retryable: true });
       if (result.status === "1") return { status: "verified", abi: parseAbi(result.result) };
-      if (isUnverified(result.message)) return { status: "unverified", detail: result.message ?? "Contract source code is not verified" };
+      if (isUnverified(result.message, result.result)) return { status: "unverified", detail: typeof result.result === "string" ? result.result : result.message ?? "Contract source code is not verified" };
       return { status: "unavailable", detail: result.message ?? "verification provider returned an unsuccessful response" };
     } catch (error) {
       if (error instanceof ExternalCallError) return { status: "unavailable", detail: error.failure.kind };
@@ -75,6 +72,4 @@ export class EtherscanVerificationClient implements VerificationClient {
   }
 }
 
-export function findExactFunction(abi: readonly VerifiedFunction[], name: string, inputTypes: readonly string[]): VerifiedFunction | undefined {
-  return abi.find((item) => item.name === name && item.inputs.length === inputTypes.length && item.inputs.every((input, index) => input.type === inputTypes[index]));
-}
+export function findExactFunction(abi: readonly VerifiedFunction[], name: string, inputTypes: readonly string[]): VerifiedFunction | undefined { return abi.find((item) => item.name === name && item.inputs.length === inputTypes.length && item.inputs.every((input, index) => input.type === inputTypes[index])); }
