@@ -64,22 +64,23 @@ runtime/resilience
 - [x] queried contract address
 - [x] verified ABI/source availability
 - [x] rate-limit metadata
-- [ ] code address integration where relevant
+- [x] code address integration through proxy resolution
 
 ### 6. Ownership
 
-- [ ] owner() observation
-- [ ] renounced ownership handling
-- [ ] non-Ownable behavior classified as not-applicable
-- [ ] proxy delegatecall integration test
+- [x] owner() observation
+- [x] renounced ownership handling
+- [x] non-Ownable behavior classified as not-applicable
+- [x] proxy delegatecall-compatible contractAddress/codeAddress separation
 
 ### 7. Proxy
 
-- [ ] supported transparent/UUPS patterns
-- [ ] implementation resolution
-- [ ] beacon detection
-- [ ] explicit unresolved beacon implementation state
-- [ ] no unverified constants
+- [x] EIP-1967 implementation slot resolution
+- [x] EIP-1967 beacon slot detection
+- [x] beacon implementation() resolution
+- [x] explicit unresolved beacon implementation state
+- [x] no unverified proxy constants; slots sourced from ERC-1967
+- [ ] broader transparent/UUPS semantic classification
 
 ### 8. Capabilities
 
@@ -89,7 +90,7 @@ runtime/resilience
 - [ ] mint authority
 - [ ] ABI-first exact function signature
 - [ ] bytecode fallback
-- [ ] correct code/storage address separation
+- [x] correct code/storage address separation foundation
 
 ## Required Test Categories
 
@@ -101,13 +102,15 @@ runtime/resilience
 - [x] PUSH-data selector decoy
 - [x] verification status/provenance semantics
 - [x] verification timeout semantics
-- [ ] happy path capability checks
-- [ ] expected negative capability checks
+- [x] ownership positive/renounced/non-applicable/error cases
+- [x] EIP-1967 implementation/beacon/unresolved proxy cases
+- [ ] happy path pause/mint capability checks
+- [ ] expected negative pause/mint capability checks
 - [ ] timeout regression with controlled clock/fetch for RPC
 - [ ] selector collision semantics
-- [ ] proxy/non-proxy
-- [ ] implementation unavailable
-- [ ] beacon unresolved
+- [ ] real-chain proxy/non-proxy integration
+- [ ] implementation unavailable against a real provider
+- [ ] beacon unresolved against a real provider
 
 ## Exit Gate
 
@@ -123,9 +126,9 @@ Phase 01 is complete only when:
 
 ## Current milestone
 
-**Runtime + RPC resilience, structural EVM bytecode foundations, and the verification/evidence foundation are implemented on `main`.**
+**Verification/evidence and ownership/minimum proxy foundations are implemented on `main`.**
 
-The next implementation milestone is ownership + minimum proxy semantics, followed by pause/mint capability checks. No UI, Passport, Watch, Policy, mobile or other post-H1 product work is permitted to block this phase.
+The next implementation milestone is pause capability + live paused-state observation and mint capability/authority. Concrete external verification provider integration and real-chain integration remain required before the full Phase 01 exit gate.
 
 ## Explicit Non-Goals
 

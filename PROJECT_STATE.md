@@ -83,6 +83,7 @@ User/Application → Telegraph Intent → Contract Address → Strict Validation
 - beacon implementation resolution with explicit unresolved state
 - contractAddress/codeAddress separation in proxy resolution
 - adversarial ownership/proxy regression tests
+- CI-verified typecheck and complete Vitest suite for the ownership/proxy implementation
 
 ### Partially implemented
 
@@ -117,7 +118,7 @@ A separate `phase-01-core` branch exists, but **main is the source of truth**. D
 - runtime/resilience foundation — **IN PROGRESS**
 - verification/evidence hierarchy — **FOUNDATION IMPLEMENTED**
 - instruction-aligned bytecode analysis — **STRUCTURAL FOUNDATION IMPLEMENTED**
-- ownership + minimum proxy semantics — **IMPLEMENTED, CI VERIFICATION PENDING**
+- ownership + minimum proxy semantics — **COMPLETE + CI GREEN**
 - pause/mint
 - adversarial regression tests
 - official Telegraph Intent selection/adapter after source verification
@@ -180,14 +181,12 @@ Preserved post-H1 architecture includes Capability Passport, Watch, Change Intel
 
 ## Next engineering task
 
-**Complete ownership/proxy gate after CI verification, then build pause capability + live paused-state observation and mint capability/authority using verified ABI first with bytecode fallback only when provenance is explicit.**
+**Build pause capability + live paused-state observation and mint capability/authority.** Use verified ABI/source as Tier 1 evidence, preserve explicit inconclusive/fallback states, then add bytecode fallback only where provenance is observable. After that: normalized result → ground-truth corpus → official Telegraph Intent adapter → live Miner.
 
 ## Verification status
 
-The verification/evidence foundation is CI-green on commit `0a10d18218ce5833468305da1b0698105ada287f`.
-
-The ownership/proxy implementation is on `main` at commit `d9ce5969a13465a0e6b4e03e94fdc8d41715fe4d`; its CI verification is the current gate before marking this milestone complete.
+Ownership/proxy implementation commit `d9ce5969a13465a0e6b4e03e94fdc8d41715fe4d` passed GitHub Actions typecheck and the complete Vitest suite.
 
 ## Last verified milestone
 
-**Verification/evidence foundation complete.** Ownership + minimum proxy semantics are implemented and awaiting the next CI result.
+**Ownership + minimum proxy semantics complete.** Phase 01 now moves to pause/mint capability semantics.
