@@ -4,3 +4,4 @@ export * from "./domain/bytecode.js";
 export * from "./infrastructure/config.js";
 export * from "./infrastructure/resilience.js";
 export * from "./infrastructure/rpc.js";
+export * from "./infrastructure/verification.js";
