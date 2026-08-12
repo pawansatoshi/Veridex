@@ -12,11 +12,13 @@ This is a hackathon product and a post-hackathon infrastructure project. We opti
 
 ## Current Status
 
-**Stage: Foundation / architecture bootstrap**
+**Stage: Phase 01 — EVM Analysis Core**
 
 Repository: `pawansatoshi/Veridex`
 Default branch: `main`
 Visibility: public
+
+Phase 00 (Constitution & Continuity) is complete. Phase 01 is the current implementation milestone.
 
 The repository was created as a clean Veridex codebase. Earlier Sentinel work from a separate environment is treated as architectural prior art, not as code that already exists in this repository. Do not claim old test counts or modules exist here unless verified in GitHub.
 
@@ -41,7 +43,7 @@ The repository was created as a clean Veridex codebase. Earlier Sentinel work fr
 These are design lessons from the earlier Sentinel implementation/review. They are **not proof that the corresponding files exist in this repository**.
 
 1. Selector clashing makes bytecode selector detection weaker than verified ABI/source evidence.
-2. Bytecode scanners must walk actual EVM instruction boundaries; scanning arbitrary byte offsets creates false positives inside PUSH data.
+2. Bytecode scanners must walk actual EVM instruction boundaries; scanning arbitrary byte offsets creates false positives inside PUSH operands.
 3. Malformed bytecode must return a structured error rather than crash a check.
 4. Etherscan API failure, unverified contract, and missing configuration are different states and must remain distinguishable.
 5. RPC JSON-RPC reverts are application-level outcomes, not infrastructure outages; they must not trip the shared circuit breaker.
@@ -77,7 +79,7 @@ Therefore:
 ## Phase Roadmap
 
 ### Phase 0 — Project Constitution
-**Status: IN PROGRESS**
+**Status: COMPLETE**
 
 - Persistent state and agent instructions
 - Architecture blueprint
@@ -87,7 +89,7 @@ Therefore:
 - Definition of done and quality gates
 
 ### Phase 1 — Analysis Core
-**Status: NEXT**
+**Status: CURRENT**
 
 - EVM primitives and strict address/hex validation
 - resilient RPC transport
@@ -225,4 +227,4 @@ When a new chat/agent opens the repository:
 
 ## Current Next Action
 
-**Build the architecture foundation and phase documents first. Do not jump into UI polish or speculative Telegraph integration before the official Miner/Intent contract is verified.**
+**Begin Phase 01 — EVM Analysis Core.** First inspect the actual current source tree, establish the strict TypeScript/test foundation, then implement the smallest correct deterministic analysis primitives. Do not jump to UI polish or speculative Telegraph integration.
