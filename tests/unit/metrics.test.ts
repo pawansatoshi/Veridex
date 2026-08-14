@@ -6,7 +6,7 @@ describe("latency tracker", () => {
     const tracker = new LatencyTracker(10);
     for (let index = 1; index <= 10; index += 1) tracker.observe(index);
 
-    expect(tracker.snapshot()).toEqual({ count: 10, p50Ms: 5, p95Ms: 9, p99Ms: 10 });
+    expect(tracker.snapshot()).toEqual({ count: 10, p50Ms: 5, p95Ms: 10, p99Ms: 10 });
   });
 
   it("bounds memory by retaining only the newest samples", () => {

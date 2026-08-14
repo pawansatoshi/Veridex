@@ -30,7 +30,7 @@ export function isEvmAddress(value: string): boolean {
 
 function base58Decode(value: string): Uint8Array | undefined {
   if (!value || !/^[1-9A-HJ-NP-Za-km-z]+$/.test(value)) return undefined;
-  const digits = [0];
+  const digits: number[] = [];
   for (const character of value) {
     const index = BASE58_ALPHABET.indexOf(character);
     if (index < 0) return undefined;

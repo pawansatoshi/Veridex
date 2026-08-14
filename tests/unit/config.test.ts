@@ -2,8 +2,12 @@ import { describe, expect, it } from "vitest";
 import { loadRuntimeConfig } from "../../src/infrastructure/config.js";
 
 describe("runtime configuration", () => {
-  it("requires an absolute HTTP(S) RPC URL", () => {
-    expect(() => loadRuntimeConfig({})).toThrow("VERIDEX_RPC_URL is required");
+  it("uses the safe public Ethereum RPC fallback when no URL is configured", () => {
+    const config = loadRuntimeConfig({});
+    expect(config.rpcUrl).toBe("https://ethereum-rpc.publicnode.com/");
+  });
+
+  it("requires an absolute HTTP(S) RPC URL when an override is supplied", () => {
     expect(() => loadRuntimeConfig({ VERIDEX_RPC_URL: "rpc.example.test" })).toThrow("Invalid VERIDEX_RPC_URL");
     expect(() => loadRuntimeConfig({ VERIDEX_RPC_URL: "file:///tmp/rpc" })).toThrow("Invalid VERIDEX_RPC_URL");
   });
