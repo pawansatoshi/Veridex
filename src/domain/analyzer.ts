@@ -140,10 +140,16 @@ export async function analyzeContract(
 
   const bytecode = bytecodeResult.kind === "success" ? bytecodeResult.value : undefined;
   const abi = verification.abiAvailable ? verification.abi : undefined;
+  const capabilityInput = {
+    contractAddress,
+    codeAddress,
+    ...(abi !== undefined ? { verifiedAbi: abi } : {}),
+    ...(bytecode !== undefined ? { bytecode } : {}),
+  };
 
   const [pauseObservation, mintObservation, pausedState] = await Promise.all([
-    Promise.resolve(analyzePauseCapability({ contractAddress, codeAddress, verifiedAbi: abi, bytecode })),
-    Promise.resolve(analyzeMintCapability({ contractAddress, codeAddress, verifiedAbi: abi, bytecode })),
+    Promise.resolve(analyzePauseCapability(capabilityInput)),
+    Promise.resolve(analyzeMintCapability(capabilityInput)),
     observePausedState(dependencies.rpc, contractAddress),
   ]);
 
