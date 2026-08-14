@@ -1,6 +1,7 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import type { NormalizedAnalysis } from "../domain/analyzer.js";
 import { analyzeContract } from "../domain/analyzer.js";
+import { AnalysisCache } from "../infrastructure/cache.js";
 import { loadRuntimeConfig } from "../infrastructure/config.js";
 import { LatencyTracker, measureAsync } from "../infrastructure/metrics.js";
 import { JsonRpcClient } from "../infrastructure/rpc.js";
@@ -10,6 +11,8 @@ import { NotConfiguredVerificationProvider, VerificationClient } from "../infras
 const MAX_BODY_BYTES = 64 * 1024;
 const ADDRESS_RE = /^0x[0-9a-fA-F]{40}$/;
 const DEFAULT_SOURCIFY_CHAIN_ID = "1";
+const DEFAULT_CACHE_TTL_MS = 15_000;
+const DEFAULT_CACHE_MAX_ENTRIES = 256;
 
 export interface MinerRequest {
   chain: string;
@@ -20,6 +23,7 @@ export interface MinerRequest {
 export interface MinerDependencies {
   analyze: (request: MinerRequest) => Promise<NormalizedAnalysis>;
   latency: LatencyTracker;
+  cache: AnalysisCache<NormalizedAnalysis>;
 }
 
 function json(response: ServerResponse, status: number, payload: unknown): void {
@@ -28,6 +32,24 @@ function json(response: ServerResponse, status: number, payload: unknown): void 
   response.setHeader("content-type", "application/json; charset=utf-8");
   response.setHeader("cache-control", "no-store");
   response.end(body);
+}
+
+function boundedEnvInteger(name: string, value: string | undefined, fallback: number, min: number, max: number): number {
+  if (value === undefined || value === "") return fallback;
+  if (!/^\d+$/.test(value)) throw new Error(`Invalid ${name}: expected an integer`);
+  const parsed = Number(value);
+  if (!Number.isSafeInteger(parsed) || parsed < min || parsed > max) {
+    throw new Error(`Invalid ${name}: expected integer in [${min}, ${max}]`);
+  }
+  return parsed;
+}
+
+function cacheKey(request: MinerRequest): string {
+  return [
+    request.chain.trim().toLowerCase(),
+    request.contractAddress.toLowerCase(),
+    request.codeAddress?.toLowerCase() ?? "",
+  ].join(":");
 }
 
 function validRequest(value: unknown): value is MinerRequest {
@@ -68,10 +90,18 @@ export function createMinerDependencies(env: Record<string, string | undefined> 
     : new NotConfiguredVerificationProvider();
   const verification = new VerificationClient(provider, config.rpcTimeoutMs);
   const latency = new LatencyTracker();
+  const cache = new AnalysisCache<NormalizedAnalysis>({
+    ttlMs: boundedEnvInteger("VERIDEX_CACHE_TTL_MS", env.VERIDEX_CACHE_TTL_MS, DEFAULT_CACHE_TTL_MS, 0, 300_000),
+    maxEntries: boundedEnvInteger("VERIDEX_CACHE_MAX_ENTRIES", env.VERIDEX_CACHE_MAX_ENTRIES, DEFAULT_CACHE_MAX_ENTRIES, 1, 10_000),
+  });
 
   return {
     latency,
-    analyze: (request) => measureAsync(latency, () => analyzeContract({ rpc, verification }, request)),
+    cache,
+    analyze: (request) => cache.getOrCompute(
+      cacheKey(request),
+      () => measureAsync(latency, () => analyzeContract({ rpc, verification }, request)),
+    ),
   };
 }
 
@@ -84,7 +114,7 @@ export function createMinerServer(dependencies: MinerDependencies): ReturnType<t
       }
 
       if (request.method === "GET" && request.url === "/metrics") {
-        json(response, 200, { latency: dependencies.latency.snapshot() });
+        json(response, 200, { latency: dependencies.latency.snapshot(), cache: dependencies.cache.snapshot() });
         return;
       }
 

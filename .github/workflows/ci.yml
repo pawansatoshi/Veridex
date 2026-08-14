@@ -19,3 +19,38 @@ jobs:
       - run: npm run typecheck
       - run: npm run build:core
       - run: npm test
+      - name: Wait for live Miner
+        if: github.ref == 'refs/heads/main'
+        run: |
+          for i in $(seq 1 36); do
+            if curl -fsS --max-time 5 https://veridex-ecru.vercel.app/metrics | grep -q '"cache"'; then
+              echo 'live Miner with cache instrumentation is reachable'
+              exit 0
+            fi
+            sleep 5
+          done
+          echo 'new live Miner did not become reachable in time'
+          exit 1
+      - name: Real-chain ground truth
+        if: github.ref == 'refs/heads/main'
+        env:
+          VERIDEX_MINER_URL: https://veridex-ecru.vercel.app
+          VERIDEX_GROUND_TRUTH_OUTPUT: artifacts/real-chain-ground-truth.json
+        run: npm run verify:real-chain
+      - name: Production performance benchmark
+        if: github.ref == 'refs/heads/main'
+        env:
+          VERIDEX_MINER_URL: https://veridex-ecru.vercel.app
+          VERIDEX_BENCHMARK_ADDRESSES: 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48,0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2,0xE592427A0AEce92De3Edee1F18E0157C05861564
+          VERIDEX_BENCHMARK_REQUESTS: 5
+          VERIDEX_BENCHMARK_CONCURRENCY: 3
+        run: |
+          mkdir -p artifacts
+          npm run benchmark:miner | tee artifacts/production-benchmark.json
+      - name: Upload verification artifacts
+        if: always() && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: veridex-h1-verification-${{ github.sha }}
+          path: artifacts/
+          if-no-files-found: ignore
