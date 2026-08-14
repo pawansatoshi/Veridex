@@ -66,7 +66,7 @@ export function normalizeVerificationEvidence(
     verified: result.status === "verified",
     abiAvailable,
     sourceAvailable,
-    ...(abiAvailable ? { abi: data?.abi } : {}),
+    ...(abiAvailable ? { abi: data?.abi as readonly unknown[] } : {}),
     ...(data?.contractName !== undefined ? { contractName: data.contractName } : {}),
     ...(data?.compilerVersion !== undefined ? { compilerVersion: data.compilerVersion } : {}),
     ...(result.detail !== undefined ? { detail: result.detail } : {}),
