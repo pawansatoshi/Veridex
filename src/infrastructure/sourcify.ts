@@ -46,7 +46,12 @@ export class SourcifyVerificationProvider implements VerificationProvider {
       if (response.status === 429) {
         const retryAfter = response.headers.get("retry-after");
         const retryAfterMs = retryAfter && /^\d+$/.test(retryAfter) ? Number(retryAfter) * 1_000 : undefined;
-        return { status: "api_failure", httpStatus: 429, retryAfterMs, detail: "Sourcify rate limit" };
+        return {
+          status: "api_failure",
+          httpStatus: 429,
+          ...(retryAfterMs !== undefined ? { retryAfterMs } : {}),
+          detail: "Sourcify rate limit",
+        };
       }
       if (!response.ok) {
         return { status: "api_failure", httpStatus: response.status, detail: `Sourcify HTTP ${response.status}` };
