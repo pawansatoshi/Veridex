@@ -15,6 +15,8 @@ const DEFAULTS = {
   circuitResetTimeoutMs: 30_000,
 } as const;
 
+const DEFAULT_PUBLIC_ETHEREUM_RPC = "https://ethereum-rpc.publicnode.com";
+
 function boundedInteger(name: string, value: string | undefined, fallback: number, min: number, max: number): number {
   if (value === undefined || value === "") return fallback;
   if (!/^\d+$/.test(value)) throw new Error(`Invalid ${name}: expected an integer`);
@@ -26,8 +28,7 @@ function boundedInteger(name: string, value: string | undefined, fallback: numbe
 }
 
 export function loadRuntimeConfig(env: Record<string, string | undefined>): RuntimeConfig {
-  const rpcUrl = env.VERIDEX_RPC_URL;
-  if (!rpcUrl) throw new Error("VERIDEX_RPC_URL is required");
+  const rpcUrl = env.VERIDEX_RPC_URL || DEFAULT_PUBLIC_ETHEREUM_RPC;
 
   let parsed: URL;
   try {
