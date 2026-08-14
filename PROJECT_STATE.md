@@ -1,65 +1,74 @@
 # Veridex — Persistent Project State
 
-> Single source of truth for continuation across chats, agents, IDEs, and sessions.
->
-> Last reviewed: 2026-08-15
+> Single source of truth for continuation across chats, agents, IDEs and sessions.
+
+**Last reviewed:** 15 Aug 2026
 
 ## Current phase
 
-**H1 Miner Critical Path / Phase 01 — EVM Analysis Core + Address-First Miner Bridge + Capability Intelligence**
+**H1 Miner Critical Path / Phase 01 — EVM Analysis Core + Address-First Detection + Telegraph Miner Bridge**
 
-Repository: `pawansatoshi/Veridex`
+Repository: `pawansatoshi/Veridex`  
 Default branch: `main`
 
-## Official H1 dates
+## Official H1 timeline
 
-- Aug 13–16, 2026: foundation sprint
-- Aug 17–31, 2026: Track 1 Miner + Track 2 Script Author
-- Aug 31–Sep 7, 2026: Track 3 Applications
-- Sep 8–18, 2026: winner selection
-- Sep 19–25, 2026: announcement/prizes
+- **17 Aug 2026:** Track 1 Miner + Track 2 Script Author open
+- **31 Aug 2026:** Track 1 + Track 2 close
+- **31 Aug–7 Sep 2026:** Track 3 Applications/Agents
+- **7 Sep 2026:** H1 final evaluation boundary
 
 ## Mission
 
-Build **Veridex — Verifiable On-Chain Intelligence** as a deterministic-first smart-contract intelligence layer.
+Build **Veridex — Verifiable On-Chain Intelligence** as a deterministic-first smart-contract capability intelligence service.
 
 Core promise:
 
-> **Know what a contract can do — and know when its powers change.**
+> **Know what a smart contract can do — and know when its powers change.**
 
 Trust principle:
 
 > **No evidence → no certainty.**
 
-H1 capability wedge:
+## H1 product wedge
 
-1. ownership / control
-2. upgradeability / proxy surface
-3. pause capability/state
-4. mint capability/authority where evidence permits
+1. Ownership / control
+2. Upgradeability / proxy surface
+3. Pause capability/state
+4. Mint capability/authority where evidence permits
 
-Differentiation abstraction:
+## Correct Telegraph model
 
-> **Capability → Evidence → State → Change**
+Telegraph Miners wrap an **API, model, dataset or tool** and provide intelligence to the network. Veridex therefore has two clean layers:
 
-## Address-first rule
+```text
+Veridex deterministic Intelligence Core
+                    ↑
+            Telegraph Miner Adapter
+                    ↑
+          Telegraph protocol envelope
+```
+
+The domain core is not coupled to a guessed Intent.
+
+## Address-first behavior
 
 ```text
 Any address
-  -> detect format/family
-  -> EVM: resolve wallet vs deployed contract with eth_getCode
-  -> supported contract: run Veridex intelligence
-  -> non-EVM/unsupported: explain detected family and stop unsupported analysis
+  -> detect family
+  -> EVM: wallet vs deployed contract
+  -> EVM contract: run Veridex analysis
+  -> non-EVM: identify family and stop unsupported semantic analysis
   -> unknown: do not guess
 ```
 
-Detector coverage includes EVM, Sui-style 32-byte hex, Aptos/Move-style hex, NEAR implicit, Solana Base58, Bitcoin bech32, TRON Base58, Cardano Shelley and Cosmos SDK bech32 formats. Format recognition is not treated as proof of exact chain where formats overlap.
+Recognized formats currently include EVM, Sui-style 32-byte hex, Aptos/Move-style hex, NEAR implicit, Solana Base58, Bitcoin bech32, TRON Base58, Cardano Shelley and Cosmos SDK bech32. Format recognition is not proof of exact chain where formats overlap.
 
 ## Implemented on `main`
 
 - strict TypeScript/Vitest foundation
 - strict EVM address validation
-- multi-chain address format detection
+- multi-chain address-format detection
 - EVM wallet-vs-contract resolution using `eth_getCode`
 - `/detect`, `/analyze`, `/health`, `/metrics` Miner surfaces
 - non-EVM and EVM-wallet early-stop behavior
@@ -69,141 +78,146 @@ Detector coverage includes EVM, Sui-style 32-byte hex, Aptos/Move-style hex, NEA
 - RPC timeout/retry/circuit breaker/failure classification
 - application JSON-RPC revert vs infrastructure failure classification
 - verification abstraction and Sourcify provider
-- EIP-1967 proxy/code context separation
+- EIP-1967 / legacy proxy handling with contract/code context separation
 - ownership, pause and mint capability foundations
 - normalized machine-readable Miner result
 - Capability Intelligence model
-- deterministic Capability Diff model
+- deterministic Capability Diff primitive
 - ground-truth evaluator foundation
 - p50/p95/p99 latency instrumentation
-- bounded concurrency primitive
-- bounded production analysis cache with in-flight request coalescing and cache metrics
+- bounded concurrency
+- bounded production analysis cache + in-flight request coalescing
 - CI dependency audit gate
 - public Ethereum RPC fallback
-- production static analyzer and Vercel routing/build fix
-- H1 execution/submission gate
-- reproducible performance benchmark protocol
-- `npm run benchmark:miner` production multi-address benchmark harness
-- `npm run verify:real-chain` real Ethereum mainnet ground-truth verification harness
-- live CI artifact capture for real-chain correctness and production performance
-- failure-injection/recovery regression tests at Miner HTTP boundary
-- H1 owner action runbook
-
-## H1 quality gates
-
-### P0 protocol
-
-- exact supported H1 Intent contract: **BLOCKED until verified from official protocol/H1 source**
-- protocol request/response tests: **BLOCKED by exact contract**
-- Miner registration/configuration verification: **PENDING owner/protocol action**
-
-The repository intentionally does not invent an Intent. The current accessible official material lists canonical intents but does not provide a verified dedicated smart-contract-capability Intent contract. `src/miner/telegraph.ts` therefore remains schema-neutral.
-
-### P0 quality
-
-- real-chain ground-truth corpus: **IMPLEMENTED + automated in main CI**
-- production benchmark: **IMPLEMENTED + automated in main CI**
-- failure-injection/recovery verification: **IMPLEMENTED + automated in main CI**
-
-### P1 operations
-
-- production cache/coalescing: **IMPLEMENTED**
-- live Miner registration: **PENDING owner/protocol action**
-- Track 3 real application/agent consumption: **NOT STARTED until Track 3 opens**
-- legitimate Track 3 demand: **NOT STARTED until Track 3 opens**
-- X transparency campaign: **PLANNED**
+- production Vercel routing/build fix
+- reproducible performance benchmark harness
+- real Ethereum mainnet ground-truth verification harness
+- live CI artifact capture for correctness/performance
+- failure-injection/recovery regression tests
+- H1 owner-action runbook
 
 ## H1 classification
 
-### H1_CRITICAL
+### H1_CRITICAL — IMPLEMENTED / FOUNDATION
 
-- address-first detection and wallet/contract gate — **IMPLEMENTED**
-- deterministic EVM capability engine — **IMPLEMENTED FOUNDATION**
-- evidence hierarchy — **IMPLEMENTED FOUNDATION**
-- Capability Intelligence — **IMPLEMENTED FOUNDATION**
-- Capability Diff — **IMPLEMENTED FOUNDATION**
-- normalized Miner result — **IMPLEMENTED**
-- security/adversarial regression foundation — **IMPLEMENTED FOUNDATION**
-- official Telegraph adapter — **BLOCKED on exact official contract**
-- real-chain ground-truth benchmark — **AUTOMATED**
-- protocol tests — **BLOCKED on exact official contract**
+- address-first detection
+- wallet vs contract gate
+- deterministic EVM capability engine
+- evidence hierarchy
+- bytecode safety
+- proxy semantics
+- ownership / upgradeability / pause / mint foundations
+- normalized Miner response
+- resilience/security baseline
+- ground-truth harness
+- performance harness
+
+### H1_CRITICAL — NEXT / PENDING
+
+- verify exact official Telegraph Intent/request-response contract
+- connect deployed Veridex API through official Telegraph Miner flow
+- generate/validate Miner YAML/config
+- IPFS pin and on-chain Miner registration where required
+- real Telegraph request/routing test
+- Track 1 submission evidence package
 
 ### H1_OPERATIONAL
 
-- live Miner deployment/API — **PARTIAL / production endpoint live**
-- latency instrumentation — **IMPLEMENTED**
-- benchmark harness — **IMPLEMENTED + CI execution**
-- benchmark evidence — **CI artifact on main pushes**
-- safe caching/coalescing — **IMPLEMENTED**
-- Track 3 operation — **NOT STARTED; opens Aug 31**
+- live Miner uptime
+- real request/performance evidence
+- X transparency updates
+- Track 3 real application/agent consumption after 31 Aug
 
-### POST-H1
+### POST_H1
 
-- Wallet Safety approvals/allowances/spender intelligence
-- Solana/Sui/Aptos/Bitcoin/Cardano/Cosmos semantic analyzers
+- broader proxy composition
 - Capability Passport
-- Continuous Watch
-- persistent Capability Change Intelligence
+- persistent Watch
+- Capability Change Intelligence / Time Machine
 - Policy Engine
-- Alerts/notification router
-- PWA/native mobile
-- premium UX/3D Contract Core
-- agent API/SDK/MCP
+- Alerts / Email / Webhooks / Mobile
+- wallet approval/safety intelligence
+- semantic multi-chain analyzers
+- premium product UX / PWA / 3D Contract Core
+- Agent API / SDK / MCP
 - enterprise tooling
+- native mobile
 
-## Performance rule
+## Telegraph integration rule
 
-Official Miner judging is **75% Normalized Performance within the selected Intent + 25% X Engagement & Updates**. There is no separate official speed percentage. Veridex therefore optimizes correctness, canonical performance, predictable latency and reliability together.
+The official supported Intent registry is authoritative. **Do not invent or select an unrelated Intent merely to get a registration through.** If Veridex has no legitimate supported category, obtain an official Telegraph answer before locking the mapping.
 
-## Track 3 rule
+Current integration UI exposes:
 
-Official rules require real Telegraph Miners, prohibit mocked/simulated Miner data, require Miners to remain live throughout Track 3, and require legitimate demand. An Intent needs at least 3 active Miners and at least 100 real Track 3 requests for global cash-prize eligibility. This ecosystem guardrail cannot be satisfied by Veridex alone and must not be gamed.
+- Connect API — **H1 Track 1 priority**
+- Submit WASM — **Track 2 optional secondary path**
+- Consume Intelligence — **Track 3 after Track 1/2**
 
-## Owner actions required
+## Performance
 
-See `docs/H1-USER-ACTION-RUNBOOK.md`.
+Current hackathon rules evaluate Miner performance/ranking plus X progress/engagement and other official criteria. Veridex tracks:
 
-Only account/protocol actions require the owner: hackathon registration, official support-channel access, any required Miner wallet/registration, exact Intent confirmation from the official H1 channel, deployment secrets, and legitimate external Track-3 demand.
+- end-to-end latency
+- RPC latency
+- verification latency
+- analysis latency
+- serialization latency
+- p50/p95/p99
+- failure rate
+- cache/coalescing effectiveness
+- ground-truth correctness
 
-Never send private keys, seed phrases, API secrets, or Vercel secrets in chat or GitHub.
+Never optimize latency by weakening correctness.
+
+## Track 3 constraints
+
+Track 3 requires live Miners and real application usage. No mocked or fabricated demand. If an Intent/category has ecosystem-wide participation thresholds, Veridex must not attempt to game them.
 
 ## Known risks
 
 1. Address formats can overlap across ecosystems.
 2. Four-byte selectors are not semantic proof.
-3. Verified ABI absence is only conclusive when provider evidence is complete.
-4. Mint authorization cannot be inferred from function presence alone.
-5. Beacon implementations must not be guessed.
-6. Exact Telegraph Intent contract is the primary H1 blocker.
+3. Verified ABI absence does not automatically prove capability absence.
+4. Mint authorization requires authority evidence, not just a `mint` selector.
+5. Beacon implementation must not be guessed.
+6. Exact Telegraph Intent mapping remains the principal integration gate.
 7. Provider latency/failure can dominate Miner performance.
-8. Wallet approval discovery requires explicit freshness/indexing semantics.
-9. X engagement must remain authentic; metric gaming can disqualify the submission.
+8. Wallet approval coverage requires explicit freshness/indexing semantics.
+9. X engagement must remain authentic.
 
-## Verification status
+## Owner actions
 
-Address detection regression tests cover EVM, Bitcoin, TRON, Cardano, Solana, Sui-style 32-byte hex and unknown input. Existing bytecode/RPC/proxy/capability/metrics/ground-truth suites remain in the repository.
+See `docs/H1-USER-ACTION-RUNBOOK.md`.
 
-The connected GitHub status API does not independently expose a verified CI result for every latest push, so this state file does not call the current commit CI-green until the corresponding workflow run is directly verified.
+Owner/protocol actions include:
+
+- official hackathon/Telegraph account access
+- wallet connection when the official registration flow requires it
+- Miner YAML/config submission
+- IPFS/on-chain registration transaction
+- official support confirmation of Intent mapping when needed
+- legitimate external Track 3 application demand
+
+Never send seed phrases, private keys, API secrets or Vercel secrets in chat/GitHub.
 
 ## Production surface
 
-- `https://veridex-pawansatoshis-projects.vercel.app/`
+- `https://veridex-ecru.vercel.app/`
 - `POST /detect`
 - `POST /analyze`
 - `GET /health`
 - `GET /metrics`
 
-## Next single highest-priority unfinished task
+## Next single highest-priority task
 
-**On Aug 17, verify the live Telegraph Intent registry and official H1 request/response/evaluation contract. If the official team provides a matching capability-intelligence Intent, lock it and implement the protocol adapter/tests immediately.**
+**Verify the official Telegraph H1 Intent/request-response contract and complete the Connect API Miner registration path without inventing an Intent.**
 
-Then:
+After that:
 
-1. Miner registration/live test
-2. legitimate Track 3 application consumption
-3. public X transparency campaign
-
-Do not replace these with broad post-H1 analyzers or final UI work.
+1. real Telegraph request test
+2. Track 1 submission package
+3. live performance evidence
+4. Track 3 application/agent consumption
 
 ## Never claim
 

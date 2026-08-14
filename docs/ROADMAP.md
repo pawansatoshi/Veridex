@@ -2,137 +2,276 @@
 
 ## North Star
 
-**Veridex — Verifiable On-Chain Intelligence**: evidence-backed capability intelligence for contracts, addresses, applications and agents.
+**Veridex — Verifiable On-Chain Intelligence**: evidence-backed capability intelligence for contracts and addresses, exposed as a deterministic service that applications and agents can consume.
 
-> **Know what a contract can do — and know when its powers change.**
+> **Know what a smart contract can do — and know when its powers change.**
 
 > **No evidence → no certainty.**
 
-## CURRENT: H1 Miner Critical Path
+---
 
-| Window | Objective | Priority | Status | Dependency | Exit criteria |
+# CURRENT PHASE — H1 MINER CRITICAL PATH
+
+**Current date:** 15 Aug 2026  
+**Track 1/2 opens:** 17 Aug 2026  
+**Track 1/2 closes:** 31 Aug 2026  
+**Track 3:** 31 Aug–7 Sep 2026  
+**H1 final boundary:** 7 Sep 2026
+
+The critical correction from the Telegraph integration research is that a **Miner is an API/model/dataset/tool wrapped for Telegraph**, not a requirement to invent a new blockchain-specific Intent. Veridex's deterministic analysis engine is the product; the Telegraph adapter is the distribution/evaluation boundary.
+
+## H1 execution gates
+
+| Window | Phase | Priority | Status | Dependency | Exit criteria |
 |---|---|---|---|---|---|
-| Aug 13–16 | foundation + address-first gate + capability intelligence primitive | H1_CRITICAL | In progress | core runtime | deterministic core + safety gates |
-| Aug 17–31 | Track 1 Miner + Track 2 Script Author | H1_CRITICAL | Upcoming | Miner core | runnable Miner submitted |
-| Aug 31–Sep 7 | live Miner + Track 3 applications/agents | H1_OPERATIONAL | Planned | deployed Miner | measured real usage |
-| Sep 7 | H1 final boundary | H1_EXIT | Planned | evidence package | evaluation-ready |
-| Post-Sep 7 | full Veridex product | POST_H1 | Planned | H1 evidence | staged expansion |
+| Aug 15–16 | Freeze H1 scope + integration contract | H1_CRITICAL | ACTIVE | live Veridex API + official Telegraph material | exact request/response path identified; no invented Intent |
+| Aug 17–20 | Telegraph Connect API / Miner integration | H1_CRITICAL | READY TO START | official integration flow | Veridex API accepted by Telegraph and testable through the network |
+| Aug 20–24 | Ground truth + correctness hardening | H1_CRITICAL | IMPLEMENTED FOUNDATION | Miner adapter | TP/TN/FP/FN + inconclusive report |
+| Aug 24–27 | Performance hardening | H1_CRITICAL | IMPLEMENTED FOUNDATION | live Miner traffic | p50/p95/p99, failure rate and cache/coalescing evidence |
+| Aug 27–30 | Reliability + submission package | H1_CRITICAL | NEXT | all above | reproducible demo, docs, benchmarks, live endpoint |
+| Aug 31 | Track 1 submission gate | H1_EXIT | UPCOMING | live registered Miner | submitted and reachable |
+| Aug 31–Sep 7 | Track 3 operational window | H1_OPERATIONAL | FUTURE | registered live Miner | real application/agent consumption; no mocks |
+| Sep 7 | H1 final evaluation boundary | H1_EXIT | FUTURE | performance + usage evidence | final evidence package |
 
-## H1 architecture
+---
+
+# H1 MINER BLUEPRINT
 
 ```text
-Any Address
-  -> Detect
-  -> EVM: wallet vs contract
-  -> Supported contract
-  -> Verification / RPC / proxy
-  -> Capability observations
-  -> Evidence normalization
-  -> Capability Intelligence
-  -> Machine-readable Miner
+Any Address / Miner Request
+        ↓
+Telegraph request contract
+        ↓
+Veridex API adapter
+        ↓
+Address-family detection
+        ↓
+EVM wallet vs deployed-contract gate
+        ↓
+RPC + verification evidence
+        ↓
+Proxy / code-address resolution
+        ↓
+Ownership / Upgradeability / Pause / Mint
+        ↓
+Evidence normalization
+        ↓
+Confidence + Conclusive/Inconclusive state
+        ↓
+Machine-readable Miner response
+        ↓
+Telegraph ranking / real requests
 ```
 
-### H1 critical items
+### H1 capability scope
+
+1. **Ownership / control**
+2. **Upgradeability / proxy surface**
+3. **Pause capability/state**
+4. **Mint capability/authority where evidence permits**
+
+Do not expand the capability matrix before these four are reliable.
+
+### Address-first UX and API rule
+
+```text
+input
+ → detect address family
+ → EVM wallet? explain and stop contract analysis
+ → EVM contract? analyze
+ → non-EVM known format? identify family and stop unsupported semantic analysis
+ → unknown/ambiguous? do not guess
+```
+
+Multi-chain format detection is a usability/security gate, **not** a claim that Veridex already semantically analyzes every chain.
+
+---
+
+# H1 CRITICAL WORK ITEMS
 
 | Item | Phase | Priority | Status | Dependency | Exit criteria |
 |---|---|---|---|---|---|
-| strict EVM validation | Phase 01 | H1_CRITICAL | Implemented | none | adversarial tests |
-| multi-chain address detection | Phase 01 | H1_CRITICAL | Implemented foundation | detector | ecosystem fixtures |
-| EVM wallet vs contract | Phase 01 | H1_CRITICAL | Implemented | RPC | `eth_getCode` gate |
-| non-EVM safe stop | Phase 01 | H1_OPERATIONAL | Implemented | detector | no EVM analysis |
-| ownership / control | Phase 01 | H1_CRITICAL | Implemented foundation | RPC | ground truth |
-| upgradeability / proxy | Phase 01 | H1_CRITICAL | Implemented foundation | storage semantics | ground truth |
-| pause | Phase 01 | H1_CRITICAL | Implemented foundation | ABI/bytecode | ground truth |
-| mint | Phase 01 | H1_CRITICAL | Implemented foundation | ABI/bytecode | ground truth |
-| evidence-backed Capability Intelligence | Phase 01 | H1_CRITICAL | Implemented foundation | normalized observations | regression tests |
-| capability diff primitive | Phase 01 | H1_OPERATIONAL | Implemented foundation | two normalized snapshots | conclusive diff tests |
-| official Telegraph adapter | H1 Miner | H1_CRITICAL | Blocked pending exact official contract verification | normalized result | protocol tests |
-| real-chain ground truth | H1 | H1_CRITICAL | Partial | live RPC/providers | TP/TN/FP/FN report |
+| strict EVM validation | Phase 01 | H1_CRITICAL | IMPLEMENTED | none | adversarial tests |
+| multi-chain address detection | Phase 01 | H1_CRITICAL | IMPLEMENTED | detector | family fixtures |
+| EVM wallet vs contract | Phase 01 | H1_CRITICAL | IMPLEMENTED | RPC | `eth_getCode` gate |
+| non-EVM safe stop | Phase 01 | H1_CRITICAL | IMPLEMENTED | detector | no false EVM analysis |
+| ownership/control | Phase 01 | H1_CRITICAL | FOUNDATION | RPC + evidence | curated ground truth |
+| upgradeability/proxy | Phase 01 | H1_CRITICAL | FOUNDATION | storage/code semantics | proxy corpus |
+| pause | Phase 01 | H1_CRITICAL | FOUNDATION | ABI/bytecode | positive/negative corpus |
+| mint | Phase 01 | H1_CRITICAL | FOUNDATION | ABI/bytecode | authority-aware corpus |
+| evidence hierarchy | Phase 01 | H1_CRITICAL | IMPLEMENTED FOUNDATION | verification + bytecode | provenance preserved |
+| normalized Miner result | Phase 01 | H1_CRITICAL | IMPLEMENTED | domain core | stable machine-readable schema |
+| resilience | Phase 01 | H1_CRITICAL | IMPLEMENTED | RPC/provider clients | failure classification tests |
+| ground-truth evaluator | H1 Quality | H1_CRITICAL | IMPLEMENTED FOUNDATION | corpus | measurable TP/TN/FP/FN |
+| production benchmark | H1 Performance | H1_CRITICAL | IMPLEMENTED FOUNDATION | live API | p50/p95/p99 evidence |
+| Telegraph Connect API adapter | H1 Integration | H1_CRITICAL | NEXT | exact official integration contract | real Telegraph request succeeds |
+| Miner YAML/config | H1 Integration | H1_CRITICAL | PENDING OWNER | Telegraph integration contract | valid config accepted |
+| Miner IPFS/on-chain registration | H1 Integration | H1_CRITICAL | PENDING OWNER | YAML/config | registered Miner visible |
+| real Telegraph traffic | H1 Operations | H1_CRITICAL | PENDING | registered Miner | non-mocked requests |
+| X transparency campaign | H1 Operations | H1_OPERATIONAL | PLANNED | benchmark/demo evidence | authentic progress updates |
 
-## Capability Intelligence wedge
+---
 
-The H1 wedge is not merely function detection. Each capability is represented as a state plus evidence, detection method, confidence and conclusive flag. The intelligence layer creates a capability map/evidence graph and can compare two normalized observations without turning degraded evidence into a false removal.
+# TELEGRAPH INTEGRATION STRATEGY
 
-Example target:
+Telegraph's current integration surface shows three distinct paths:
+
+1. **Connect API** — H1 Track 1 priority for Veridex.
+2. **Submit WASM** — Track 2 / evaluation-script path; optional for the Veridex H1 submission unless we deliberately add a quality script.
+3. **Consume Intelligence** — Track 3 application/agent path after Track 1/2 close.
+
+The supported Intent list must be treated as authoritative. **Never select an unrelated Intent merely because it is available in the UI.** If Veridex's capability-intelligence category has no legitimate supported Intent, obtain an official answer from the Telegraph team before locking the mapping.
+
+The adapter must remain schema-neutral until that contract is verified.
+
+---
+
+# TRACK 2 OPTION — EVALUATION SCRIPT
+
+**Priority:** H1_OPERATIONAL / optional secondary submission.
+
+After the Miner is live, a deterministic WASM evaluation script may be added if Telegraph provides a suitable Intent/category and ground-truth interface. It must evaluate correctness rather than reward superficial selector matching.
+
+Do not let Track 2 work delay Track 1.
+
+---
+
+# TRACK 3 — DEMAND / APPLICATION VALIDATION
+
+Track 3 begins only after Track 1/2 close.
+
+Target flow:
 
 ```text
-Contract
-  -> control authority
-  -> live code / implementation
-  -> ownership
-  -> upgradeability
-  -> pause
-  -> mint
-  -> evidence
-  -> confidence
-  -> capability state
+Application / Agent
+       ↓
+Telegraph
+       ↓
+Veridex Miner
+       ↓
+Evidence-backed capability result
+       ↓
+Agent/application decision
 ```
 
-## Evidence hierarchy
+No simulated requests. No fabricated usage. Keep the Miner live throughout the window.
 
-1. verified ABI/source evidence
-2. supported verified structural evidence
-3. instruction-boundary bytecode fallback
+---
 
-Selector presence is never semantic proof. Unsupported/incomplete evidence stays inconclusive.
+# EVIDENCE CONTRACT
 
-## Security baseline
+```text
+Tier 1 — verified ABI / verified source
+Tier 2 — supported verified structural evidence
+Tier 3 — instruction-boundary bytecode fallback
+```
 
-Strict address/bytecode validation, bounded parser/network work, RPC timeout/retry/circuit breaker, application-level revert classification, malformed ABI handling, instruction-boundary scanning, explicit provider states, no secrets in client code, dependency/CI security gates, and adversarial regression tests.
+Every result preserves:
 
-## POST-H1 PRODUCT ROADMAP
+- requested address
+- contract address
+- code address when applicable
+- chain
+- capability
+- result
+- evidence
+- detection method/tier
+- verification state
+- confidence
+- conclusive/inconclusive
+- fallback reason
+- provider/API status
+- observation metadata when available
 
-### Phase 2 — Capability Passport + Persistent Watch
+Provider failure is never converted into a negative contract finding.
+
+---
+
+# SECURITY / CORRECTNESS GATES
+
+- strict address and bytecode validation
+- bounded parser work
+- EVM instruction-boundary scanning
+- selector-collision protection
+- malformed bytecode rejection
+- malformed ABI handling
+- RPC timeout/retry/circuit breaker
+- expected application-level revert classification
+- provider/API failure classification
+- no client-supplied evidence becomes canonical
+- no secrets in client code
+- dependency/CI security gates
+- every correctness bug gets a regression test
+
+---
+
+# POST-H1 PRODUCT ROADMAP
+
+These are preserved and explicitly **must not block the H1 Miner**.
+
+### Phase 2 — Proxy-Aware Composition
 **Priority: POST_H1 | Status: NEXT**
 
-Persist normalized snapshots, provenance and timestamps; compare future observations safely.
+Broader proxy families, implementation history, beacon composition and richer code/state provenance.
 
-### Phase 2.5 — Capability Change Intelligence
-**Priority: POST_H1 | Status: PARTIAL FOUNDATION**
-
-The deterministic diff primitive exists in the H1 core. Post-H1 adds persistent history, implementation/code-change correlation and richer change explanations.
-
-### Phase 3 — Policy Engine
+### Phase 3 — Capability Passport
 **Priority: POST_H1 | Status: PLANNED**
 
-Map capability states to `COMPLIANT`, `VIOLATION`, `INCONCLUSIVE` policies.
+Canonical evolving identity and evidence-backed capability posture.
 
-### Phase 4 — Watch / Alerts
+### Phase 4 — Continuous Watch
 **Priority: POST_H1 | Status: PLANNED**
 
-Observation → Capability Diff → Policy → Alert Event → Notification Router → Email/Webhook/Mobile.
+Shared observations, adaptive polling and safe change detection.
 
-### Phase 5 — Wallet Safety
-**Priority: POST_H1 | Status: ARCHITECTURE FOUNDATION**
+### Phase 5 — Capability Change Intelligence / Time Machine
+**Priority: POST_H1 | Status: FOUNDATION ONLY**
 
-Approvals, allowances, spender intelligence, permission changes and transaction-risk signals. Unlimited allowance is a risk signal, not an automatic maliciousness verdict. Never claim exhaustive approval coverage from bounded evidence.
+Persistent snapshots, historical capability diffs, implementation changes and explanations.
 
-### Phase 6 — Multi-Chain Intelligence
-**Priority: POST_H1 | Status: ARCHITECTURE FOUNDATION**
+### Phase 6 — Policy Engine
+**Priority: POST_H1 | Status: PLANNED**
 
-Dedicated semantic adapters for Solana, Sui/Move, Aptos, Bitcoin, Cardano, Cosmos and other ecosystems. Detection exists before semantic analysis; unsupported chains are never guessed.
+`COMPLIANT / VIOLATION / INCONCLUSIVE` policy outcomes.
 
-### Phase 7 — Production Web / PWA
+### Phase 7 — Alerts
+**Priority: POST_H1 | Status: PLANNED**
+
+Observation → Diff → Policy → Alert Event → Notification Router → Email/Webhook/Mobile.
+
+### Phase 8 — Wallet Safety
+**Priority: POST_H1 | Status: ARCHITECTURE ONLY**
+
+Approvals, allowances, spender intelligence and transaction-risk signals. Unlimited approval is a risk signal, not a maliciousness verdict.
+
+### Phase 9 — Multi-Chain Semantic Intelligence
+**Priority: POST_H1 | Status: DETECTION ONLY**
+
+Dedicated semantic analyzers for Solana, Sui/Move, Aptos, Bitcoin, Cardano, Cosmos and additional ecosystems.
+
+### Phase 10 — Product Application
 **Priority: POST_H1 | Status: PARTIAL**
 
-Evidence-first web experience consuming the versioned intelligence API.
+Premium evidence-first web application, localization, accessibility, PWA and account/product surfaces.
 
-### Phase 8 — Premium UX / 3D Contract Core
-**Priority: POST_H1 | Status: PLANNED**
+### Phase 11 — 3D Contract Core
+**Priority: POST_H1 | Status: CONCEPT**
 
 Blockchain → Contract → Evidence → Intelligence → Change visualization.
 
-### Phase 9 — Agent / Telegraph Ecosystem
+### Phase 12 — Agents / SDK / MCP / Enterprise
 **Priority: POST_H1 | Status: PLANNED**
 
-Stable machine-readable intelligence for applications, agents, SDK/MCP and broader Telegraph integrations.
+Agent APIs, SDK/MCP, enterprise policy tooling and broader Telegraph integrations.
 
-### Phase 10 — Mobile / Enterprise
+### Phase 13 — Native Mobile
 **Priority: POST_H1 | Status: PLANNED**
 
-Native mobile, enterprise policy tooling and channel-specific notification experiences.
+Mobile push, native applications and channel-specific security controls.
 
-## Five product pillars
+---
+
+# FIVE PRODUCT PILLARS
 
 1. **UNDERSTAND** — What is this contract/address?
 2. **VERIFY** — Why should I believe the result?
@@ -140,19 +279,46 @@ Native mobile, enterprise policy tooling and channel-specific notification exper
 4. **WATCH** — What changes after I leave?
 5. **CONNECT** — Can humans, applications, agents and Telegraph consume this intelligence?
 
-H1 focuses on UNDERSTAND + VERIFY + DISCOVER POWERS + CONNECT. WATCH remains post-H1 except for the reusable diff primitive.
+**H1:** UNDERSTAND + VERIFY + DISCOVER POWERS + CONNECT.  
+**Post-H1:** WATCH becomes the persistent product layer.
 
-## Never-do
+---
 
-- never fabricate Intent schemas or evaluation semantics
-- never treat RPC reverts as infrastructure outages
-- never treat selectors as semantic proof
-- never claim unsupported chain analysis
-- never claim exhaustive wallet approvals from bounded scans
-- never call unlimited allowance proof of maliciousness
-- never hide fallback reasons
-- never infer capability removal from degraded evidence
-- never sacrifice correctness for UI polish
-- never fake usage/engagement
-- never couple domain intelligence to Telegraph transport
-- never let post-H1 features block the H1 Miner
+# PERFORMANCE PRINCIPLE
+
+The Miner is judged on Telegraph's ranking/performance and other official criteria. Veridex therefore measures:
+
+- end-to-end latency
+- RPC latency
+- verification latency
+- analysis latency
+- serialization latency
+- error/failure rate
+- cache effectiveness
+- duplicate-request coalescing
+- ground-truth correctness
+
+**Correctness cannot be traded for latency.**
+
+---
+
+# COMMUNICATION STRATEGY
+
+Public narrative:
+
+**Evidence → Engineering → Measurement → Improvement**
+
+Publish meaningful technical progress, benchmark evidence, demos and honest failure/fix notes. Never fabricate traffic, rankings, users, performance or engagement.
+
+---
+
+# NEVER DO
+
+- never invent a Telegraph Intent
+- never map Veridex to an unrelated Intent just to submit
+- never treat a selector as semantic proof
+- never treat provider failure as a contract negative
+- never claim unsupported multi-chain semantic analysis
+- never fake Track 3 demand
+- never let website polish outrank Miner correctness
+- never allow post-H1 features to block Track 1
