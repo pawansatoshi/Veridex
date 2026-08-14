@@ -11,4 +11,5 @@ export * from "./infrastructure/metrics.js";
 export * from "./infrastructure/resilience.js";
 export * from "./infrastructure/rpc.js";
 export * from "./infrastructure/proxy.js";
+export * from "./infrastructure/sourcify.js";
 export * from "./infrastructure/verification.js";
