@@ -18,7 +18,7 @@ Core trust principle:
 
 ## Current phase
 
-**CURRENT PHASE: H1 Miner Critical Path / Phase 01 — EVM Analysis Core**
+**CURRENT PHASE: H1 Miner Critical Path / Phase 01 — EVM Analysis Core + Miner Bridge**
 
 Repository: `pawansatoshi/Veridex`  
 Default branch: `main`
@@ -90,21 +90,26 @@ User/Application → Telegraph Intent → Contract Address → Strict Validation
 - bounded p50/p95/p99 latency measurement primitive
 - bounded concurrency primitive
 - CI dependency audit gate
+- **dependency-free Miner HTTP bridge** with `/health`, `/metrics`, `/analyze`
+- strict request validation and 64 KiB body bound
+- production build/start scripts
+- Miner HTTP boundary tests
+- runtime documentation
 
 ## Partially implemented
 
-- runtime telemetry integration into the end-to-end orchestrator
-- broader transparent/UUPS/beacon semantic classification
 - real-chain integration corpus
 - real-chain benchmark/evaluation run
 - official Telegraph Intent adapter and live endpoint
 - production performance harness/cache/coalescing
+- deployment/registration and Track 3 operation
 
 ## H1_CRITICAL
 
 - normalized machine-readable analysis result/orchestrator — **IMPLEMENTED FOUNDATION**
-- ground-truth corpus/evaluator — **IMPLEMENTED FOUNDATION; real-chain corpus remains**
+- ground-truth evaluator — **IMPLEMENTED FOUNDATION; real-chain corpus remains**
 - exact capability signature semantics — **IMPLEMENTED FOUNDATION**
+- Miner HTTP bridge — **IMPLEMENTED**
 - official Telegraph Intent selection and adapter after exact current request/response/evaluation contract verification
 - Telegraph request/response tests
 - real-chain proxy/non-proxy integration
@@ -118,38 +123,6 @@ User/Application → Telegraph Intent → Contract Address → Strict Validation
 - operational reliability through Track 3
 - real Track 3 application/agent consumption
 - transparent X progress and benchmark reporting
-
-## POST_H1
-
-- Phase 2 Proxy-Aware Composition
-- Capability Intelligence expansion
-- Capability Passport
-- Continuous Watch
-- Change Intelligence / Time Machine
-- Policy Engine
-- alert/event router
-- Email/Webhook/Mobile
-- Web/PWA and premium 3D Contract Core
-- native mobile
-- Agent API/SDK/MCP and enterprise tooling
-- broader Telegraph integrations
-
-## Architecture-only / preserved vision
-
-```text
-UNDERSTAND → VERIFY → DISCOVER POWERS → WATCH → CONNECT
-```
-
-Future architecture remains:
-
-```text
-Telegraph Miner
-    → Veridex Intelligence Core
-    → Capability Passport / Watch / Policy
-    → Web / Mobile / Agents
-```
-
-The future hero remains **“Know what a contract can do.”** followed by **“Know when its powers change.”** The 3D Contract Core and five-pillar UX are explicitly post-H1 implementation work.
 
 ## Telegraph Intent decision
 
@@ -171,7 +144,7 @@ The current official Telegraph Intent reference lists deterministic on-chain int
 4. Beacon proxy resolution must not treat the beacon address as implementation code.
 5. Telegraph intent fit is currently the main external dependency for the adapter.
 6. Network latency/provider failures can dominate Miner performance.
-7. A broad response containing raw ABI data would be too large for a production Miner; the final transport adapter must emit normalized evidence, not the entire provider payload.
+7. A broad response containing raw ABI data would be too large for a production Miner; the transport emits normalized analysis rather than the full provider payload.
 8. `npm ci` is not currently viable because the repository's lockfile is intentionally minimal/incomplete; CI therefore uses `npm install` plus an audit gate until the lockfile is regenerated safely.
 
 ## Security baseline
@@ -180,7 +153,7 @@ H1 requires strict input validation, bounded parser/network work, RPC timeout/re
 
 ## Tests / CI status
 
-A previous CI run exposed two exact-optional-property type errors in the new Sourcify/orchestrator code; both were fixed. A later CI run also exposed the minimal `package-lock.json` incompatibility with `npm ci`; CI was reverted to `npm install` with the dependency audit retained. The latest exact-signature commit `a85644d1520d8151e87053e43850bf4b7ffb1dd6` has a CI run currently in progress and must be confirmed before being called CI-verified.
+The repository now has a production build step and HTTP boundary tests. CI must complete on the latest bridge commit before the bridge is called CI-verified. Earlier CI failures were traced to exact-optional-property typing and the minimal lockfile/`npm ci` mismatch; those issues were addressed without weakening runtime correctness.
 
 ## Latest verified commit
 
@@ -188,7 +161,7 @@ A previous CI run exposed two exact-optional-property type errors in the new Sou
 
 ## Next engineering task
 
-**Complete the real-chain ground-truth corpus and evaluation run, then implement the Telegraph adapter only after the exact H1 Intent request/response/evaluation contract is verified.** Do not substitute an unrelated canonical Intent merely to claim integration.
+**Run and harden the real-chain ground-truth corpus, verify the exact current Telegraph H1 Intent request/response/evaluation contract, then connect the existing Miner bridge to that contract.** Do not substitute an unrelated canonical Intent merely to claim integration.
 
 ## H1 exit sequence
 
