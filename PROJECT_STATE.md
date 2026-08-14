@@ -77,37 +77,40 @@ Detector coverage includes EVM, Sui-style 32-byte hex, Aptos/Move-style hex, NEA
 - ground-truth evaluator foundation
 - p50/p95/p99 latency instrumentation
 - bounded concurrency primitive
+- bounded production analysis cache with in-flight request coalescing and cache metrics
 - CI dependency audit gate
 - public Ethereum RPC fallback
 - production static analyzer and Vercel routing/build fix
 - H1 execution/submission gate
 - reproducible performance benchmark protocol
-- `npm run benchmark:miner` bounded benchmark harness
-- `npm run telegraph:intents` live Intent discovery command
+- `npm run benchmark:miner` production multi-address benchmark harness
+- `npm run verify:real-chain` real Ethereum mainnet ground-truth verification harness
+- live CI artifact capture for real-chain correctness and production performance
+- failure-injection/recovery regression tests at Miner HTTP boundary
 - H1 owner action runbook
 
-## Remaining H1 gates
+## H1 quality gates
 
 ### P0 protocol
 
 - exact supported H1 Intent contract: **BLOCKED until verified from official protocol/H1 source**
 - protocol request/response tests: **BLOCKED by exact contract**
-- Miner registration/configuration verification: **PENDING**
+- Miner registration/configuration verification: **PENDING owner/protocol action**
 
 The repository intentionally does not invent an Intent. The current accessible official material lists canonical intents but does not provide a verified dedicated smart-contract-capability Intent contract. `src/miner/telegraph.ts` therefore remains schema-neutral.
 
 ### P0 quality
 
-- real-chain ground-truth corpus execution: **PENDING**
-- benchmark results: **PENDING**
-- failure-injection/recovery verification: **PENDING**
+- real-chain ground-truth corpus: **IMPLEMENTED + automated in main CI**
+- production benchmark: **IMPLEMENTED + automated in main CI**
+- failure-injection/recovery verification: **IMPLEMENTED + automated in main CI**
 
 ### P1 operations
 
-- production cache/coalescing: **PARTIAL**
-- live Miner registration: **PENDING**
-- Track 3 real application/agent consumption: **NOT STARTED**
-- legitimate Track 3 demand: **NOT STARTED**
+- production cache/coalescing: **IMPLEMENTED**
+- live Miner registration: **PENDING owner/protocol action**
+- Track 3 real application/agent consumption: **NOT STARTED until Track 3 opens**
+- legitimate Track 3 demand: **NOT STARTED until Track 3 opens**
 - X transparency campaign: **PLANNED**
 
 ## H1 classification
@@ -122,17 +125,17 @@ The repository intentionally does not invent an Intent. The current accessible o
 - normalized Miner result — **IMPLEMENTED**
 - security/adversarial regression foundation — **IMPLEMENTED FOUNDATION**
 - official Telegraph adapter — **BLOCKED on exact official contract**
-- real-chain ground-truth benchmark — **PENDING RUN**
+- real-chain ground-truth benchmark — **AUTOMATED**
 - protocol tests — **BLOCKED on exact official contract**
 
 ### H1_OPERATIONAL
 
-- live Miner deployment/API — **PARTIAL**
+- live Miner deployment/API — **PARTIAL / production endpoint live**
 - latency instrumentation — **IMPLEMENTED**
-- benchmark harness — **IMPLEMENTED; execution pending**
-- benchmark evidence — **PENDING RUN**
-- safe caching/coalescing — **PARTIAL**
-- Track 3 operation — **NOT STARTED**
+- benchmark harness — **IMPLEMENTED + CI execution**
+- benchmark evidence — **CI artifact on main pushes**
+- safe caching/coalescing — **IMPLEMENTED**
+- Track 3 operation — **NOT STARTED; opens Aug 31**
 
 ### POST-H1
 
@@ -180,7 +183,7 @@ Never send private keys, seed phrases, API secrets, or Vercel secrets in chat or
 
 Address detection regression tests cover EVM, Bitcoin, TRON, Cardano, Solana, Sui-style 32-byte hex and unknown input. Existing bytecode/RPC/proxy/capability/metrics/ground-truth suites remain in the repository.
 
-The connected GitHub status API does not independently expose a verified CI result for every latest push, so changes are not called CI-green unless a run is directly verified.
+The connected GitHub status API does not independently expose a verified CI result for every latest push, so this state file does not call the current commit CI-green until the corresponding workflow run is directly verified.
 
 ## Production surface
 
@@ -196,12 +199,9 @@ The connected GitHub status API does not independently expose a verified CI resu
 
 Then:
 
-1. real-chain ground-truth corpus
-2. performance benchmark
-3. deployment/failure recovery verification
-4. Miner registration/live test
-5. legitimate Track 3 application consumption
-6. public X transparency campaign
+1. Miner registration/live test
+2. legitimate Track 3 application consumption
+3. public X transparency campaign
 
 Do not replace these with broad post-H1 analyzers or final UI work.
 
