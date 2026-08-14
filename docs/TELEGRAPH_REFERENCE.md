@@ -2,118 +2,95 @@
 
 > Living reference. Verify current official docs before implementing protocol-specific behavior.
 
-## Official Sources
+## Official sources
 
+- Hackathon: https://hackathon.telegraphprotocol.com/
+- Rules: https://hackathon.telegraphprotocol.com/rules
 - Docs: https://docs.telegraphprotocol.com/docs
-- Intents: https://github.com/telegraphprotocol/telegraph-docs/blob/main/using/intents.md
-- Hackathon rules: https://hackathon.telegraphprotocol.com/rules
-- Hackathon supported-intents page: https://hackathon.telegraphprotocol.com/supported-intents
+- Intents reference: https://github.com/telegraphprotocol/telegraph-docs/blob/main/using/intents.md
 - Official use cases: https://github.com/telegraphprotocol/telegraph-usecases
 
-## Current Verified Documentation Surface — 2026-08-14
+## Verified H1 rules — 2026-08-14
 
-The official docs currently organize material into:
+The official rules state:
 
-- protocol fundamentals: how Telegraph works, tokenomics, addresses/parameters, roles
-- using Telegraph: Engine inference, Intents, x402, daemon signal feeds, WebSocket subscriptions, ERC-8183 jobs, MCP
-- running a Miner: what Miners do, YAML configuration, registration
-- running a Validator: what Validators do, key management, node setup
-- deployment and troubleshooting
-
-The canonical Intent documentation states that the live Intent set is source-of-truth on-chain and can be queried from the Engine. It currently lists deterministic on-chain intents including:
-
-- `WALLET_BALANCE_CHECK`
-- `GAS_PRICE`
-- `TOKEN_HOLDER_COUNT`
-- `TVL_LOOKUP`
-- `ONCHAIN_TX_LOOKUP`
-
-It does **not** currently document a dedicated contract-capability / smart-contract-power Intent. Veridex therefore must not silently map capability intelligence to an unrelated Intent merely to obtain a submission slot. Intent selection must be based on the exact H1 request/response/evaluation contract.
-
-## Hackathon Facts
-
-Current official rules state:
-
-- Track 1: Miners — Aug 17–Aug 31, 2026
-- Track 2: Script Authors — Aug 17–Aug 31, 2026
-- Track 3: Applications — Aug 31–Sep 7, 2026
-- Winner selection — Sep 8–Sep 18, 2026
-- Announcement/prizes — Sep 19–Sep 25, 2026
+- Track 1 Miners: Aug 17–Aug 31, 2026
+- Track 2 Script Authors: Aug 17–Aug 31, 2026
+- Track 3 Applications: Aug 31–Sep 7, 2026
+- Winner selection: Sep 8–Sep 18, 2026
+- Announcement/prizes: Sep 19–Sep 25, 2026
 - Miner judging: 75% Normalized Performance within the chosen Intent + 25% X Engagement & Updates
-- Global-prize guardrail: at least 3 active Miners and at least 100 real Track 3 requests for an Intent
-- Track 3 applications must use real Miners; simulated/mock data is prohibited
-- Miners must remain live through Track 3
-- metric gaming/artificial inflation can disqualify a participant
+- Each Intent has an independent leaderboard.
+- Global cash-prize guardrail: an Intent needs at least 3 active Miners and at least 100 real Track 3 requests.
+- Track 3 applications must use real Telegraph Miners; mocked/simulated data is prohibited.
+- Miners and Script Authors must remain live and operational throughout Track 3.
+- Judging updates must be public on X and tagged `@Telegraphprotoc`.
+- Artificial metric inflation/gaming can disqualify a participant.
+- Participants must join the official Hackathon Discord and remain active.
 
-## Strategic Implications
+## Performance interpretation
 
-Veridex should:
+The rules do not define a standalone "speed percentage". Performance is represented primarily by the Intent-specific Canonical Score and then normalized against the best Miner in that Intent. Veridex therefore measures latency, failure rate and reliability as engineering inputs to high-quality Miner performance, but must not claim a separate official speed score.
 
-1. choose an Intent only when its request/response/evaluation semantics match the Miner
-2. maximize deterministic correctness and canonical performance
-3. keep latency low and predictable
-4. remain live and observable
-5. generate legitimate application utility and demand
-6. publish meaningful X progress rather than spam
+## Intent policy
 
-## Intent Policy
+An Intent is a specific category of intelligence and each Intent has its own leaderboard. Veridex must compete only where the selected Intent's request/response/evaluation semantics actually match the service.
 
-Do not assume that a supported Intent's name automatically matches Veridex semantics. The actual input/output/evaluation contract must be inspected before adapter implementation.
+The current accessible official materials do not provide a verified dedicated `smart-contract-capability` Intent contract. The repository therefore deliberately keeps `src/miner/telegraph.ts` schema-neutral rather than inventing an Intent or mapping capability intelligence to an unrelated domain.
 
-If no canonical Intent matches contract capability intelligence, preserve a schema-neutral adapter boundary and resolve the protocol choice from the official H1 support channel rather than fabricating an Intent.
+Before implementing a protocol adapter, verify from the current official protocol/H1 support channel:
 
-## Miner Policy
-
-Before implementing the Miner adapter, verify the current official:
-
+- exact Intent identifier
 - request schema
 - response schema
-- YAML/configuration fields
-- registration flow
-- payment/x402 requirements
-- health/readiness expectations
-- evaluation interface
+- canonical/evaluation semantics
+- confidence/deadline fields if applicable
 - supported networks
-- official contract addresses/parameters
+- Miner YAML/configuration fields
+- registration flow
+- health/readiness requirements
+- payment/x402 requirements where applicable
 
-## Verification Provider Policy
+Once verified, implement the smallest adapter and protocol regression suite at the existing schema boundary.
 
-Veridex now includes a read-only Sourcify v2 provider foundation. Sourcify's current API documents contract lookup at `/v2/contract/{chainId}/{address}` with ABI fields available from verified contract records. Provider status remains explicit and never becomes a negative contract finding.
+## Veridex Miner scope
 
-## Official Contract Registry Policy
+H1 deterministic capability wedge:
 
-When official smart-contract addresses are needed, store them only after verifying them against the current official Telegraph documentation/repository.
+1. ownership/control
+2. upgradeability/proxy surface
+3. pause capability/state
+4. mint capability/authority where evidence permits
 
-Required metadata:
+Response principles:
 
-```text
-network
-contract name
-address
-purpose
-source URL
-source section/file
-verified date
-ABI/reference
-status
-```
+- structured machine-readable evidence
+- explicit detection method
+- provider/API status
+- confidence
+- conclusive/inconclusive state
+- honest fallback reason
+- contractAddress vs codeAddress separation
 
-No unverified address should enter production configuration.
+## Evidence hierarchy
 
-## Use-Case References
+Tier 1 — verified ABI/source evidence.
 
-The official `telegraph-usecases` repository contains real Telegraph applications/use cases. Use it as an implementation benchmark for:
+Tier 2 — verified source/structural evidence where actually supported.
 
-- HTTP/API integration
-- x402 payment handling where applicable
-- response UX
-- application-to-Miner boundaries
-- proof/transaction presentation
-- real application workflows
+Tier 3 — bytecode fallback with instruction-boundary scanning.
 
-Do not copy use-case code blindly; adapt only verified patterns to the current official protocol contract.
+Selector presence alone is never treated as semantic proof.
 
-## Update Procedure
+## Ground truth and performance
+
+H1 requires a reproducible ground-truth strategy covering positives, negatives, proxies, verified/unverified contracts and adversarial bytecode. Veridex records TP/TN/FP/FN/inconclusive/unavailable/error and p50/p95/p99 latency. See `docs/H1-GROUND-TRUTH.md` and `docs/H1-PERFORMANCE-BENCHMARK.md`.
+
+## Track 3 strategy
+
+Track 3 is not a documentation exercise. The Miner must remain live and real applications/agents must consume it. Veridex should pursue legitimate application utility and demand without manufacturing traffic.
+
+## Update procedure
 
 When Telegraph changes:
 
