@@ -20,7 +20,7 @@ Core trust principle:
 
 **CURRENT PHASE: H1 Miner Critical Path / Phase 01 — EVM Analysis Core + Miner Bridge**
 
-Repository: `pawansatoshi/Veridex`  
+Repository: `pawansatoshi/Veridex`
 Default branch: `main`
 
 ## Official H1 dates
@@ -32,7 +32,7 @@ Default branch: `main`
 - **Sep 8–18:** winner selection
 - **Sep 19–25:** announcement/prizes
 
-Official rules score Miner Track submissions using 75% Normalized Performance within the chosen Intent and 25% X engagement/updates. Track 3 applications must use real Miners, Miners must remain live through Track 3, and an Intent needs at least 3 active Miners plus 100 real Track 3 requests to qualify for global cash prizes.
+Official rules score Miner Track submissions using 75% Normalized Performance within the chosen Intent and 25% X engagement/updates. Track 3 applications must use real Miners, and Miners must remain live through Track 3. An Intent needs at least 3 active Miners and 100 real Track 3 requests to qualify for global cash prizes.
 
 ## Immediate objective
 
@@ -92,9 +92,11 @@ User/Application → Telegraph Intent → Contract Address → Strict Validation
 - CI dependency audit gate
 - **dependency-free Miner HTTP bridge** with `/health`, `/metrics`, `/analyze`
 - strict request validation and 64 KiB body bound
-- production build/start scripts
-- Miner HTTP boundary tests
-- runtime documentation
+- production API handler with public Ethereum RPC fallback
+- production static web analyzer interface
+- Vercel deployment routing hardened so `index.html` is served as the website instead of compiled `src/index.js`
+- Vercel project verified serving the complete web interface at the production domain
+- production build verified on the latest Vercel deployment
 
 ## Partially implemented
 
@@ -103,6 +105,7 @@ User/Application → Telegraph Intent → Contract Address → Strict Validation
 - official Telegraph Intent adapter and live endpoint
 - production performance harness/cache/coalescing
 - deployment/registration and Track 3 operation
+- persistent server-side Watch/Change Timeline storage
 
 ## H1_CRITICAL
 
@@ -110,6 +113,7 @@ User/Application → Telegraph Intent → Contract Address → Strict Validation
 - ground-truth evaluator — **IMPLEMENTED FOUNDATION; real-chain corpus remains**
 - exact capability signature semantics — **IMPLEMENTED FOUNDATION**
 - Miner HTTP bridge — **IMPLEMENTED**
+- web analyzer — **IMPLEMENTED and deployed**
 - official Telegraph Intent selection and adapter after exact current request/response/evaluation contract verification
 - Telegraph request/response tests
 - real-chain proxy/non-proxy integration
@@ -126,7 +130,7 @@ User/Application → Telegraph Intent → Contract Address → Strict Validation
 
 ## Telegraph Intent decision
 
-The current official Telegraph Intent reference lists deterministic on-chain intents such as `ONCHAIN_TX_LOOKUP`, `WALLET_BALANCE_CHECK`, `TOKEN_HOLDER_COUNT`, `TVL_LOOKUP`, and `GAS_PRICE`, but none is semantically identical to contract capability intelligence. The rules state that each Intent has an independent leaderboard, so registering under an unrelated Intent would distort evaluation rather than improve it. Veridex therefore keeps the adapter schema-neutral until the exact supported H1 Intent/evaluation contract is confirmed.
+The current official Telegraph documentation/rules confirm that each Intent has an independent leaderboard and that Miner quality is evaluated against ground truth. Veridex must not register under an unrelated Intent merely to claim integration. The protocol-specific adapter therefore remains schema-neutral until the exact current H1 Intent request/response/evaluation contract is verified from official Telegraph sources.
 
 ## Blocked until verified
 
@@ -134,7 +138,7 @@ The current official Telegraph Intent reference lists deterministic on-chain int
 - official Telegraph addresses/constants until verified from current official sources
 - numerical Veridex scoring before evaluation requirements and ground truth justify it
 - any beacon implementation claim without actual resolution
-- real Miner deployment until Telegraph registration/configuration requirements and required credentials are available
+- real Miner registration until Telegraph registration/configuration requirements and required credentials are available
 
 ## Known risks
 
@@ -146,6 +150,7 @@ The current official Telegraph Intent reference lists deterministic on-chain int
 6. Network latency/provider failures can dominate Miner performance.
 7. A broad response containing raw ABI data would be too large for a production Miner; the transport emits normalized analysis rather than the full provider payload.
 8. `npm ci` is not currently viable because the repository's lockfile is intentionally minimal/incomplete; CI therefore uses `npm install` plus an audit gate until the lockfile is regenerated safely.
+9. Vercel automatically detects TypeScript API functions; the core TypeScript build is therefore exposed as `build:core` rather than `build` so Vercel does not replace the static website with compiled JavaScript output.
 
 ## Security baseline
 
@@ -153,15 +158,26 @@ H1 requires strict input validation, bounded parser/network work, RPC timeout/re
 
 ## Tests / CI status
 
-The repository now has a production build step and HTTP boundary tests. CI must complete on the latest bridge commit before the bridge is called CI-verified. Earlier CI failures were traced to exact-optional-property typing and the minimal lockfile/`npm ci` mismatch; those issues were addressed without weakening runtime correctness.
+The repository contains the production test/typecheck/build workflow. Vercel production build for commit `bcff76ecaa4609c915a7b3bd89b707979d4e2b5d` completed successfully. GitHub Actions workflow runs were not exposed by the connected GitHub status API for the latest push, so CI is not called independently verified here.
 
-## Latest verified commit
+## Latest verified commits
 
-`795b1c9c9013c15a19e0b6207a716d7301fd7265` — ownership/proxy gate; CI verified.
+- `bcff76ecaa4609c915a7b3bd89b707979d4e2b5d` — CI build script update; Vercel production deployment READY.
+- `21898c4c30021e8f60ca07a3f44fc176f3a83322` — prevent Vercel from treating core build as the site build.
+- `bc343cc21999606b9f544a8bfc02eec5b91fe5b8` — static Veridex UI deployment routing fix.
+
+## Current production surface
+
+- Production site: `https://veridex-pawansatoshis-projects.vercel.app/`
+- Analyzer endpoint: `POST /analyze`
+- Health endpoint: `GET /health`
+- Metrics endpoint: `GET /metrics`
+
+The production site was directly fetched after deployment and returned the intended Veridex HTML interface rather than compiled JavaScript.
 
 ## Next engineering task
 
-**Run and harden the real-chain ground-truth corpus, verify the exact current Telegraph H1 Intent request/response/evaluation contract, then connect the existing Miner bridge to that contract.** Do not substitute an unrelated canonical Intent merely to claim integration.
+**Verify the exact current Telegraph H1 Intent contract from official protocol sources, build the smallest protocol adapter and request/response tests, then run a real-chain ground-truth corpus and performance benchmark.** Do not substitute an unrelated canonical Intent merely to claim integration.
 
 ## H1 exit sequence
 
@@ -177,4 +193,4 @@ real-chain ground truth
 
 ## Never claim
 
-A feature is implemented only when the live `main` repository contains the code and the relevant tests/CI evidence support the claim. Documentation alone is not implementation proof.
+A feature is implemented only when the live `main` repository contains the code and the relevant tests/CI/deployment evidence support the claim. Documentation alone is not implementation proof.
