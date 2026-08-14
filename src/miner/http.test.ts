@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { AnalysisCache } from "../infrastructure/cache.js";
 import { LatencyTracker } from "../infrastructure/metrics.js";
 import { createMinerServer } from "./http.js";
+import type { NormalizedAnalysis } from "../domain/analyzer.js";
 
 function get(server: ReturnType<typeof createMinerServer>, path: string): Promise<{ status: number; body: string }> {
   return new Promise((resolve, reject) => {
@@ -35,7 +36,7 @@ function post(server: ReturnType<typeof createMinerServer>, body: string): Promi
 function dependencies() {
   return {
     latency: new LatencyTracker(),
-    cache: new AnalysisCache({ ttlMs: 15_000, maxEntries: 8 }),
+    cache: new AnalysisCache<NormalizedAnalysis>({ ttlMs: 15_000, maxEntries: 8 }),
     analyze: async () => { throw new Error("not called"); },
   };
 }
