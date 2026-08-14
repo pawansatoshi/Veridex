@@ -16,6 +16,7 @@ runtime/resilience
 → ground truth
 → Telegraph adapter
 → live Miner
+→ performance
 ```
 
 ## Scope and status
@@ -26,9 +27,9 @@ runtime/resilience
 | RPC timeout/retry/circuit | 01 | H1_CRITICAL | ALREADY_IMPLEMENTED | runtime | deterministic failure semantics |
 | application-level revert classification | 01 | H1_CRITICAL | ALREADY_IMPLEMENTED | RPC | reverts never trip breaker |
 | verification abstraction | 01 | H1_CRITICAL | ALREADY_IMPLEMENTED foundation | resilience | provider states distinct |
-| concrete verification provider | 01 | H1_CRITICAL | MISSING | official provider/API | real verified ABI/source evidence |
+| Sourcify v2 verification provider | 01 | H1_CRITICAL | IMPLEMENTED FOUNDATION | verification abstraction | verified ABI lookup with timeout/rate-limit semantics |
 | bytecode validation/walker | 01 | H1_CRITICAL | ALREADY_IMPLEMENTED foundation | validation | instruction boundaries enforced |
-| selector collision semantics | 01 | H1_CRITICAL | MISSING | bytecode | fallback remains inconclusive |
+| selector collision semantics | 01 | H1_CRITICAL | IMPLEMENTED FOUNDATION | bytecode | fallback remains inconclusive |
 | ownership observation | 01 | H1_CRITICAL | ALREADY_IMPLEMENTED foundation | RPC/evidence | positive/renounced/non-applicable/unavailable |
 | EIP-1967 proxy resolution | 01 | H1_CRITICAL | ALREADY_IMPLEMENTED foundation | RPC | code/storage separation |
 | broader transparent/UUPS composition | 02 | POST_H1 | MISSING | Phase 01 | reliable pattern classification |
@@ -36,10 +37,12 @@ runtime/resilience
 | live paused state | 01 | H1_CRITICAL | IMPLEMENTED FOUNDATION | RPC | observed/not-applicable/unavailable/error |
 | mint capability | 01 | H1_CRITICAL | IMPLEMENTED FOUNDATION | evidence | ABI-first capability result |
 | mint authority | 01 | H1_CRITICAL | PARTIAL | source/access-control evidence | authority never guessed |
-| normalized analysis result | 01 | H1_CRITICAL | MISSING | all checks | deterministic machine-readable contract |
-| bounded orchestrator | 01 | H1_CRITICAL | MISSING | normalized result | bounded end-to-end analysis |
-| ground-truth corpus | H1 Eval | H1_CRITICAL | MISSING | orchestrator | TP/TN/FP/FN/inconclusive |
-| Telegraph adapter | H1 Miner | H1_CRITICAL | BLOCKED | official Intent schema | protocol tests pass |
+| normalized analysis result | 01 | H1_CRITICAL | IMPLEMENTED FOUNDATION | all checks | deterministic machine-readable contract |
+| bounded orchestrator | 01 | H1_CRITICAL | IMPLEMENTED FOUNDATION | normalized result | bounded end-to-end analysis |
+| ground-truth corpus | H1 Eval | H1_CRITICAL | IMPLEMENTED FOUNDATION | orchestrator | TP/TN/FP/FN/inconclusive evaluator |
+| latency measurement | H1 Ops | H1_OPERATIONAL | IMPLEMENTED FOUNDATION | orchestrator | bounded p50/p95/p99 measurement |
+| bounded concurrency primitive | H1 Ops | H1_OPERATIONAL | IMPLEMENTED FOUNDATION | runtime | explicit concurrency cap |
+| Telegraph adapter | H1 Miner | H1_CRITICAL | BLOCKED | official Intent schema/evaluation | exact protocol contract + tests |
 | live Miner | H1 Ops | H1_OPERATIONAL | MISSING | adapter | deployable/live |
 
 ## Required Test Categories
@@ -59,12 +62,15 @@ runtime/resilience
 - [x] mint capability ABI semantics
 - [x] malformed ABI capability input
 - [x] bytecode fallback remains inconclusive
-- [ ] selector collision corpus
+- [x] selector collision fallback semantics
+- [x] normalized-result orchestration
+- [x] ground-truth evaluator
+- [x] bounded latency tracker
+- [x] bounded concurrency
+- [x] Sourcify provider semantics
 - [ ] RPC timeout regression with controlled clock/fetch
 - [ ] real-chain proxy/non-proxy integration
-- [ ] concrete verification provider integration
-- [ ] normalized-result contract tests
-- [ ] ground-truth evaluation tests
+- [ ] real-chain ground-truth corpus
 - [ ] Telegraph request/response tests
 
 ## Security requirements
@@ -111,7 +117,7 @@ Phase 01 is complete only when every supported check has deterministic behavior,
 
 ## Current milestone
 
-**Pause/mint capability foundation is now on `main`.** The next engineering milestone is the normalized H1 analysis orchestrator, followed by ground truth, official Telegraph adapter integration, live Miner and performance work.
+**The normalized H1 analysis orchestrator, ground-truth evaluator, latency tracker, bounded concurrency primitive and Sourcify verification provider are now implemented on `main`.** The remaining H1 bridge is real-chain ground truth plus the exact Telegraph Intent adapter, followed by live deployment and performance validation.
 
 ## Explicit Non-Goals
 
