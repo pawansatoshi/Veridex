@@ -60,10 +60,19 @@ describe("pause and mint capabilities", () => {
     expect(result).toMatchObject({ capability: "pause", status: "negative", conclusive: true });
   });
 
+  it("requires exact input types for verified mint detection", () => {
+    const result = analyzeMintCapability({
+      contractAddress: CONTRACT,
+      verifiedAbi: [{ type: "function", name: "mint", inputs: [{ type: "uint256" }], stateMutability: "nonpayable" }],
+    });
+
+    expect(result).toMatchObject({ capability: "mint", status: "negative", conclusive: true });
+  });
+
   it("does not treat a view-only function named mint as mint authority", () => {
     const result = analyzeMintCapability({
       contractAddress: CONTRACT,
-      verifiedAbi: [{ type: "function", name: "mint", inputs: [], stateMutability: "view" }],
+      verifiedAbi: [{ type: "function", name: "mint", inputs: [{ type: "address" }, { type: "uint256" }], stateMutability: "view" }],
     });
 
     expect(result).toMatchObject({ capability: "mint", status: "negative", conclusive: true });
