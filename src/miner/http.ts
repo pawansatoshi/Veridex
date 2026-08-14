@@ -9,6 +9,7 @@ import { NotConfiguredVerificationProvider, VerificationClient } from "../infras
 
 const MAX_BODY_BYTES = 64 * 1024;
 const ADDRESS_RE = /^0x[0-9a-fA-F]{40}$/;
+const DEFAULT_SOURCIFY_CHAIN_ID = "1";
 
 export interface MinerRequest {
   chain: string;
@@ -58,8 +59,12 @@ async function readJson(request: IncomingMessage): Promise<unknown> {
 export function createMinerDependencies(env: Record<string, string | undefined> = process.env): MinerDependencies {
   const config = loadRuntimeConfig(env);
   const rpc = new JsonRpcClient(config);
-  const provider = env.VERIDEX_SOURCIFY_CHAIN_ID && /^\d+$/.test(env.VERIDEX_SOURCIFY_CHAIN_ID)
-    ? new SourcifyVerificationProvider({ chainId: env.VERIDEX_SOURCIFY_CHAIN_ID })
+  const sourcifyChainId = env.VERIDEX_SOURCIFY_CHAIN_ID ?? DEFAULT_SOURCIFY_CHAIN_ID;
+  const provider = /^\d+$/.test(sourcifyChainId)
+    ? new SourcifyVerificationProvider({
+        chainId: sourcifyChainId,
+        ...(env.VERIDEX_SOURCIFY_BASE_URL ? { baseUrl: env.VERIDEX_SOURCIFY_BASE_URL } : {}),
+      })
     : new NotConfiguredVerificationProvider();
   const verification = new VerificationClient(provider, config.rpcTimeoutMs);
   const latency = new LatencyTracker();
