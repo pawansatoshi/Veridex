@@ -78,7 +78,7 @@ Before implementing the Miner adapter, verify the current official:
 
 ## Verification Provider Policy
 
-Veridex now includes a read-only Sourcify v2 provider foundation. Sourcify's current API documents contract lookup at `/v2/contract/{chainId}/{address}` with ABI fields available from verified contract records. Provider status remains explicit and never becomes a negative contract finding. citehttps://docs.sourcify.dev/docs/api/index.html
+Veridex now includes a read-only Sourcify v2 provider foundation. Sourcify's current API documents contract lookup at `/v2/contract/{chainId}/{address}` with ABI fields available from verified contract records. Provider status remains explicit and never becomes a negative contract finding.
 
 ## Official Contract Registry Policy
 
