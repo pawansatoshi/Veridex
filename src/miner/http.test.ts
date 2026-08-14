@@ -1,5 +1,6 @@
 import { request } from "node:http";
 import { describe, expect, it } from "vitest";
+import { AnalysisCache } from "../infrastructure/cache.js";
 import { LatencyTracker } from "../infrastructure/metrics.js";
 import { createMinerServer } from "./http.js";
 
@@ -31,9 +32,17 @@ function post(server: ReturnType<typeof createMinerServer>, body: string): Promi
   });
 }
 
+function dependencies() {
+  return {
+    latency: new LatencyTracker(),
+    cache: new AnalysisCache({ ttlMs: 15_000, maxEntries: 8 }),
+    analyze: async () => { throw new Error("not called"); },
+  };
+}
+
 describe("Miner HTTP bridge", () => {
   it("serves health and metrics without an RPC dependency", async () => {
-    const server = createMinerServer({ latency: new LatencyTracker(), analyze: async () => { throw new Error("not called"); } });
+    const server = createMinerServer(dependencies());
     await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", () => resolve()));
     try {
       const health = await get(server, "/health");
@@ -42,13 +51,14 @@ describe("Miner HTTP bridge", () => {
       const metrics = await get(server, "/metrics");
       expect(metrics.status).toBe(200);
       expect(JSON.parse(metrics.body).latency.count).toBe(0);
+      expect(JSON.parse(metrics.body).cache.entries).toBe(0);
     } finally {
       await new Promise<void>((resolve) => server.close(() => resolve()));
     }
   });
 
   it("rejects malformed Miner requests before analysis", async () => {
-    const server = createMinerServer({ latency: new LatencyTracker(), analyze: async () => { throw new Error("not called"); } });
+    const server = createMinerServer(dependencies());
     await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", () => resolve()));
     try {
       const result = await post(server, JSON.stringify({ chain: "1", contractAddress: "not-an-address" }));

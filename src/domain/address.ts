@@ -36,7 +36,8 @@ function base58Decode(value: string): Uint8Array | undefined {
     if (index < 0) return undefined;
     let carry = index;
     for (let i = 0; i < digits.length; i += 1) {
-      carry += digits[i] * 58;
+      const current = digits[i] ?? 0;
+      carry += current * 58;
       digits[i] = carry & 0xff;
       carry >>= 8;
     }
@@ -45,7 +46,7 @@ function base58Decode(value: string): Uint8Array | undefined {
   let leadingZeroes = 0;
   while (leadingZeroes < value.length && value[leadingZeroes] === "1") leadingZeroes += 1;
   const output = new Uint8Array(leadingZeroes + digits.length);
-  for (let i = 0; i < digits.length; i += 1) output[output.length - 1 - i] = digits[i];
+  for (let i = 0; i < digits.length; i += 1) output[output.length - 1 - i] = digits[i] ?? 0;
   return output;
 }
 
