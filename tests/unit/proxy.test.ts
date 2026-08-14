@@ -4,6 +4,7 @@ import {
   EIP1967_BEACON_SLOT,
   EIP1967_IMPLEMENTATION_SLOT,
   IBEACON_IMPLEMENTATION_SELECTOR,
+  LEGACY_IMPLEMENTATION_SELECTOR,
   resolveProxy,
 } from "../../src/infrastructure/proxy.js";
 import type { JsonRpcClient } from "../../src/infrastructure/rpc.js";
@@ -19,7 +20,7 @@ function fakeRpc(results: unknown[]): JsonRpcClient {
   return { call: vi.fn().mockImplementation(async () => results.shift()) } as unknown as JsonRpcClient;
 }
 
-describe("EIP-1967 proxy resolution", () => {
+describe("EIP-1967 and legacy proxy resolution", () => {
   it("resolves a direct implementation slot", async () => {
     const rpc = fakeRpc([
       { kind: "success", value: slotFor(IMPLEMENTATION) },
@@ -28,11 +29,7 @@ describe("EIP-1967 proxy resolution", () => {
     ]);
     const result = await resolveProxy(rpc, CONTRACT);
 
-    expect(result).toMatchObject({
-      status: "implementation_resolved",
-      codeAddress: IMPLEMENTATION,
-      evidence: { implementationAddress: IMPLEMENTATION, adminAddress: ADMIN },
-    });
+    expect(result).toMatchObject({ status: "implementation_resolved", codeAddress: IMPLEMENTATION, evidence: { implementationAddress: IMPLEMENTATION, adminAddress: ADMIN } });
   });
 
   it("resolves a beacon implementation and preserves beacon evidence", async () => {
@@ -44,11 +41,7 @@ describe("EIP-1967 proxy resolution", () => {
     ]);
     const result = await resolveProxy(rpc, CONTRACT);
 
-    expect(result).toMatchObject({
-      status: "beacon_resolved",
-      codeAddress: IMPLEMENTATION,
-      evidence: { beaconAddress: BEACON, implementationAddress: IMPLEMENTATION },
-    });
+    expect(result).toMatchObject({ status: "beacon_resolved", codeAddress: IMPLEMENTATION, evidence: { beaconAddress: BEACON, implementationAddress: IMPLEMENTATION } });
   });
 
   it("leaves a beacon explicitly unresolved when implementation() fails", async () => {
@@ -63,11 +56,28 @@ describe("EIP-1967 proxy resolution", () => {
     expect(result).toMatchObject({ status: "beacon_unresolved", evidence: { beaconAddress: BEACON } });
   });
 
-  it("classifies an address with no EIP-1967 slots as direct", async () => {
+  it("resolves a legacy implementation() getter when EIP-1967 slots are empty", async () => {
     const rpc = fakeRpc([
       { kind: "success", value: ZERO_SLOT },
       { kind: "success", value: ZERO_SLOT },
       { kind: "success", value: ZERO_SLOT },
+      { kind: "success", value: slotFor(IMPLEMENTATION) },
+    ]);
+    const result = await resolveProxy(rpc, CONTRACT);
+
+    expect(result).toMatchObject({
+      status: "implementation_resolved",
+      codeAddress: IMPLEMENTATION,
+      evidence: { implementationAddress: IMPLEMENTATION, implementationSelector: LEGACY_IMPLEMENTATION_SELECTOR },
+    });
+  });
+
+  it("classifies an address with no proxy evidence as direct", async () => {
+    const rpc = fakeRpc([
+      { kind: "success", value: ZERO_SLOT },
+      { kind: "success", value: ZERO_SLOT },
+      { kind: "success", value: ZERO_SLOT },
+      { kind: "failure", failure: { class: "application_revert", message: "execution reverted" } },
     ]);
     const result = await resolveProxy(rpc, CONTRACT);
 
@@ -85,7 +95,7 @@ describe("EIP-1967 proxy resolution", () => {
     expect(result).toMatchObject({ status: "unavailable", evidence: { detail: "rpc down" } });
   });
 
-  it("uses the EIP-1967 slots and beacon interface selector", async () => {
+  it("uses the EIP-1967 slots and exact implementation selectors", async () => {
     const call = vi.fn().mockResolvedValue({ kind: "success", value: ZERO_SLOT });
     const rpc = { call } as unknown as JsonRpcClient;
     await resolveProxy(rpc, CONTRACT);
@@ -93,6 +103,8 @@ describe("EIP-1967 proxy resolution", () => {
     expect(call).toHaveBeenNthCalledWith(1, "eth_getStorageAt", [CONTRACT, EIP1967_IMPLEMENTATION_SLOT, "latest"]);
     expect(call).toHaveBeenNthCalledWith(2, "eth_getStorageAt", [CONTRACT, EIP1967_BEACON_SLOT, "latest"]);
     expect(call).toHaveBeenNthCalledWith(3, "eth_getStorageAt", [CONTRACT, EIP1967_ADMIN_SLOT, "latest"]);
+    expect(call).toHaveBeenNthCalledWith(4, "eth_call", [{ to: CONTRACT, data: LEGACY_IMPLEMENTATION_SELECTOR }, "latest"]);
     expect(IBEACON_IMPLEMENTATION_SELECTOR).toBe("0x5c60da1b");
+    expect(LEGACY_IMPLEMENTATION_SELECTOR).toBe("0x5c60da1b");
   });
 });
