@@ -7,17 +7,19 @@ const CONTRACT = "0x0000000000000000000000000000000000000001";
 const OWNER = "0x1111111111111111111111111111111111111111";
 const OWNER_RESULT = `0x${"0".repeat(24)}${OWNER.slice(2)}`;
 const TRUE_RESULT = `0x${"0".repeat(63)}1`;
+const ZERO_RESULT = `0x${"0".repeat(64)}`;
 const BYTECODE = "0x6001600155";
 
 function fakeRpc(): JsonRpcClient {
   return {
     call: vi.fn(async (method: string, params: readonly unknown[]) => {
-      if (method === "eth_getStorageAt") return { kind: "success", value: `0x${"0".repeat(64)}` };
+      if (method === "eth_getStorageAt") return { kind: "success", value: ZERO_RESULT };
       if (method === "eth_getCode") return { kind: "success", value: BYTECODE };
       if (method === "eth_call") {
         const request = params[0] as { data?: string };
         if (request.data === "0x8da5cb5b") return { kind: "success", value: OWNER_RESULT };
         if (request.data === "0x5c975abb") return { kind: "success", value: TRUE_RESULT };
+        if (request.data === "0x5c60da1b") return { kind: "success", value: ZERO_RESULT };
       }
       throw new Error(`Unexpected RPC call: ${method}`);
     }),
