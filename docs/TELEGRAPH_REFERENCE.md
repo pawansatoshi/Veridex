@@ -5,19 +5,30 @@
 ## Official Sources
 
 - Docs: https://docs.telegraphprotocol.com/docs
+- Intents: https://github.com/telegraphprotocol/telegraph-docs/blob/main/using/intents.md
 - Hackathon rules: https://hackathon.telegraphprotocol.com/rules
-- Supported intents: https://hackathon.telegraphprotocol.com/supported-intents
+- Hackathon supported-intents page: https://hackathon.telegraphprotocol.com/supported-intents
 - Official use cases: https://github.com/telegraphprotocol/telegraph-usecases
 
-## Current Verified Documentation Surface
+## Current Verified Documentation Surface — 2026-08-14
 
 The official docs currently organize material into:
 
 - protocol fundamentals: how Telegraph works, tokenomics, addresses/parameters, roles
-- using Telegraph: direct x402 inference, Engine inference, daemon signal feeds, WebSocket signal subscriptions, ERC-8183 on-chain jobs, MCP server
+- using Telegraph: Engine inference, Intents, x402, daemon signal feeds, WebSocket subscriptions, ERC-8183 jobs, MCP
 - running a Miner: what Miners do, YAML configuration, registration
 - running a Validator: what Validators do, key management, node setup
 - deployment and troubleshooting
+
+The canonical Intent documentation states that the live Intent set is source-of-truth on-chain and can be queried from the Engine. It currently lists deterministic on-chain intents including:
+
+- `WALLET_BALANCE_CHECK`
+- `GAS_PRICE`
+- `TOKEN_HOLDER_COUNT`
+- `TVL_LOOKUP`
+- `ONCHAIN_TX_LOOKUP`
+
+It does **not** currently document a dedicated contract-capability / smart-contract-power Intent. Veridex therefore must not silently map capability intelligence to an unrelated Intent merely to obtain a submission slot. Intent selection must be based on the exact H1 request/response/evaluation contract.
 
 ## Hackathon Facts
 
@@ -38,7 +49,7 @@ Current official rules state:
 
 Veridex should:
 
-1. choose an Intent with a verified request/response and evaluation contract
+1. choose an Intent only when its request/response/evaluation semantics match the Miner
 2. maximize deterministic correctness and canonical performance
 3. keep latency low and predictable
 4. remain live and observable
@@ -48,6 +59,8 @@ Veridex should:
 ## Intent Policy
 
 Do not assume that a supported Intent's name automatically matches Veridex semantics. The actual input/output/evaluation contract must be inspected before adapter implementation.
+
+If no canonical Intent matches contract capability intelligence, preserve a schema-neutral adapter boundary and resolve the protocol choice from the official H1 support channel rather than fabricating an Intent.
 
 ## Miner Policy
 
@@ -62,6 +75,10 @@ Before implementing the Miner adapter, verify the current official:
 - evaluation interface
 - supported networks
 - official contract addresses/parameters
+
+## Verification Provider Policy
+
+Veridex now includes a read-only Sourcify v2 provider foundation. Sourcify's current API documents contract lookup at `/v2/contract/{chainId}/{address}` with ABI fields available from verified contract records. Provider status remains explicit and never becomes a negative contract finding. citehttps://docs.sourcify.dev/docs/api/index.html
 
 ## Official Contract Registry Policy
 
