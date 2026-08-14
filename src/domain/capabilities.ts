@@ -63,7 +63,7 @@ function validateAbiEntry(entry: unknown): asserts entry is Record<string, unkno
 export function hasVerifiedFunction(
   abi: readonly unknown[],
   names: readonly string[],
-  options: { requireCallable?: boolean } = {},
+  options: { requireCallable?: boolean; inputTypes?: readonly string[] } = {},
 ): boolean {
   if (!Array.isArray(abi)) throw new Error("Malformed ABI: expected an array");
 
@@ -72,6 +72,10 @@ export function hasVerifiedFunction(
     if (entry.type !== "function") continue;
     if (typeof entry.name !== "string" || !names.includes(entry.name)) continue;
 
+    const inputTypes = Array.isArray(entry.inputs) ? entry.inputs.map((input) => (input as Record<string, unknown>).type) : [];
+    if (options.inputTypes !== undefined && (inputTypes.length !== options.inputTypes.length || inputTypes.some((type, index) => type !== options.inputTypes?.[index]))) {
+      continue;
+    }
     if (options.requireCallable && (entry.stateMutability === "view" || entry.stateMutability === "pure")) {
       continue;
     }
@@ -151,7 +155,7 @@ export function analyzePauseCapability(input: {
   if (input.codeAddress !== undefined) assertEvmAddress(input.codeAddress, "code address");
 
   if (input.verifiedAbi !== undefined) {
-    const detected = hasVerifiedFunction(input.verifiedAbi, ["pause", "unpause"], { requireCallable: true });
+    const detected = hasVerifiedFunction(input.verifiedAbi, ["pause", "unpause"], { requireCallable: true, inputTypes: [] });
     return {
       contractAddress: input.contractAddress,
       ...(input.codeAddress !== undefined ? { codeAddress: input.codeAddress } : {}),
@@ -162,8 +166,8 @@ export function analyzePauseCapability(input: {
       evidence: {
         functionNames: detected ? ["pause", "unpause"] : [],
         detail: detected
-          ? "Verified ABI exposes a pause control surface"
-          : "Verified ABI does not expose a callable pause control surface",
+          ? "Verified ABI exposes an exact callable pause control signature"
+          : "Verified ABI does not expose an exact callable pause control signature",
       },
     };
   }
@@ -212,7 +216,11 @@ export function analyzeMintCapability(input: {
   if (input.codeAddress !== undefined) assertEvmAddress(input.codeAddress, "code address");
 
   if (input.verifiedAbi !== undefined) {
-    const detected = hasVerifiedFunction(input.verifiedAbi, ["mint", "safeMint"], { requireCallable: true });
+    const detected =
+      hasVerifiedFunction(input.verifiedAbi, ["mint"], { requireCallable: true, inputTypes: ["address", "uint256"] })
+      || hasVerifiedFunction(input.verifiedAbi, ["mint"], { requireCallable: true, inputTypes: ["address"] })
+      || hasVerifiedFunction(input.verifiedAbi, ["safeMint"], { requireCallable: true, inputTypes: ["address", "uint256"] });
+
     return {
       contractAddress: input.contractAddress,
       ...(input.codeAddress !== undefined ? { codeAddress: input.codeAddress } : {}),
@@ -223,8 +231,8 @@ export function analyzeMintCapability(input: {
       evidence: {
         functionNames: detected ? ["mint", "safeMint"] : [],
         detail: detected
-          ? "Verified ABI exposes a callable mint entry point; authorization is not proven by ABI presence alone"
-          : "Verified ABI does not expose a callable mint entry point",
+          ? "Verified ABI exposes an exact supported callable mint signature; authorization is not proven by ABI presence alone"
+          : "Verified ABI does not expose an exact supported callable mint signature",
       },
       authority: detected ? "unknown" : "unresolved",
     };
