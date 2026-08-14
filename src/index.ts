@@ -14,3 +14,4 @@ export * from "./infrastructure/proxy.js";
 export * from "./infrastructure/sourcify.js";
 export * from "./infrastructure/verification.js";
 export * from "./miner/http.js";
+export * from "./miner/telegraph.js";
