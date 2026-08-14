@@ -6,6 +6,7 @@ export * from "./domain/ownership.js";
 export * from "./domain/analyzer.js";
 export * from "./evaluation/ground-truth.js";
 export * from "./infrastructure/config.js";
+export * from "./infrastructure/metrics.js";
 export * from "./infrastructure/resilience.js";
 export * from "./infrastructure/rpc.js";
 export * from "./infrastructure/proxy.js";
