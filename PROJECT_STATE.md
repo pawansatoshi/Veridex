@@ -32,7 +32,7 @@ Default branch: `main`
 - **Sep 8–18:** winner selection
 - **Sep 19–25:** announcement/prizes
 
-Official rules currently score Miner Track submissions using 75% Normalized Performance within the chosen Intent and 25% X engagement/updates. Track 3 applications must use real Miners, Miners must remain live through Track 3, and the global-prize guardrail requires at least 3 active Miners and 100 real Track 3 requests for an Intent.
+Official rules score Miner Track submissions using 75% Normalized Performance within the chosen Intent and 25% X engagement/updates. Track 3 applications must use real Miners, Miners must remain live through Track 3, and an Intent needs at least 3 active Miners plus 100 real Track 3 requests to qualify for global cash prizes.
 
 ## Immediate objective
 
@@ -71,6 +71,7 @@ User/Application → Telegraph Intent → Contract Address → Strict Validation
 - instruction-boundary PUSH4 extraction
 - malformed/truncated bytecode and PUSH-data selector regression tests
 - verification provider abstraction with explicit verified/unverified/not-configured/API-failure/timeout/malformed-response states
+- provider-derived ABI retained for deterministic capability analysis
 - verification evidence normalization and rate-limit metadata
 - deterministic `owner()` observation with active/renounced/not-applicable/unavailable/error outcomes
 - EIP-1967 implementation/beacon/admin slot inspection
@@ -82,23 +83,25 @@ User/Application → Telegraph Intent → Contract Address → Strict Validation
 - mint/safeMint capability detection from verified ABI
 - conservative bytecode selector fallback that remains inconclusive
 - malformed ABI rejection for capability analysis
+- **H1 normalized analysis orchestrator** joining proxy, verification, bytecode, ownership, pause and mint evidence
+- normalized capability result with detection method, confidence, conclusive state, fallback reason and provider status
+- orchestrator regression tests for verified and unverified paths
 
 ## Partially implemented
 
 - runtime telemetry and bounded concurrency
 - concrete external verification provider
-- broader transparent/UUPS/beacon classification
+- broader transparent/UUPS/beacon semantic classification
 - real-chain integration corpus
-- normalized Miner response/orchestrator
-- Telegraph adapter and live endpoint
+- ground-truth evaluation harness
+- official Telegraph Intent adapter and live endpoint
 - performance harness/cache/coalescing
 
 ## H1_CRITICAL
 
-- pause/mint semantics and regression coverage — **IMPLEMENTED FOUNDATION; integration/orchestration pending**
-- normalized machine-readable analysis result
+- normalized machine-readable analysis result/orchestrator — **IMPLEMENTED FOUNDATION**
 - ground-truth corpus and evaluation harness
-- official Telegraph Intent selection and adapter after current official schema verification
+- official Telegraph Intent selection and adapter after exact current request/response/evaluation contract verification
 - Telegraph request/response tests
 - adversarial selector-collision semantics
 - real-chain proxy/non-proxy integration
@@ -145,12 +148,17 @@ Telegraph Miner
 
 The future hero remains **“Know what a contract can do.”** followed by **“Know when its powers change.”** The 3D Contract Core and five-pillar UX are explicitly post-H1 implementation work.
 
+## Telegraph Intent decision
+
+The current official Telegraph Intent reference lists deterministic on-chain intents such as `ONCHAIN_TX_LOOKUP`, `WALLET_BALANCE_CHECK`, `TOKEN_HOLDER_COUNT`, `TVL_LOOKUP`, and `GAS_PRICE`, but none is semantically identical to contract capability intelligence. The rules state that each Intent has an independent leaderboard, so registering under an unrelated Intent would distort evaluation rather than improve it. Veridex therefore keeps the adapter schema-neutral until the exact supported H1 Intent/evaluation contract is confirmed.
+
 ## Blocked until verified
 
-- Telegraph Intent selection until the current supported-intent request/response/evaluation contract is inspected
+- Telegraph Intent selection until the exact supported H1 request/response/evaluation contract is inspected
 - official Telegraph addresses/constants until verified from current official sources
 - numerical Veridex scoring before evaluation requirements and ground truth justify it
 - any beacon implementation claim without actual resolution
+- real Miner deployment until Telegraph registration/configuration requirements and required credentials are available
 
 ## Known risks
 
@@ -160,6 +168,7 @@ The future hero remains **“Know what a contract can do.”** followed by **“
 4. Beacon proxy resolution must not treat the beacon address as implementation code.
 5. Telegraph intent fit is currently the main external dependency for the adapter.
 6. Network latency/provider failures can dominate Miner performance.
+7. A broad response containing raw ABI data would be too large for a production Miner; the final transport adapter must emit normalized evidence, not the entire provider payload.
 
 ## Security baseline
 
@@ -167,18 +176,21 @@ H1 requires strict input validation, bounded parser/network work, RPC timeout/re
 
 ## Tests
 
-Existing CI has verified typecheck and the complete Vitest suite through commit `795b1c9c9013c15a19e0b6207a716d7301fd7265`. The new pause/mint commit `df01b50a976d08335ecb87536d0edb4ca4060539` is currently in GitHub Actions CI and must not be called verified until that run completes.
+CI has repeatedly verified typecheck and the complete Vitest suite through earlier milestones. The latest normalized-analysis test commit is `f35199801270ff12cfe1fe7d19b65a13523edcf7`; its GitHub Actions run is currently in progress and must be confirmed before this commit is called CI-verified.
+
+## Latest verified commit
+
+`795b1c9c9013c15a19e0b6207a716d7301fd7265` — ownership/proxy gate; CI verified.
 
 ## Next engineering task
 
-**Build the normalized H1 analysis orchestrator.** It must validate the request, resolve proxy/code context, obtain verification/bytecode evidence, execute ownership + upgradeability + pause + mint checks with bounded work, normalize evidence and explicit conclusive/inconclusive/provider states, and expose a deterministic machine-readable result independent of Telegraph transport.
+**Build the H1 ground-truth corpus and evaluation harness**, while finalizing the schema-neutral Telegraph adapter boundary. The corpus must cover positive/negative ownership, pause, mint, proxy, verified/unverified and adversarial selector cases, and must report TP/TN/FP/FN/inconclusive and latency metrics without contaminating production logic.
 
 ## H1 exit sequence
 
 ```text
-pause/mint
-→ normalized result/orchestrator
-→ ground truth
+normalized result/orchestrator
+→ ground truth + evaluator
 → official Telegraph Intent adapter
 → live Miner
 → performance optimization
