@@ -139,8 +139,7 @@ export async function analyzeContract(
   ]);
 
   const bytecode = bytecodeResult.kind === "success" ? bytecodeResult.value : undefined;
-  const verifiedAbi = verification.abiAvailable ? verification.data : undefined;
-  const abi = verifiedAbi && Array.isArray(verifiedAbi) ? verifiedAbi : undefined;
+  const abi = verification.abiAvailable ? verification.abi : undefined;
 
   const [pauseObservation, mintObservation, pausedState] = await Promise.all([
     Promise.resolve(analyzePauseCapability({ contractAddress, codeAddress, verifiedAbi: abi, bytecode })),
@@ -155,18 +154,19 @@ export async function analyzeContract(
     capabilityFromObservation(mintObservation),
   ];
 
-  if (pauseObservation.status === "positive" && pausedState.status === "observed") {
-    const pause = capabilities.find((item) => item.capability === "pause");
-    if (pause) pause.evidence = { ...pause.evidence, paused: pausedState.paused, stateQueriedAddress: pausedState.evidence.queriedAddress };
-  } else if (pauseObservation.status === "positive" && pausedState.status !== "observed") {
-    const pause = capabilities.find((item) => item.capability === "pause");
-    if (pause) pause.evidence = { ...pause.evidence, pausedStateStatus: pausedState.status, pausedStateDetail: pausedState.evidence.detail };
+  const pause = capabilities.find((item) => item.capability === "pause");
+  if (pause && pauseObservation.status === "positive") {
+    pause.evidence = pausedState.status === "observed"
+      ? { ...pause.evidence, paused: pausedState.paused, stateQueriedAddress: pausedState.evidence.queriedAddress }
+      : { ...pause.evidence, pausedStateStatus: pausedState.status, pausedStateDetail: pausedState.evidence.detail };
   }
 
   const rpcStatus = bytecodeResult.kind === "failure" || proxy.status === "unavailable" || ownership.status === "unavailable" || pausedState.status === "unavailable"
     ? "unavailable"
     : "ok";
-  const conclusive = capabilities.every((capability) => capability.conclusive) && verification.status !== "api_failure" && verification.status !== "timeout" && bytecodeResult.kind === "success";
+  const conclusive = capabilities.every((capability) => capability.conclusive)
+    && verification.status === "verified"
+    && bytecodeResult.kind === "success";
   const confidence = capabilities.length === 0
     ? 0
     : capabilities.reduce((sum, capability) => sum + capability.confidence, 0) / capabilities.length;
