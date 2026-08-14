@@ -14,10 +14,12 @@ describe("address detection", () => {
     expect(() => assertEvmAddress("0x608", "implementation")).toThrow("Invalid EVM implementation");
   });
 
-  it("recognizes non-EVM formats without pretending they are EVM contracts", () => {
+  it("recognizes common non-EVM formats", () => {
     expect(detectAddress("bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh").kind).toBe("bitcoin");
     expect(detectAddress("T9yD14Nj9j7xAB4dbGeiX9h8unkKHxuWwb").kind).toBe("tron");
     expect(detectAddress("addr1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh").kind).toBe("cardano");
+    expect(detectAddress("11111111111111111111111111111111").kind).toBe("solana");
+    expect(detectAddress("0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef").kind).toBe("sui");
   });
 
   it("does not guess unknown addresses", () => {
