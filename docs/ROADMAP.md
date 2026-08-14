@@ -83,17 +83,21 @@ Do not expand into dozens of capabilities before these are reliable and benchmar
 | strict address/hex/bytecode validation | Phase 01 | H1_CRITICAL | Implemented | none | adversarial tests |
 | RPC timeout/retry/circuit/revert classification | Phase 01 | H1_CRITICAL | Implemented | runtime | reverts never trip breaker |
 | verification abstraction/evidence hierarchy | Phase 01 | H1_CRITICAL | Implemented foundation | resilience | provider states distinct |
+| Sourcify v2 verification provider | Phase 01 | H1_CRITICAL | Implemented foundation | verification abstraction | verified ABI + failure semantics |
 | instruction-aligned bytecode walker | Phase 01 | H1_CRITICAL | Implemented foundation | validation | PUSH-data decoys excluded |
 | ownership/control | Phase 01 | H1_CRITICAL | Implemented foundation | RPC/evidence | deterministic positive/negative/inapplicable |
 | EIP-1967 proxy/code context | Phase 01 | H1_CRITICAL | Implemented foundation | RPC | contractAddress/codeAddress separated |
 | pause capability/state | Phase 01 | H1_CRITICAL | Implemented foundation | evidence/RPC | ABI-first + state tests |
 | mint capability/authority | Phase 01 | H1_CRITICAL | Implemented foundation | evidence | capability explicit; authority honest |
-| selector-collision semantics | Phase 01 | H1_CRITICAL | Missing | bytecode | fallback never conclusive |
-| normalized analysis result | Phase 01 | H1_CRITICAL | Missing | all core checks | deterministic schema + tests |
-| ground-truth corpus/evaluator | Phase 01 | H1_CRITICAL | Missing | normalized result | TP/TN/FP/FN/inconclusive/latency |
-| official Telegraph Intent adapter | H1 Miner | H1_CRITICAL | Blocked pending schema verification | normalized result | official request/response contract tested |
+| selector-collision semantics | Phase 01 | H1_CRITICAL | Implemented foundation | bytecode | fallback never conclusive |
+| normalized analysis result | Phase 01 | H1_CRITICAL | Implemented foundation | all core checks | deterministic schema + tests |
+| bounded orchestrator | Phase 01 | H1_CRITICAL | Implemented foundation | normalized result | bounded end-to-end analysis |
+| ground-truth corpus/evaluator | Phase 01 | H1_CRITICAL | Implemented foundation | normalized result | TP/TN/FP/FN/inconclusive |
+| latency measurement | H1 Operations | H1_OPERATIONAL | Implemented foundation | orchestrator | bounded p50/p95/p99 |
+| bounded concurrency | H1 Operations | H1_OPERATIONAL | Implemented foundation | runtime | explicit concurrency cap |
+| official Telegraph Intent adapter | H1 Miner | H1_CRITICAL | Blocked pending exact schema/evaluation verification | normalized result | official request/response contract tested |
 | live Miner endpoint | H1 Operations | H1_OPERATIONAL | Missing | adapter | deployable/live |
-| performance harness | H1 Operations | H1_OPERATIONAL | Missing | live Miner | p50/p95/p99 + failure metrics |
+| performance harness | H1 Operations | H1_OPERATIONAL | Partial | live Miner | real p50/p95/p99 + failure metrics |
 | Track 3 real usage | H1 Operations | H1_OPERATIONAL | Future | live Miner | real requests and application consumption |
 | X transparency/updates | H1 Operations | H1_OPERATIONAL | Planned | real progress | meaningful public evidence |
 
@@ -106,8 +110,10 @@ Do not expand into dozens of capabilities before these are reliable and benchmar
 - instruction-correct bytecode analysis
 - ownership/proxy
 - pause/mint
-- adversarial regressions
-- normalized-result design
+- normalized orchestrator
+- ground-truth evaluator foundation
+- latency/concurrency primitives
+- verification-provider foundation
 
 ## AUG 17 — Track 1 opens
 
@@ -133,6 +139,7 @@ Target: runnable/integration-ready deterministic Miner core; no UI-first detour.
 - selector collisions
 - provider failures/reverts
 - false-positive/false-negative/inconclusive analysis
+- real-chain corpus
 
 ## AUG 24–27 — Performance
 
@@ -175,7 +182,7 @@ Submission gate, not engineering stop.
 ### Phase 1 — EVM Analysis Core
 **Status: H1_CRITICAL / CURRENT**
 
-Exit: deterministic capability observations, normalized result, ground truth, integration-ready core.
+Exit: deterministic capability observations, normalized result, real-chain ground truth, integration-ready core.
 
 ### Phase 2 — Proxy-Aware Composition
 **Status: POST_H1 / NEXT**
