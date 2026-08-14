@@ -25,9 +25,19 @@ describe("EVM bytecode walker", () => {
     expect(selectors).toEqual([{ offset: 2, selector: "0x11223344" }]);
   });
 
-  it("rejects malformed hexadecimal and truncated PUSH operands", () => {
+  it("rejects malformed hexadecimal but safely records truncated PUSH operands", () => {
     expect(() => walkEvmBytecode("0x123")).toThrow("even length");
-    expect(() => walkEvmBytecode("0x6a0102")).toThrow("exceeds bytecode length");
+
+    const analysis = walkEvmBytecode("0x6a0102");
+    expect(analysis.instructions).toEqual([
+      {
+        offset: 0,
+        opcode: 0x6a,
+        pushData: new Uint8Array([0x01, 0x02]),
+        truncatedPush: true,
+      },
+    ]);
+    expect(findPush4Constants("0x630102")).toEqual([]);
   });
 
   it("handles PUSH0 as a single-byte opcode", () => {
