@@ -9,13 +9,7 @@ export const ZEPPELINOS_ADMIN_SLOT = "0x10d6a54a4754c8869d6886b5f5d7fbfa5b452223
 export const IBEACON_IMPLEMENTATION_SELECTOR = "0x5c60da1b";
 export const LEGACY_IMPLEMENTATION_SELECTOR = "0x5c60da1b";
 
-export type ProxyResolutionStatus =
-  | "direct"
-  | "implementation_resolved"
-  | "beacon_resolved"
-  | "beacon_unresolved"
-  | "unavailable"
-  | "error";
+export type ProxyResolutionStatus = "direct" | "implementation_resolved" | "beacon_resolved" | "beacon_unresolved" | "unavailable" | "error";
 
 export interface ProxyResolution {
   contractAddress: string;
@@ -37,16 +31,10 @@ export interface ProxyResolution {
 
 function decodeStorageAddress(data: string): string | undefined {
   if (data === "0x" || data === "0x0") return undefined;
-  if (!/^0x[0-9a-fA-F]*$/.test(data) || data.length !== 66) {
-    throw new Error("Malformed EIP-1967 storage response: expected 32 bytes");
-  }
+  if (!/^0x[0-9a-fA-F]*$/.test(data) || data.length !== 66) throw new Error("Malformed EIP-1967 storage response: expected 32 bytes");
   const address = `0x${data.slice(-40)}`;
   assertEvmAddress(address, "proxy storage address");
   return address.toLowerCase() === "0x0000000000000000000000000000000000000000" ? undefined : address;
-}
-
-function decodeCallAddress(data: string): string | undefined {
-  return decodeStorageAddress(data);
 }
 
 async function readSlot(rpc: JsonRpcClient, contractAddress: string, slot: string): Promise<RpcResult<string>> {
@@ -64,8 +52,8 @@ export async function resolveProxy(rpc: JsonRpcClient, contractAddress: string):
     readSlot(rpc, contractAddress, ZEPPELINOS_ADMIN_SLOT),
   ]);
 
-  if ([implementation, beacon, admin, legacyImplementation, legacyAdmin].some((item) => item.kind === "failure")) {
-    const failure = [implementation, beacon, admin, legacyImplementation, legacyAdmin].find((item) => item.kind === "failure");
+  if (implementation.kind === "failure" || beacon.kind === "failure" || admin.kind === "failure" || legacyImplementation.kind === "failure" || legacyAdmin.kind === "failure") {
+    const failure = implementation.kind === "failure" ? implementation : beacon.kind === "failure" ? beacon : admin.kind === "failure" ? admin : legacyImplementation.kind === "failure" ? legacyImplementation : legacyAdmin;
     return {
       contractAddress,
       status: "unavailable",
@@ -75,7 +63,7 @@ export async function resolveProxy(rpc: JsonRpcClient, contractAddress: string):
         adminSlot: EIP1967_ADMIN_SLOT,
         legacyImplementationSlot: ZEPPELINOS_IMPLEMENTATION_SLOT,
         legacyAdminSlot: ZEPPELINOS_ADMIN_SLOT,
-        detail: failure?.kind === "failure" ? failure.failure.message : "proxy storage query failed",
+        detail: failure.failure.message,
       },
     };
   }
@@ -137,8 +125,7 @@ export async function resolveProxy(rpc: JsonRpcClient, contractAddress: string):
           },
         };
       }
-
-      const resolvedImplementation = decodeCallAddress(beaconResult.value);
+      const resolvedImplementation = decodeStorageAddress(beaconResult.value);
       if (resolvedImplementation === undefined) {
         return {
           contractAddress,
@@ -152,7 +139,6 @@ export async function resolveProxy(rpc: JsonRpcClient, contractAddress: string):
           },
         };
       }
-
       return {
         contractAddress,
         codeAddress: resolvedImplementation,
@@ -168,12 +154,9 @@ export async function resolveProxy(rpc: JsonRpcClient, contractAddress: string):
       };
     }
 
-    // Some proxy families expose implementation() only to their admin, so a
-    // public eth_call can legitimately revert. This is only a final fallback;
-    // the exact on-chain storage slots above are preferred and authoritative.
     const legacyResult = await rpc.call<string>("eth_call", [{ to: contractAddress, data: LEGACY_IMPLEMENTATION_SELECTOR }, "latest"]);
     if (legacyResult.kind === "success") {
-      const legacyGetterImplementation = decodeCallAddress(legacyResult.value);
+      const legacyGetterImplementation = decodeStorageAddress(legacyResult.value);
       if (legacyGetterImplementation !== undefined && legacyGetterImplementation.toLowerCase() !== contractAddress.toLowerCase()) {
         return {
           contractAddress,
