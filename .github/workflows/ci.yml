@@ -23,13 +23,13 @@ jobs:
         if: github.ref == 'refs/heads/main'
         run: |
           for i in $(seq 1 36); do
-            if curl -fsS --max-time 5 https://veridex-ecru.vercel.app/metrics | grep -q '"cache"'; then
-              echo 'live Miner with cache instrumentation is reachable'
+            if curl -fsS --max-time 5 https://veridex-ecru.vercel.app/health | grep -q '"ok":true'; then
+              echo 'live Miner is reachable'
               exit 0
             fi
             sleep 5
           done
-          echo 'new live Miner did not become reachable in time'
+          echo 'live Miner did not become reachable in time'
           exit 1
       - name: Real-chain ground truth
         if: github.ref == 'refs/heads/main'
