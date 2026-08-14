@@ -2,6 +2,7 @@
   "version": 2,
   "routes": [
     { "src": "/health", "dest": "/api/health" },
+    { "src": "/detect", "dest": "/api/detect" },
     { "src": "/analyze", "dest": "/api/analyze" },
     { "src": "/metrics", "dest": "/api/metrics" }
   ]
