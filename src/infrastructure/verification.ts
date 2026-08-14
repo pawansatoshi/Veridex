@@ -31,6 +31,8 @@ export interface VerificationEvidence {
   verified: boolean;
   abiAvailable: boolean;
   sourceAvailable: boolean;
+  /** Provider-derived ABI retained for deterministic capability analysis; never caller-supplied. */
+  abi?: readonly unknown[];
   contractName?: string;
   compilerVersion?: string;
   detail?: string;
@@ -64,6 +66,7 @@ export function normalizeVerificationEvidence(
     verified: result.status === "verified",
     abiAvailable,
     sourceAvailable,
+    ...(abiAvailable ? { abi: data?.abi } : {}),
     ...(data?.contractName !== undefined ? { contractName: data.contractName } : {}),
     ...(data?.compilerVersion !== undefined ? { compilerVersion: data.compilerVersion } : {}),
     ...(result.detail !== undefined ? { detail: result.detail } : {}),
