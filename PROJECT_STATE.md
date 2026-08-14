@@ -72,38 +72,41 @@ User/Application → Telegraph Intent → Contract Address → Strict Validation
 - malformed/truncated bytecode and PUSH-data selector regression tests
 - verification provider abstraction with explicit verified/unverified/not-configured/API-failure/timeout/malformed-response states
 - provider-derived ABI retained for deterministic capability analysis
+- read-only Sourcify v2 verification provider with timeout, 404, 429/rate-limit and malformed-response semantics
 - verification evidence normalization and rate-limit metadata
 - deterministic `owner()` observation with active/renounced/not-applicable/unavailable/error outcomes
 - EIP-1967 implementation/beacon/admin slot inspection
 - beacon implementation resolution with explicit unresolved state
 - `contractAddress`/`codeAddress` separation
 - adversarial ownership/proxy regression coverage
-- pause capability detection from verified ABI
+- pause capability detection from exact supported callable signatures
 - live `paused()` observation with application-revert vs provider-failure semantics
-- mint/safeMint capability detection from verified ABI
+- mint/safeMint capability detection from exact supported callable signatures
 - conservative bytecode selector fallback that remains inconclusive
 - malformed ABI rejection for capability analysis
 - **H1 normalized analysis orchestrator** joining proxy, verification, bytecode, ownership, pause and mint evidence
 - normalized capability result with detection method, confidence, conclusive state, fallback reason and provider status
-- orchestrator regression tests for verified and unverified paths
+- ground-truth evaluator with TP/TN/FP/FN/inconclusive/unavailable/error metrics
+- bounded p50/p95/p99 latency measurement primitive
+- bounded concurrency primitive
+- CI dependency audit gate
 
 ## Partially implemented
 
-- runtime telemetry and bounded concurrency
-- concrete external verification provider
+- runtime telemetry integration into the end-to-end orchestrator
 - broader transparent/UUPS/beacon semantic classification
 - real-chain integration corpus
-- ground-truth evaluation harness
+- real-chain benchmark/evaluation run
 - official Telegraph Intent adapter and live endpoint
-- performance harness/cache/coalescing
+- production performance harness/cache/coalescing
 
 ## H1_CRITICAL
 
 - normalized machine-readable analysis result/orchestrator — **IMPLEMENTED FOUNDATION**
-- ground-truth corpus and evaluation harness
+- ground-truth corpus/evaluator — **IMPLEMENTED FOUNDATION; real-chain corpus remains**
+- exact capability signature semantics — **IMPLEMENTED FOUNDATION**
 - official Telegraph Intent selection and adapter after exact current request/response/evaluation contract verification
 - Telegraph request/response tests
-- adversarial selector-collision semantics
 - real-chain proxy/non-proxy integration
 - security/resource-bound regression coverage
 
@@ -169,14 +172,15 @@ The current official Telegraph Intent reference lists deterministic on-chain int
 5. Telegraph intent fit is currently the main external dependency for the adapter.
 6. Network latency/provider failures can dominate Miner performance.
 7. A broad response containing raw ABI data would be too large for a production Miner; the final transport adapter must emit normalized evidence, not the entire provider payload.
+8. `npm ci` is not currently viable because the repository's lockfile is intentionally minimal/incomplete; CI therefore uses `npm install` plus an audit gate until the lockfile is regenerated safely.
 
 ## Security baseline
 
 H1 requires strict input validation, bounded parser/network work, RPC timeout/retry/circuit breaker, application-level revert classification, safe malformed ABI/bytecode handling, instruction-boundary scanning, no provider-failure-as-contract-result, no client-supplied data as canonical evidence, no secrets in client code, dependency/CI security basics, and adversarial regression tests.
 
-## Tests
+## Tests / CI status
 
-CI has repeatedly verified typecheck and the complete Vitest suite through earlier milestones. The latest normalized-analysis test commit is `f35199801270ff12cfe1fe7d19b65a13523edcf7`; its GitHub Actions run is currently in progress and must be confirmed before this commit is called CI-verified.
+A previous CI run exposed two exact-optional-property type errors in the new Sourcify/orchestrator code; both were fixed. A later CI run also exposed the minimal `package-lock.json` incompatibility with `npm ci`; CI was reverted to `npm install` with the dependency audit retained. The latest exact-signature commit `a85644d1520d8151e87053e43850bf4b7ffb1dd6` has a CI run currently in progress and must be confirmed before being called CI-verified.
 
 ## Latest verified commit
 
@@ -184,14 +188,15 @@ CI has repeatedly verified typecheck and the complete Vitest suite through earli
 
 ## Next engineering task
 
-**Build the H1 ground-truth corpus and evaluation harness**, while finalizing the schema-neutral Telegraph adapter boundary. The corpus must cover positive/negative ownership, pause, mint, proxy, verified/unverified and adversarial selector cases, and must report TP/TN/FP/FN/inconclusive and latency metrics without contaminating production logic.
+**Complete the real-chain ground-truth corpus and evaluation run, then implement the Telegraph adapter only after the exact H1 Intent request/response/evaluation contract is verified.** Do not substitute an unrelated canonical Intent merely to claim integration.
 
 ## H1 exit sequence
 
 ```text
-normalized result/orchestrator
-→ ground truth + evaluator
-→ official Telegraph Intent adapter
+real-chain ground truth
+→ exact Telegraph Intent contract
+→ Telegraph adapter
+→ protocol tests
 → live Miner
 → performance optimization
 → Track 3 operation
