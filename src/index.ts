@@ -5,6 +5,7 @@ export * from "./domain/capabilities.js";
 export * from "./domain/ownership.js";
 export * from "./domain/analyzer.js";
 export * from "./evaluation/ground-truth.js";
+export * from "./infrastructure/concurrency.js";
 export * from "./infrastructure/config.js";
 export * from "./infrastructure/metrics.js";
 export * from "./infrastructure/resilience.js";
