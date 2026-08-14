@@ -54,10 +54,19 @@ describe("pause and mint capabilities", () => {
   it("does not confuse paused-state exposure with a pause control surface", () => {
     const result = analyzePauseCapability({
       contractAddress: CONTRACT,
-      verifiedAbi: [{ type: "function", name: "paused", inputs: [] }],
+      verifiedAbi: [{ type: "function", name: "paused", inputs: [], stateMutability: "view" }],
     });
 
     expect(result).toMatchObject({ capability: "pause", status: "negative", conclusive: true });
+  });
+
+  it("does not treat a view-only function named mint as mint authority", () => {
+    const result = analyzeMintCapability({
+      contractAddress: CONTRACT,
+      verifiedAbi: [{ type: "function", name: "mint", inputs: [], stateMutability: "view" }],
+    });
+
+    expect(result).toMatchObject({ capability: "mint", status: "negative", conclusive: true });
   });
 
   it("returns live paused state from the contract address", async () => {
