@@ -2,6 +2,7 @@ export * from "./domain/address.js";
 export * from "./types/analysis.js";
 export * from "./domain/bytecode.js";
 export * from "./domain/ownership.js";
+export * from "./domain/capabilities.js";
 export * from "./infrastructure/config.js";
 export * from "./infrastructure/resilience.js";
 export * from "./infrastructure/rpc.js";
