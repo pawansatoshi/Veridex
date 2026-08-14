@@ -2,7 +2,7 @@
 
 ## North Star
 
-Build **Veridex — Verifiable On-Chain Intelligence** into a production-grade, deterministic-first intelligence layer for smart contracts, Telegraph, applications, and autonomous agents.
+Build **Veridex — Verifiable On-Chain Intelligence** into a deterministic-first intelligence layer for smart contracts, Telegraph, applications, and autonomous agents.
 
 Core promise:
 
@@ -12,40 +12,30 @@ Core trust principle:
 
 > **No evidence → no certainty.**
 
-Veridex is not a generic one-shot scanner. Its long-term lifecycle is:
+Long-term lifecycle:
 
 ```text
 Analyze → Verify → Discover Powers → Passport → Watch → Detect Change
 → Explain Change → Policy → Alert → Agent/API → Telegraph
 ```
 
-The integrated moat is evidence-backed Capability Passport + continuous observation + Change Intelligence + policy + alerting, not any isolated feature.
+## CURRENT: H1 Miner Critical Path
 
-## H1 REBASELINE — CURRENT PRIORITY
-
-The long-term product roadmap remains intact. H1 introduces a temporary execution overlay so the team can prioritize the official Hackathon 1 Miner window without deleting or prematurely implementing post-H1 product work.
+H1 is a temporary execution overlay. It does not delete the original product roadmap.
 
 ### Official H1 timeline
 
-| Window | Objective | Priority |
-|---|---|---|
-| **Aug 13–16, 2026** | Foundation sprint: audit, rebaseline, Phase 01 runtime/evidence/security | **H1_CRITICAL** |
-| **Aug 17–31, 2026** | Track 1 Miner + Track 2 Script Author window; ship and operate real Miner | **H1_CRITICAL** |
-| **Aug 31–Sep 7, 2026** | Track 3 applications/agents consume live Miners; maintain reliability and measure real usage | **H1_OPERATIONAL** |
-| **Sep 7, 2026** | H1 final boundary | **H1_EXIT** |
-| **Post-Sep 7** | Full Veridex product expansion | **POST_H1** |
+| Window | Objective | Priority | Status | Exit criteria |
+|---|---|---|---|---|
+| Aug 13–16 | Audit, roadmap rebase, Phase 01 foundation | H1_CRITICAL | In progress | core runtime/evidence/security gates green |
+| Aug 17–31 | Track 1 Miner + Track 2 Script Author | H1_CRITICAL | Upcoming | real Miner submitted and runnable |
+| Aug 31–Sep 7 | Track 3 applications/agents + live Miner | H1_OPERATIONAL | Planned | Miner live, real requests, measured reliability |
+| Sep 7 | H1 final boundary | H1_EXIT | Planned | evidence package complete |
+| Post-Sep 7 | Full Veridex product | POST_H1 | Planned | staged by measured demand |
 
-Official rules say Track 1 and Track 2 run Aug 17–Aug 31, Track 3 runs Aug 31–Sep 7, and Miner judging is 75% Normalized Performance within the chosen Intent plus 25% X engagement/updates. Track 3 applications must use real Miners, and Miners must remain live throughout Track 3. See `docs/TELEGRAPH_REFERENCE.md` and the official rules before protocol-specific implementation.
+Official rules define Track 1/2 as Aug 17–31 and Track 3 as Aug 31–Sep 7. Miner judging is 75% Normalized Performance within the chosen Intent plus 25% X engagement/updates. Track 3 must use real Miners and Miners must remain live through Track 3.
 
-## CURRENT PHASE: H1 Miner Critical Path
-
-**Phase identity:** Phase 01 — EVM Analysis Core, accelerated and scoped as the H1 Miner foundation.
-
-### H1 objective
-
-Ship a **real, deterministic, measurable, reliable Veridex Miner**. H1 is not the deadline for the complete commercial Veridex product.
-
-### H1 critical pipeline
+## H1 critical pipeline
 
 ```text
 User/Application
@@ -75,7 +65,7 @@ Performance Measurement
 Telegraph Miner
 ```
 
-### H1 capability wedge
+## H1 capability wedge
 
 Only these capabilities are H1 core:
 
@@ -86,175 +76,156 @@ Only these capabilities are H1 core:
 
 Do not expand into dozens of capabilities before these are reliable and benchmarked.
 
-### H1 classification
+## H1 classification matrix
 
-| Work | Classification | Dependency | Exit condition |
-|---|---|---|---|
-| Strict address/hex/bytecode validation | H1_CRITICAL | none | adversarial tests pass |
-| RPC transport + timeout/retry | H1_CRITICAL | runtime | deterministic failure semantics |
-| Circuit breaker + revert classification | H1_CRITICAL | RPC | reverts never trip transport breaker |
-| Verification provider abstraction | H1_CRITICAL | resilience | configured/unconfigured/unverified/API failure distinct |
-| Instruction-aligned bytecode walker | H1_CRITICAL | validation | PUSH-data decoys cannot create findings |
-| Evidence/provenance model | H1_CRITICAL | domain types | every finding auditable |
-| Ownership check | H1_CRITICAL | RPC/evidence | positive/negative/inapplicable deterministic |
-| Pause check | H1_CRITICAL | RPC/evidence | capability + state semantics tested |
-| Mint check | H1_CRITICAL | RPC/evidence | capability/authority uncertainty explicit |
-| Minimum proxy-aware semantics | H1_CRITICAL | RPC/bytecode | contractAddress/codeAddress never confused |
-| Ground-truth corpus | H1_CRITICAL | checks | expected results independently defined |
-| Telegraph Intent adapter | H1_CRITICAL | core result | official schema verified and adapter tested |
-| Miner deployment/live operation | H1_OPERATIONAL | adapter | endpoint remains live through Track 3 |
-| Performance measurement | H1_OPERATIONAL | live Miner | p50/p95/p99 and failure metrics recorded |
-| X progress/transparency | H1_OPERATIONAL | real progress | meaningful, non-spam updates |
-| Track 3 application/agent validation | H1_OPERATIONAL | live Miner | real requests, no mocked demand |
-| Capability Passport | POST_H1 | stable normalized result | versioned persistent snapshot |
-| Continuous Watch | POST_H1 | Passport | shared observations/resource budgets |
-| Change Intelligence | POST_H1 | Watch + Passport | evidence-backed before/after diff |
-| Capability Time Machine | POST_H1 | Change Intelligence | stored observation timeline |
-| Policy Engine | POST_H1 | normalized capabilities | COMPLIANT/VIOLATION/INCONCLUSIVE |
-| Email/Webhook/Mobile alerts | POST_H1 | policy/events | channel-agnostic notification router |
-| Web/PWA | POST_H1 | API/result contract | thin client of intelligence core |
-| Premium 3D Contract Core | POST_H1 | product API | semantic, accessible visual layer |
-| Native mobile | POST_H1 | versioned API | separate client, same intelligence |
-| Agent API/SDK/MCP expansion | POST_H1 | stable intelligence contract | machine-consumable provenance |
+| Item | Phase | Priority | Status | Dependency | Exit criteria |
+|---|---|---|---|---|---|
+| strict address/hex/bytecode validation | Phase 01 | H1_CRITICAL | Implemented | none | adversarial tests |
+| RPC timeout/retry/circuit/revert classification | Phase 01 | H1_CRITICAL | Implemented | runtime | reverts never trip breaker |
+| verification abstraction/evidence hierarchy | Phase 01 | H1_CRITICAL | Implemented foundation | resilience | provider states distinct |
+| instruction-aligned bytecode walker | Phase 01 | H1_CRITICAL | Implemented foundation | validation | PUSH-data decoys excluded |
+| ownership/control | Phase 01 | H1_CRITICAL | Implemented foundation | RPC/evidence | deterministic positive/negative/inapplicable |
+| EIP-1967 proxy/code context | Phase 01 | H1_CRITICAL | Implemented foundation | RPC | contractAddress/codeAddress separated |
+| pause capability/state | Phase 01 | H1_CRITICAL | Implemented foundation | evidence/RPC | ABI-first + state tests |
+| mint capability/authority | Phase 01 | H1_CRITICAL | Implemented foundation | evidence | capability explicit; authority honest |
+| selector-collision semantics | Phase 01 | H1_CRITICAL | Missing | bytecode | fallback never conclusive |
+| normalized analysis result | Phase 01 | H1_CRITICAL | Missing | all core checks | deterministic schema + tests |
+| ground-truth corpus/evaluator | Phase 01 | H1_CRITICAL | Missing | normalized result | TP/TN/FP/FN/inconclusive/latency |
+| official Telegraph Intent adapter | H1 Miner | H1_CRITICAL | Blocked pending schema verification | normalized result | official request/response contract tested |
+| live Miner endpoint | H1 Operations | H1_OPERATIONAL | Missing | adapter | deployable/live |
+| performance harness | H1 Operations | H1_OPERATIONAL | Missing | live Miner | p50/p95/p99 + failure metrics |
+| Track 3 real usage | H1 Operations | H1_OPERATIONAL | Future | live Miner | real requests and application consumption |
+| X transparency/updates | H1 Operations | H1_OPERATIONAL | Planned | real progress | meaningful public evidence |
 
-## H1 EXECUTION PLAN
-
-### Aug 13–16 — Foundation sprint
+## AUG 13–16 — Foundation sprint
 
 - repository/source-of-truth audit
-- roadmap/state rebaseline
-- strict runtime/test foundation
-- resilience abstraction
-- RPC transport
+- roadmap/state rebase
+- resilience and security baseline
 - evidence hierarchy
-- bytecode correctness
-- ownership/pause/mint
-- minimum proxy semantics
-- security baseline
-- adversarial tests
+- instruction-correct bytecode analysis
+- ownership/proxy
+- pause/mint
+- adversarial regressions
+- normalized-result design
 
-### Aug 17 — Track 1 opens
+## AUG 17 — Track 1 opens
 
-Target: Veridex Miner is runnable/integration-ready, with the deterministic core and verified Telegraph adapter path prioritized over UI polish.
+Target: runnable/integration-ready deterministic Miner core; no UI-first detour.
 
-### Aug 17–20 — Telegraph integration hardening
+## AUG 17–20 — Telegraph integration hardening
 
-- verify chosen official Intent
-- request/response contract
-- Miner configuration/registration
+- verify current official Intent and supported request/response contract
+- implement adapter boundary
+- validate Miner lifecycle/configuration
 - error/deadline behavior
-- live endpoint
 - independent protocol tests
+- live endpoint path
 
-### Aug 20–24 — Ground truth + correctness
+## AUG 20–24 — Ground truth + correctness
 
-- curated contract corpus
-- positive/negative/inconclusive cases
-- proxy cases
-- malformed/adversarial fixtures
-- false-positive/false-negative analysis
+- Ownable/non-Ownable
+- pausable/non-pausable
+- mintable/non-mintable
+- direct/proxy
+- verified/unverified
+- malformed/adversarial bytecode
+- selector collisions
+- provider failures/reverts
+- false-positive/false-negative/inconclusive analysis
 
-### Aug 24–27 — Performance
+## AUG 24–27 — Performance
 
 - latency instrumentation
 - evidence reuse
-- safe caching where freshness is explicit
+- safe caching with explicit freshness
 - duplicate request coalescing where justified
 - bounded concurrency
 - provider resilience
+- p50/p95/p99 reporting
 
-### Aug 27–30 — Reliability / deployment / demo
+## AUG 27–30 — Reliability / deployment / demo
 
 - edge cases
 - deployment readiness
 - operational observability
 - documentation
-- reproducible demo
-- public technical progress
+- reproducible Miner demo
+- benchmark and transparency material
 
-### Aug 31 — Track 1 submission gate
+## AUG 31 — Track 1 submission gate
 
-Do not treat this as the end of engineering.
+Submission gate, not engineering stop.
 
-### Aug 31–Sep 7 — Track 3 operational window
+## AUG 31–SEP 7 — Track 3 operational window
 
 - keep Miner live
 - accept real requests
-- support real applications/agents
+- support applications/agents
 - measure latency/reliability
 - fix critical issues
 - publish transparent progress
-- collect legitimate evidence of utility
+- collect legitimate utility evidence
 
-### Sep 7 — H1 final boundary
-
-H1 evaluation boundary. After this, return to the full product roadmap.
-
-## LONG-TERM PRODUCT ROADMAP
+## POST-H1 PRODUCT ROADMAP
 
 ### Phase 0 — Constitution & continuity
-**Status: COMPLETE**
+**Status: ALREADY_IMPLEMENTED / COMPLETE**
 
 ### Phase 1 — EVM Analysis Core
-**Status: H1 CRITICAL / CURRENT**
+**Status: H1_CRITICAL / CURRENT**
 
-The existing Phase 01 contract remains the engineering foundation. H1 adds urgency, not weaker correctness requirements.
+Exit: deterministic capability observations, normalized result, ground truth, integration-ready core.
 
 ### Phase 2 — Proxy-Aware Composition
-**Status: POST-H1 / NEXT**
+**Status: POST_H1 / NEXT**
 
-Correctly compose direct, transparent/UUPS and supported beacon flows while preserving live proxy storage semantics.
+Dependency: Phase 1 normalized result. Exit: correct direct, transparent/UUPS and supported beacon composition without storage/code confusion.
 
 ### Phase 3 — Capability Intelligence
-**Status: POST-H1 / PLANNED**
+**Status: POST_H1 / PLANNED**
 
-Normalize deterministic observations into a machine-readable intelligence object.
+Dependency: stable normalized observations. Exit: versioned machine-readable intelligence object.
 
 ### Phase 3.5 — Capability Passport + Persistent Watch
-**Status: POST-H1 / PLANNED**
+**Status: POST_H1 / PLANNED**
 
-Build versioned Passport snapshots, continuous shared observation, change detection and historical timeline.
+Dependency: normalized intelligence. Exit: versioned snapshots, shared observation and safe change history.
 
 ### Phase 3.7 — Capability Policy Engine
-**Status: POST-H1 / PLANNED — NEW EXPLICIT MILESTONE**
+**Status: POST_H1 / PLANNED**
 
-Make policy evaluation a first-class phase rather than an implicit part of alert architecture.
+Dependency: Passport/Watch. Exit states: `COMPLIANT`, `VIOLATION`, `INCONCLUSIVE`.
 
-Required states:
+### Phase 4 — Telegraph Integration Expansion
+**Status: H1 minimal adapter / POST_H1 broader integrations**
 
-- `COMPLIANT`
-- `VIOLATION`
-- `INCONCLUSIVE`
+Dependency: official H1 adapter and stable core. Exit: replaceable protocol integrations without domain coupling.
 
-No premature numerical policy/confidence mathematics.
+### Phase 5 — Evaluation / Performance Platform
+**Status: H1 operational requirement + POST_H1 expansion**
 
-### Phase 4 — Telegraph Integration
-**Status: H1 adapter work / POST-H1 expansion**
-
-The H1 adapter is the minimal protocol boundary. Broader Telegraph integrations remain post-H1.
-
-### Phase 5 — Evaluation / Performance / Ground Truth
-**Status: H1 operational requirement + POST-H1 expansion**
-
-H1 requires enough evaluation to prove correctness/performance. The mature evaluation platform remains a continuing phase.
+Dependency: ground truth. Exit: durable benchmark/evaluation infrastructure.
 
 ### Phase 6 — Production Web Application
-**Status: POST-H1 / PLANNED**
+**Status: POST_H1 / PLANNED**
 
-Responsive web/PWA proof surface over the same intelligence API.
+Dependency: versioned intelligence API. Exit: thin, evidence-first web/PWA client.
 
-### Phase 7 — Premium UX / Brand / 3D Product Experience
-**Status: POST-H1 / PLANNED**
+### Phase 7 — Premium UX / Brand / 3D Contract Core
+**Status: POST_H1 / PLANNED**
 
-Apple-grade calm UX, Contract Core, progressive disclosure and evidence visualization.
+Dependency: stable product API. Exit: five-pillar UX with real analysis-state visualization.
 
-### Phase 8 — Hackathon Demo / Submission / Validation
-**Status: H1 operational work now; broader lifecycle remains ongoing**
+### Phase 8 — Hackathon lifecycle
+**Status: H1 OPERATIONAL NOW**
+
+Submission, Track 3 operation, measurement and transparent public evidence.
 
 ### Phase 9 — Mobile / Agent / Enterprise Evolution
-**Status: POST-H1 / PLANNED**
+**Status: POST_H1 / PLANNED**
 
-Native mobile, agent APIs/SDKs/MCP, enterprise policy tooling and broader integrations.
+Dependency: stable versioned intelligence contract. Exit: native mobile, agent API/SDK/MCP and enterprise policy tooling.
 
 ## Five long-term product pillars
 
@@ -266,49 +237,38 @@ Native mobile, agent APIs/SDKs/MCP, enterprise policy tooling and broader integr
 
 H1 focuses on UNDERSTAND + VERIFY + DISCOVER POWERS and CONNECT through the Miner. WATCH remains post-H1.
 
-## Long-term product architecture preserved
-
-The following remain explicitly planned and must not be deleted because H1 is narrower:
+## Preserved long-term architecture
 
 - Capability Passport
-- continuous Watch
+- Continuous Watch
 - Capability Change Intelligence
 - Capability Time Machine
 - Policy Engine
-- live posture/ranking with evidence/calibration requirements
-- email/webhook/mobile notification routing
-- PWA/native mobile
-- Apple-grade web application
+- evidence-backed posture/ranking
+- channel-agnostic alert router
+- Email / Webhook / Mobile
+- Web/PWA
+- native mobile
+- premium Apple-grade web application
 - 3D Contract Core
-- five-pillar UX
 - agent API/SDK/MCP
 - broader Telegraph integrations
 - enterprise policy tooling
 
 ## Quality gates
 
-Every milestone:
-
-- strict typecheck
-- complete test suite
-- adversarial/regression coverage
-- no fabricated blockchain/Telegraph constants
-- explicit external dependency failure semantics
-- security review of new trust boundaries
-- measured latency for network paths
-- documentation/state update
-- coherent commits; avoid unnecessary micro-commits
+Every milestone requires strict typecheck, complete tests, adversarial/regression coverage, no fabricated protocol constants, explicit dependency failure semantics, security review of new trust boundaries, measured network latency, and a state/documentation update.
 
 ## Never-do
 
-- never fabricate official addresses, ABI values, selectors or Intent schemas
+- never fabricate Intent schemas, addresses, selectors or evaluation semantics
 - never treat RPC reverts as provider outages
 - never treat selector scanning as stronger than verified ABI/source
-- never claim beacon implementation resolution without resolving it
+- never claim beacon implementation resolution without actual resolution
 - never hide fallback reasons
 - never infer capability removal from degraded evidence
 - never invent scoring before evaluation requirements are known
 - never sacrifice correctness for animation
-- never fake usage, engagement or demand
+- never fake usage or engagement
 - never couple core analysis to Telegraph transport
-- never build post-H1 UI/mobile/watch work at the expense of the H1 Miner critical path
+- never build post-H1 UI/mobile/watch work at the expense of the Miner

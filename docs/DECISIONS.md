@@ -54,7 +54,7 @@ Durable decisions live here so a future chat/agent does not reopen settled quest
 
 **Decision:** do not invent a large proprietary scoring engine before the Telegraph Intent and canonical evaluation contract are verified.
 
-**Rationale:** Telegraph's own evaluation/ranking mechanism is part of the hackathon objective. Internal risk aggregation should not distort the expected Miner response prematurely.
+**Rationale:** Telegraph's evaluation/ranking mechanism is part of the hackathon objective. Internal risk aggregation should not distort the expected Miner response prematurely.
 
 ## D010 — UI Animation
 
@@ -86,21 +86,35 @@ Durable decisions live here so a future chat/agent does not reopen settled quest
 
 **Evidence:** official Telegraph hackathon rules/site and official documentation emphasize Miner performance, real application usage, verified intelligence, and an evolving multi-round ecosystem.
 
-**Consequences:** current work prioritizes correctness, exact Intent compatibility, latency/reliability and real utility before UI breadth or speculative features. The product can evolve without rewriting the analysis core if Telegraph changes an Intent or transport.
+**Consequences:** current work prioritizes correctness, exact Intent compatibility, latency/reliability and real utility before UI breadth or speculative features.
 
 ## D014 — Capability Passport & Change Intelligence
 
 **Date:** 2026-08-13
 
-**Context:** A one-shot scanner is easy to imitate and only answers what a contract appears to expose at one observation point. Telegraph's positioning emphasizes verifiable and persistent intelligence, creating an opportunity to make the intelligence durable without weakening deterministic evidence semantics.
+**Context:** A one-shot scanner is easy to imitate and only answers what a contract appears to expose at one observation point.
 
 **Decision:** Veridex will develop a versioned Capability Passport and a safe Change Intelligence layer. A passport records the evidence-backed capability/control surface at an observation point. Comparisons classify control/capability changes separately from evidence-quality changes and infrastructure failures. A degraded observation can never imply that a capability was removed.
 
 **Alternatives considered:** remain a one-shot scanner; build a generic alerting system; infer changes from missing data; add a broad vulnerability engine instead.
 
-**Evidence:** current Veridex evidence/provenance architecture; Telegraph's public emphasis on verifiable signals and persistent intelligence; engineering need to distinguish contract changes from provider/verification failures.
+**Evidence:** current Veridex evidence/provenance architecture and the need to distinguish contract changes from provider/verification failures.
 
-**Consequences:** this becomes a strategic product moat while remaining staged after the deterministic analysis engine. It enables future agent preflight queries, historical intelligence and Telegraph signal use without forcing persistence into the first implementation.
+**Consequences:** this becomes a strategic product moat while remaining staged after the deterministic analysis engine.
+
+## D015 — H1 Miner Rebaseline and Capability Conservatism
+
+**Date:** 2026-08-14
+
+**Context:** H1 has a fixed Miner window ending Aug 31, followed by a seven-day Track 3 operational window. The existing repository already contained strong runtime, evidence, bytecode and proxy foundations but did not yet have a normalized Miner result or Telegraph adapter.
+
+**Decision:** keep H1 strictly on the deterministic Miner critical path. Pause and mint are implemented as evidence-first capability checks. Verified ABI evidence may be conclusive; instruction-aligned bytecode selector fallback is explicitly inconclusive because selector collisions exist. Live state queries use `contractAddress`; code/ABI inspection may use `codeAddress`. Mint authorization remains unresolved unless stronger access-control/source evidence proves it.
+
+**Alternatives considered:** build the final UI first; broaden the scanner to many capabilities; treat bytecode selectors as definitive; infer mint authority from function presence.
+
+**Evidence:** repository audit, existing architecture decisions, EVM selector semantics, OpenZeppelin capability/access-control documentation, and current Telegraph hackathon rules.
+
+**Consequences:** the next H1 milestone is a normalized analysis orchestrator, then ground truth and the official Telegraph adapter. Passport, Watch, Policy, mobile and 3D UX remain post-H1.
 
 ## How to Add a Decision
 
