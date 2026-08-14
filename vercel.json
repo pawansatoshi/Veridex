@@ -4,6 +4,7 @@
   "routes": [
     { "src": "/health", "dest": "/api/health" },
     { "src": "/analyze", "dest": "/api/analyze" },
-    { "src": "/metrics", "dest": "/api/metrics" }
+    { "src": "/metrics", "dest": "/api/metrics" },
+    { "src": "/(.*)", "dest": "/index.html" }
   ]
 }
