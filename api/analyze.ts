@@ -1,7 +1,5 @@
-import { createMinerDependencies } from "../src/miner/http.js";
 import { buildCapabilityIntelligence } from "../src/domain/capabilityIntelligence.js";
-
-const dependencies = createMinerDependencies();
+import { minerDependencies } from "../src/miner/runtime.js";
 
 export default async function handler(req: { method?: string; body?: unknown }, res: { statusCode?: number; setHeader(name: string, value: string): void; end(body?: string): void }): Promise<void> {
   res.setHeader("content-type", "application/json; charset=utf-8");
@@ -10,7 +8,7 @@ export default async function handler(req: { method?: string; body?: unknown }, 
   const input = req.body as Record<string, unknown> | undefined;
   if (!input || typeof input.chain !== "string" || typeof input.contractAddress !== "string") { res.statusCode = 400; res.end(JSON.stringify({ error: "invalid_request", detail: "Expected chain and contractAddress" })); return; }
   try {
-    const result = await dependencies.analyze({ chain: input.chain, contractAddress: input.contractAddress, ...(typeof input.codeAddress === "string" ? { codeAddress: input.codeAddress } : {}) });
+    const result = await minerDependencies.analyze({ chain: input.chain, contractAddress: input.contractAddress, ...(typeof input.codeAddress === "string" ? { codeAddress: input.codeAddress } : {}) });
     res.statusCode = 200;
     res.end(JSON.stringify({ schema: "veridex.miner.v1", result, capabilityIntelligence: buildCapabilityIntelligence(result) }));
   } catch (error) {

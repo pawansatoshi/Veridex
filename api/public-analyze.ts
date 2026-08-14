@@ -1,10 +1,4 @@
-import { createMinerDependencies } from "../src/miner/http.js";
-
-const dependencies = createMinerDependencies({
-  ...process.env,
-  VERIDEX_RPC_URL: process.env.VERIDEX_RPC_URL ?? "https://ethereum-rpc.publicnode.com",
-  VERIDEX_SOURCIFY_CHAIN_ID: process.env.VERIDEX_SOURCIFY_CHAIN_ID ?? "1",
-});
+import { minerDependencies } from "../src/miner/runtime.js";
 
 const ADDRESS_RE = /^0x[0-9a-fA-F]{40}$/;
 
@@ -26,7 +20,7 @@ export default async function handler(req: { method?: string; body?: unknown }, 
   }
 
   try {
-    const result = await dependencies.analyze({ chain: "1", contractAddress: input.contractAddress });
+    const result = await minerDependencies.analyze({ chain: "1", contractAddress: input.contractAddress });
     res.statusCode = 200;
     res.end(JSON.stringify({ schema: "veridex.miner.v1", result }));
   } catch (error) {
