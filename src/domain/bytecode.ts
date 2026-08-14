@@ -2,6 +2,7 @@ export interface EvmInstruction {
   offset: number;
   opcode: number;
   pushData?: Uint8Array;
+  truncatedPush?: boolean;
 }
 
 export interface BytecodeAnalysis {
@@ -39,11 +40,16 @@ export function walkEvmBytecode(bytecode: string): BytecodeAnalysis {
       const pushLength = opcode - PUSH1 + 1;
       const dataStart = offset + 1;
       const dataEnd = dataStart + pushLength;
-      if (dataEnd > bytes.length) {
-        throw new Error(`Malformed bytecode: PUSH${pushLength} at offset ${offset} exceeds bytecode length`);
-      }
-      instructions.push({ offset, opcode, pushData: bytes.slice(dataStart, dataEnd) });
-      offset = dataEnd;
+      const truncatedPush = dataEnd > bytes.length;
+      const actualEnd = Math.min(dataEnd, bytes.length);
+
+      instructions.push({
+        offset,
+        opcode,
+        pushData: bytes.slice(dataStart, actualEnd),
+        ...(truncatedPush ? { truncatedPush: true } : {}),
+      });
+      offset = actualEnd;
       continue;
     }
 
@@ -57,7 +63,7 @@ export function walkEvmBytecode(bytecode: string): BytecodeAnalysis {
 export function findPush4Constants(bytecode: string): readonly { offset: number; selector: string }[] {
   const analysis = walkEvmBytecode(bytecode);
   return analysis.instructions
-    .filter((instruction) => instruction.opcode === 0x63 && instruction.pushData?.length === 4)
+    .filter((instruction) => instruction.opcode === 0x63 && instruction.pushData?.length === 4 && instruction.truncatedPush !== true)
     .map((instruction) => ({
       offset: instruction.offset,
       selector: `0x${Array.from(instruction.pushData ?? []).map((byte) => byte.toString(16).padStart(2, "0")).join("")}`,
