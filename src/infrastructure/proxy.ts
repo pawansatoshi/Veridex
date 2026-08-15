@@ -4,7 +4,9 @@ import type { JsonRpcClient, RpcResult } from "./rpc.js";
 export const EIP1967_IMPLEMENTATION_SLOT = "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";
 export const EIP1967_BEACON_SLOT = "0xa3f0ad74e5423aebfd80d3ef4346578335a9a72aeaee59ff6cb3582b35133d50";
 export const EIP1967_ADMIN_SLOT = "0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103";
-export const ZEPPELINOS_IMPLEMENTATION_SLOT = "0x7050c9e0f4ca769c69bd3a8ef740bc37934f8e2c036e5a723fd8ee048ed3f8c";
+// keccak256("org.zeppelinos.proxy.implementation")
+export const ZEPPELINOS_IMPLEMENTATION_SLOT = "0x7050c9e0f4ca769c69bd3a8ef740bc37934f8e2c036e5a723fd8ee048ed3f8c3";
+// keccak256("org.zeppelinos.proxy.admin")
 export const ZEPPELINOS_ADMIN_SLOT = "0x10d6a54a4754c8869d6886b5f5d7fbfa5b4522237ea5c60d11bc4e7a1ff9390b";
 export const IBEACON_IMPLEMENTATION_SELECTOR = "0x5c60da1b";
 export const LEGACY_IMPLEMENTATION_SELECTOR = "0x5c60da1b";
@@ -64,8 +66,6 @@ export async function resolveProxy(rpc: JsonRpcClient, contractAddress: string):
     readSlot(rpc, contractAddress, ZEPPELINOS_ADMIN_SLOT),
   ]);
 
-  // Keep the discriminated-union narrowing explicit. TypeScript does not
-  // preserve the narrowing of individual tuple members through Array.some().
   if (
     implementation.kind === "failure" ||
     beacon.kind === "failure" ||
@@ -176,9 +176,6 @@ export async function resolveProxy(rpc: JsonRpcClient, contractAddress: string):
       };
     }
 
-    // Some proxy families expose implementation() only to their admin, so a
-    // public eth_call can legitimately revert. This is only a final fallback;
-    // the exact on-chain storage slots above are preferred and authoritative.
     const legacyResult = await rpc.call<string>("eth_call", [{ to: contractAddress, data: LEGACY_IMPLEMENTATION_SELECTOR }, "latest"]);
     if (legacyResult.kind === "success") {
       const legacyGetterImplementation = decodeCallAddress(legacyResult.value);
