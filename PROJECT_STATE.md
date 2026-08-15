@@ -116,41 +116,34 @@ Recognized formats currently include EVM, Sui-style 32-byte hex, Aptos/Move-styl
 - ground-truth harness
 - performance harness
 - production API request/response contract
+- **legitimate Telegraph Intent confirmed: `FRAUD_DETECTION`**
 
 ### H1_CRITICAL — NEXT / PENDING
 
-- verify exact live canonical Telegraph Intent and select only a semantically correct mapping
+- finalize/import/validate Miner YAML using `FRAUD_DETECTION`
 - connect deployed Veridex API through official Telegraph Miner flow
-- generate/validate final Miner YAML/config after Intent is confirmed
 - IPFS pin and on-chain Miner registration where required
 - real Telegraph request/routing test
 - Track 1 submission evidence package
 
-### H1_OPERATIONAL
+## Official Telegraph Intent confirmation
 
-- live Miner uptime
-- real request/performance evidence
-- X transparency updates
-- Track 3 real application/agent consumption after 31 Aug
+On 15 Aug 2026, Ahmed Ali explicitly confirmed that `FRAUD_DETECTION` is a legitimate high-value use case for Veridex. His confirmation specifically covered parsing contract state and logic such as ownership, mint/pause authority and upgradeability to output verifiable risk/safety signals that agents can rely on.
 
-### POST_H1
+Therefore Veridex will use:
 
-- broader proxy composition
-- Capability Passport
-- persistent Watch
-- Capability Change Intelligence / Time Machine
-- Policy Engine
-- Alerts / Email / Webhooks / Mobile
-- wallet approval/safety intelligence
-- semantic multi-chain analyzers
-- premium product UX / PWA / 3D Contract Core
-- Agent API / SDK / MCP
-- enterprise tooling
-- native mobile
+```text
+supported_intents:
+  - FRAUD_DETECTION
+```
+
+This is not an inferred or convenience mapping; it is an explicit protocol-team semantic confirmation for the Veridex use case.
+
+Ahmed also confirmed that a single Miner endpoint may subscribe to multiple Intents, but Veridex will not add `AGENT_TASK` without a separate concrete product requirement. Track 1 remains intentionally narrow.
 
 ## Telegraph integration rule
 
-The official supported Intent registry is authoritative. **Do not invent or select an unrelated Intent merely to get a registration through.** If Veridex has no legitimate supported category, obtain an official Telegraph answer before locking the mapping.
+The official supported Intent registry is authoritative. **Do not invent or select an unrelated Intent merely to get a registration through.** The current `FRAUD_DETECTION` mapping is backed by explicit Ahmed Ali confirmation for Veridex's contract risk/safety inference use case.
 
 Current integration UI exposes:
 
@@ -219,10 +212,8 @@ Track 3 requires live Miners and real application usage. No mocked or fabricated
 3. Verified ABI absence does not automatically prove capability absence.
 4. Mint authorization requires authority evidence, not just a `mint` selector.
 5. Beacon implementation must not be guessed.
-6. **Exact Telegraph canonical Intent mapping remains the principal external integration gate.**
-7. Provider latency/failure can dominate Miner performance.
-8. X engagement must remain authentic.
-9. Vercel currently reports a build-rate-limit status failure for the newest post-31b2c7585b8d1afc1f6cc4881bfb1064ff607419 commits; the production deployment itself remains healthy on the last successful deployment. Do not claim the newest docs/CI-only commits are deployed until Vercel accepts a build.
+6. Provider latency/failure can dominate Miner performance.
+7. Vercel currently reports a build-rate-limit status failure for the newest post-31b2c7585b8d1afc1f6cc4881bfb1064ff607419 commits; the production deployment itself remains healthy on the last successful deployment. Do not claim the newest docs/CI-only commits are deployed until Vercel accepts a build.
 
 ## Owner actions
 
@@ -234,7 +225,6 @@ Owner/protocol actions include:
 - wallet connection when the official registration flow requires it
 - Miner YAML/config submission
 - IPFS/on-chain registration transaction
-- official support confirmation of Intent mapping when needed
 - legitimate external Track 3 application demand
 
 Never send seed phrases, private keys, API secrets or Vercel secrets in chat/GitHub.
@@ -249,16 +239,15 @@ Never send seed phrases, private keys, API secrets or Vercel secrets in chat/Git
 
 ## Next single highest-priority task
 
-**Get an official, semantically correct canonical Telegraph Intent for contract-capability intelligence, then generate and validate the final Miner YAML against the live production endpoint.**
+**Finalize and validate the `FRAUD_DETECTION` Miner YAML against the live production endpoint, then complete official Telegraph sandbox/routing verification.**
 
 After that:
 
-1. official Miner sandbox validation
-2. IPFS pin / on-chain registration prerequisites
-3. real Telegraph request/routing test
-4. Track 1 submission package
-5. live performance evidence
-6. Track 3 application/agent consumption
+1. IPFS pin / on-chain registration prerequisites
+2. real Telegraph request/routing test
+3. Track 1 submission package
+4. live performance evidence
+5. Track 3 application/agent consumption
 
 ## Never claim
 
