@@ -11,13 +11,6 @@
 Repository: `pawansatoshi/Veridex`  
 Default branch: `main`
 
-## Official H1 timeline
-
-- **17 Aug 2026:** Track 1 Miner + Track 2 Script Author open
-- **31 Aug 2026:** Track 1 + Track 2 close
-- **31 Aug–7 Sep 2026:** Track 3 Applications/Agents
-- **7 Sep 2026:** H1 final evaluation boundary
-
 ## Mission
 
 Build **Veridex — Verifiable On-Chain Intelligence** as a deterministic-first smart-contract capability intelligence service.
@@ -50,6 +43,47 @@ Veridex deterministic Intelligence Core
 ```
 
 The domain core is not coupled to a guessed Intent.
+
+## Official Telegraph template reconciliation
+
+The previous `telegraph/miner.yaml` candidate was not fully aligned with the current official Miner Standard. The Telegraph validator returned HTTP 400, and the official `telegraphprotocol/telegraph-examples` repository was inspected directly.
+
+The official templates establish that a Miner YAML uses:
+
+- `version: "1"`
+- `kind: miner`
+- numeric `id`
+- unique lowercase `slug`
+- `protocol: generic` for normal HTTP APIs; `bittensor` is for subnet miners
+- `name`, `description`, `base_url`
+- optional `docs`
+- `auth.type: none` for keyless public APIs
+- optional rate/cache/circuit settings
+- endpoint `path`, `external_path`, `method`, `description`, and `intents`
+- optional/recommended JSON `input_schema` and `output_schema`
+- `semantics.signal_mapping`
+- `semantics.supported_intents` for autonomous routing
+- optional `on_chain` block
+
+Veridex has now been reconciled to this official structure. The corrected file is `telegraph/miner.yaml`.
+
+Current corrected identity/configuration:
+
+```yaml
+version: "1"
+kind: miner
+id: 1001
+slug: veridex-contract-risk-miner
+protocol: generic
+name: Veridex
+base_url: https://veridex-ecru.vercel.app
+auth:
+  type: none
+```
+
+The `/analyze` endpoint declares `FRAUD_DETECTION`, and `semantics.supported_intents` declares the same canonical Intent. No top-level `supported_intents` convenience field is used because the official annotated template places this declaration under `semantics` and endpoint-level `intents`.
+
+The YAML intentionally omits `on_chain`; this is an API-only inference Miner. The floor price remains an on-chain registration parameter.
 
 ## Address-first behavior
 
@@ -99,6 +133,7 @@ Recognized formats currently include EVM, Sui-style 32-byte hex, Aptos/Move-styl
 - regression coverage for the standalone Miner response envelope
 - production response-schema verification script added to CI
 - production endpoint contract documented: `POST /analyze`, JSON request, no auth, Ethereum chain normalized to `1`
+- Telegraph Miner YAML reconciled against the official `telegraphprotocol/telegraph-examples` Miner templates
 
 ## H1 classification
 
@@ -117,10 +152,11 @@ Recognized formats currently include EVM, Sui-style 32-byte hex, Aptos/Move-styl
 - performance harness
 - production API request/response contract
 - **legitimate Telegraph Intent confirmed: `FRAUD_DETECTION`**
+- **official Miner YAML structure reconciled**
 
 ### H1_CRITICAL — NEXT / PENDING
 
-- finalize/import/validate Miner YAML using `FRAUD_DETECTION`
+- official Telegraph YAML/import sandbox validation
 - connect deployed Veridex API through official Telegraph Miner flow
 - IPFS pin and on-chain Miner registration where required
 - real Telegraph request/routing test
@@ -130,26 +166,15 @@ Recognized formats currently include EVM, Sui-style 32-byte hex, Aptos/Move-styl
 
 On 15 Aug 2026, Ahmed Ali explicitly confirmed that `FRAUD_DETECTION` is a legitimate high-value use case for Veridex. His confirmation specifically covered parsing contract state and logic such as ownership, mint/pause authority and upgradeability to output verifiable risk/safety signals that agents can rely on.
 
-Therefore Veridex will use:
+Therefore Veridex uses:
 
 ```text
-supported_intents:
-  - FRAUD_DETECTION
+FRAUD_DETECTION
 ```
 
 This is not an inferred or convenience mapping; it is an explicit protocol-team semantic confirmation for the Veridex use case.
 
 Ahmed also confirmed that a single Miner endpoint may subscribe to multiple Intents, but Veridex will not add `AGENT_TASK` without a separate concrete product requirement. Track 1 remains intentionally narrow.
-
-## Telegraph integration rule
-
-The official supported Intent registry is authoritative. **Do not invent or select an unrelated Intent merely to get a registration through.** The current `FRAUD_DETECTION` mapping is backed by explicit Ahmed Ali confirmation for Veridex's contract risk/safety inference use case.
-
-Current integration UI exposes:
-
-- Connect API — **H1 Track 1 priority**
-- Submit WASM — **Track 2 optional secondary path**
-- Consume Intelligence — **Track 3 after Track 1/2**
 
 ## Current exact API contract
 
@@ -185,26 +210,6 @@ capabilityIntelligence: derived capability map/evidence graph
 
 The Vercel production route has been observed receiving POST `/analyze` requests with HTTP 200 on the current production deployment, alongside successful `/health` and `/metrics` requests.
 
-## Performance
-
-Current hackathon rules evaluate Miner performance/ranking plus X progress/engagement and other official criteria. Veridex tracks:
-
-- end-to-end latency
-- RPC latency
-- verification latency
-- analysis latency
-- serialization latency
-- p50/p95/p99
-- failure rate
-- cache/coalescing effectiveness
-- ground-truth correctness
-
-Never optimize latency by weakening correctness.
-
-## Track 3 constraints
-
-Track 3 requires live Miners and real application usage. No mocked or fabricated demand. If an Intent/category has ecosystem-wide participation thresholds, Veridex must not attempt to game them.
-
 ## Known risks / blockers
 
 1. Address formats can overlap across ecosystems.
@@ -213,7 +218,7 @@ Track 3 requires live Miners and real application usage. No mocked or fabricated
 4. Mint authorization requires authority evidence, not just a `mint` selector.
 5. Beacon implementation must not be guessed.
 6. Provider latency/failure can dominate Miner performance.
-7. Vercel currently reports a build-rate-limit status failure for the newest post-31b2c7585b8d1afc1f6cc4881bfb1064ff607419 commits; the production deployment itself remains healthy on the last successful deployment. Do not claim the newest docs/CI-only commits are deployed until Vercel accepts a build.
+7. The Telegraph importer previously returned HTTP 400 against the older non-standard YAML; the YAML has now been reconciled to the official template. The next validation run must confirm the official importer accepts it before any registration transaction.
 
 ## Owner actions
 
@@ -239,15 +244,16 @@ Never send seed phrases, private keys, API secrets or Vercel secrets in chat/Git
 
 ## Next single highest-priority task
 
-**Finalize and validate the `FRAUD_DETECTION` Miner YAML against the live production endpoint, then complete official Telegraph sandbox/routing verification.**
+**Re-import the reconciled `telegraph/miner.yaml` into the official Telegraph Miner Registry and run Step 2 sandbox validation. Do not pin/register until the validator returns success.**
 
 After that:
 
 1. IPFS pin / on-chain registration prerequisites
-2. real Telegraph request/routing test
-3. Track 1 submission package
-4. live performance evidence
-5. Track 3 application/agent consumption
+2. Base Sepolia registration
+3. real Telegraph request/routing test
+4. Track 1 submission package
+5. live performance evidence
+6. Track 3 application/agent consumption
 
 ## Never claim
 
