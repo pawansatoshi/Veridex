@@ -31,6 +31,12 @@ const emptySlots = () => [
 ];
 
 describe("EIP-1967 and legacy proxy resolution", () => {
+  it("keeps every storage slot exactly 32 bytes", () => {
+    expect(ZEPPELINOS_IMPLEMENTATION_SLOT).toHaveLength(66);
+    expect(ZEPPELINOS_ADMIN_SLOT).toHaveLength(66);
+    expect(ZEPPELINOS_IMPLEMENTATION_SLOT).toBe("0x7050c9e0f4ca769c69bd3a8ef740bc37934f8e2c036e5a723fd8ee048ed3f8c3");
+  });
+
   it("resolves a direct implementation slot", async () => {
     const rpc = fakeRpc([
       { kind: "success", value: slotFor(IMPLEMENTATION) },
