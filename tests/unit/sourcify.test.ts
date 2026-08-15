@@ -29,9 +29,18 @@ describe("Sourcify verification provider", () => {
     await expect(provider.lookup(CONTRACT)).resolves.toMatchObject({ status: "unverified_contract", httpStatus: 404 });
   });
 
-  it("preserves rate-limit information", async () => {
+  it("preserves rate-limit information when retries are disabled", async () => {
     const headers = new Headers({ "retry-after": "2" });
-    const provider = new SourcifyVerificationProvider({ chainId: "1", fetchImpl: vi.fn(async () => response(429, {}, headers)) });
+    const provider = new SourcifyVerificationProvider({ chainId: "1", maxRetries: 0, fetchImpl: vi.fn(async () => response(429, {}, headers)) });
     await expect(provider.lookup(CONTRACT)).resolves.toMatchObject({ status: "api_failure", httpStatus: 429, retryAfterMs: 2000 });
+  });
+
+  it("retries a transient rate limit and succeeds", async () => {
+    const fetchImpl = vi.fn()
+      .mockResolvedValueOnce(response(429, {}, new Headers({ "retry-after": "0" })))
+      .mockResolvedValueOnce(response(200, { match: "exact_match", abi: [{ type: "function", name: "pause", inputs: [], stateMutability: "nonpayable" }] }));
+    const provider = new SourcifyVerificationProvider({ chainId: "1", maxRetries: 1, fetchImpl });
+    await expect(provider.lookup(CONTRACT)).resolves.toMatchObject({ status: "verified" });
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
   });
 });
