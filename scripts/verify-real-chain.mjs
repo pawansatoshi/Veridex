@@ -52,7 +52,7 @@ async function analyze(address) {
   const response = await fetch(`${endpoint}/analyze`, {
     method: "POST",
     headers: { "content-type": "application/json", accept: "application/json" },
-    body: JSON.stringify({ chain: "ethereum", contractAddress: address }),
+    body: JSON.stringify({ chain: "1", contractAddress: address }),
   });
   const body = await response.json();
   if (!response.ok) throw new Error(`Miner returned ${response.status}: ${JSON.stringify(body)}`);
