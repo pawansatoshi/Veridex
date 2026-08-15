@@ -64,7 +64,15 @@ export async function resolveProxy(rpc: JsonRpcClient, contractAddress: string):
     readSlot(rpc, contractAddress, ZEPPELINOS_ADMIN_SLOT),
   ]);
 
-  if ([implementation, beacon, admin, legacyImplementation, legacyAdmin].some((item) => item.kind === "failure")) {
+  // Keep the discriminated-union narrowing explicit. TypeScript does not
+  // preserve the narrowing of individual tuple members through Array.some().
+  if (
+    implementation.kind === "failure" ||
+    beacon.kind === "failure" ||
+    admin.kind === "failure" ||
+    legacyImplementation.kind === "failure" ||
+    legacyAdmin.kind === "failure"
+  ) {
     const failure = [implementation, beacon, admin, legacyImplementation, legacyAdmin].find((item) => item.kind === "failure");
     return {
       contractAddress,
