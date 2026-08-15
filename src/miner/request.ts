@@ -1,6 +1,10 @@
-import type { MinerRequest } from "./http.js";
-
 const ADDRESS_RE = /^0x[0-9a-fA-F]{40}$/;
+
+export interface MinerRequest {
+  chain: string;
+  contractAddress: string;
+  codeAddress?: string;
+}
 
 /**
  * H1 semantic analysis is Ethereum mainnet only. Accept the unambiguous
