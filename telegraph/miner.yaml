@@ -51,7 +51,11 @@ endpoints:
           type: object
       additionalProperties: true
 limitations:
-  - Ethereum mainnet only for the H1 Miner.
-  - Contract capability findings are evidence-backed and may be inconclusive when provider or verification evidence is unavailable.
-  - Selector presence alone is never treated as semantic proof of a capability.
-  - Provider or infrastructure failures are reported as unavailable/error state and are never converted into negative contract findings.
+  - code: EVM_MAINNET_ONLY
+    message: H1 semantic analysis is supported for Ethereum mainnet only.
+  - code: EVIDENCE_DEPENDENT
+    message: Findings may be inconclusive when provider or verification evidence is unavailable.
+  - code: SELECTOR_NOT_PROOF
+    message: Function selector presence alone is never treated as semantic proof of a capability.
+  - code: PROVIDER_FAILURE
+    message: Provider or infrastructure failures are reported as unavailable/error and are never converted into negative contract findings.
