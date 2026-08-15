@@ -2,17 +2,27 @@
 
 The H1 bridge is a small dependency-free HTTP adapter around the deterministic analysis core.
 
-## Endpoints
+## Production endpoints
 
 ### `GET /health`
 
-Returns a liveness response.
+Returns a liveness response:
+
+```json
+{
+  "ok": true,
+  "service": "veridex-miner",
+  "version": "0.1.0"
+}
+```
 
 ### `GET /metrics`
 
-Returns bounded latency samples with p50/p95/p99.
+Returns bounded latency samples with p50/p95/p99 plus cache counters.
 
 ### `POST /analyze`
+
+This is the Telegraph-facing production endpoint.
 
 Request:
 
@@ -26,7 +36,51 @@ Request:
 
 `codeAddress` is optional. It is intended for explicit proxy implementation targeting; normal callers should provide only `contractAddress` and let Veridex resolve the code address.
 
-The response is wrapped as `schema: veridex.miner.v1` and contains the normalized analysis object. Provider failures are represented as evidence/status and are never converted into negative contract findings.
+Accepted `chain` values are `1`, `ethereum`, and `ethereum-mainnet`; the response always normalizes the chain to `1`. Other chains are rejected because the H1 Miner is currently Ethereum-mainnet only.
+
+Success responses use one stable envelope in both the Vercel production handler and the standalone Miner runtime:
+
+```json
+{
+  "schema": "veridex.miner.v1",
+  "result": {
+    "contract": {},
+    "proxy": {},
+    "verification": {},
+    "capabilities": [],
+    "evidence": [],
+    "confidence": 0,
+    "conclusive": false,
+    "providerStatus": {}
+  },
+  "capabilityIntelligence": {
+    "subject": {},
+    "capabilityMap": [],
+    "evidenceGraph": [],
+    "state": "established",
+    "confidence": 0
+  }
+}
+```
+
+The exact JSON response is validated by `npm run verify:production-schema` against the live production deployment. The same envelope is covered by `src/miner/http.test.ts` to prevent the standalone runtime and Vercel adapter from drifting apart.
+
+Provider failures are represented as evidence/status and are never converted into negative contract findings.
+
+## Telegraph integration boundary
+
+For the current Vercel deployment:
+
+- `base_url`: `https://veridex-ecru.vercel.app`
+- Telegraph-facing `path`: `/analyze`
+- upstream `external_path`: `/analyze`
+- method: `POST`
+- auth: none
+- request body: JSON
+- request fields: `chain`, `contractAddress`, optional `codeAddress`
+- success schema: `veridex.miner.v1` envelope above
+
+The final `supported_intents` value is deliberately not hard-coded here until an official, semantically correct canonical Telegraph Intent is confirmed for contract-capability intelligence. Veridex must not register under `ONCHAIN_TX_LOOKUP` or another unrelated Intent merely because it is available.
 
 ## Environment
 
@@ -43,7 +97,7 @@ The response is wrapped as `schema: veridex.miner.v1` and contains the normalize
 
 ```bash
 npm install
-npm run build
+npm run build:core
 VERIDEX_RPC_URL=https://your-rpc.example npm start
 ```
 
@@ -51,6 +105,6 @@ No private key or transaction signing is required. The Miner is read-only.
 
 ## Security boundary
 
-The request body is capped at 64 KiB, contract addresses are strictly validated, JSON is parsed defensively, responses are `no-store`, and the core retains explicit inconclusive/unavailable/error states.
+The standalone request body is capped at 64 KiB, contract addresses are strictly validated, JSON is parsed defensively, responses are `no-store`, and the core retains explicit inconclusive/unavailable/error states.
 
-The adapter is intentionally schema-neutral with respect to Telegraph until the exact currently supported H1 Intent request/response/evaluation contract is verified. It does not invent a Telegraph Intent or claim registration merely because the HTTP bridge exists.
+The Vercel production route inherits Vercel's request parsing/limits and applies the same semantic request validation before analysis.
