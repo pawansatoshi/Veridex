@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 const baseUrl = (process.env.VERIDEX_MINER_URL ?? "https://veridex-ecru.vercel.app").replace(/\/$/, "");
-const chain = process.env.VERIDEX_BENCHMARK_CHAIN ?? "ethereum";
+const chain = process.env.VERIDEX_BENCHMARK_CHAIN ?? "1";
 const addresses = (process.env.VERIDEX_BENCHMARK_ADDRESSES ?? process.env.VERIDEX_BENCHMARK_ADDRESS ?? "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48")
   .split(",")
   .map((value) => value.trim())
