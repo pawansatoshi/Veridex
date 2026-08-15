@@ -1,61 +1,81 @@
-name: Veridex
 version: "1"
+kind: miner
+id: 1001
+slug: veridex-contract-risk-miner
+protocol: generic
+name: Veridex
+
 description: >-
   Evidence-backed smart-contract risk and safety inference for agents. Veridex
   parses Ethereum contract state and logic to produce verifiable signals for
   ownership/control, upgradeability, pause capability, and mint authority.
+
 base_url: https://veridex-ecru.vercel.app
+
+docs:
+  website: https://veridex-ecru.vercel.app
+  repository: https://github.com/pawansatoshi/Veridex
+
 auth:
   type: none
-supported_intents:
-  - FRAUD_DETECTION
+
+rate_limit_per_sec: 5
+cache_ttl_sec: 30
+circuit_threshold: 5
+circuit_cooldown_seconds: 30
+
 endpoints:
   - path: /analyze
+    external_path: /analyze
     method: POST
     description: >-
       Analyze an Ethereum smart contract and return evidence-backed risk and
-      capability intelligence.
-    input_schema:
+      capability intelligence for ownership, upgradeability, pause and mint
+      authority.
+    intents:
+      - FRAUD_DETECTION
+
+input_schema:
+  type: object
+  required:
+    - chain
+    - contractAddress
+  properties:
+    chain:
+      type: string
+      description: Ethereum chain identifier; canonical value is 1.
+      example: "1"
+    contractAddress:
+      type: string
+      description: EVM contract address to analyze.
+      example: "0x0000000000000000000000000000000000000000"
+    codeAddress:
+      type: string
+      description: Optional explicit implementation/code address for proxy analysis.
+      example: "0x0000000000000000000000000000000000000000"
+
+output_schema:
+  type: object
+  required:
+    - schema
+    - result
+    - capabilityIntelligence
+  properties:
+    schema:
+      type: string
+      description: Veridex Miner response schema identifier.
+      example: veridex.miner.v1
+    result:
       type: object
-      additionalProperties: false
-      required:
-        - chain
-        - contractAddress
-      properties:
-        chain:
-          type: string
-          description: Ethereum chain identifier. Canonical value is 1.
-          enum:
-            - "1"
-            - ethereum
-            - ethereum-mainnet
-        contractAddress:
-          type: string
-          description: EVM contract address to analyze.
-        codeAddress:
-          type: string
-          description: Optional explicit implementation/code address for proxy analysis.
-    output_schema:
+      description: Normalized evidence-backed smart-contract analysis.
+    capabilityIntelligence:
       type: object
-      required:
-        - schema
-        - result
-        - capabilityIntelligence
-      properties:
-        schema:
-          type: string
-          const: veridex.miner.v1
-        result:
-          type: object
-        capabilityIntelligence:
-          type: object
-      additionalProperties: true
-limitations:
-  - code: EVM_MAINNET_ONLY
-    message: H1 semantic analysis is supported for Ethereum mainnet only.
-  - code: EVIDENCE_DEPENDENT
-    message: Findings may be inconclusive when provider or verification evidence is unavailable.
-  - code: SELECTOR_NOT_PROOF
-    message: Function selector presence alone is never treated as semantic proof of a capability.
-  - code: PROVIDER_FAILURE
-    message: Provider or infrastructure failures are reported as unavailable/error and are never converted into negative contract findings.
+      description: Derived capability map and evidence graph for agent consumption.
+
+semantics:
+  signal_mapping:
+    label_field: capabilityIntelligence
+    confidence_field: capabilityIntelligence.confidence
+    reason_field: result.evidence
+  supported_intents:
+    - FRAUD_DETECTION
