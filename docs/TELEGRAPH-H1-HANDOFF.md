@@ -52,19 +52,25 @@ Ahmed Ali confirmed registration can be submitted anytime; it does not require w
 
 ### Base URL
 
-`base_url` must be the actual **production API endpoint Telegraph will route requests to**, not the Veridex website. Example given by the team: `https://api.yourminer.com/v1/endpoint`.
+The official Miner examples define `base_url` as the production host to which endpoint paths are appended. Veridex therefore uses:
 
-The website/docs URL belongs in the optional `docs.website` field.
+```text
+https://veridex-ecru.vercel.app
+```
 
-For Veridex, use the real deployed Miner endpoint once the exact request path is confirmed. Do not substitute the landing-page URL.
+with the Telegraph-facing endpoint `/analyze`.
+
+Do not use the Veridex website as the API base URL.
 
 ### Authentication
 
 If the production API is publicly accessible without credentials, the YAML auth type should be `none`. This means Telegraph does not inject auth headers/query parameters.
 
-### Endpoints
+### Endpoints and request contracts
 
-The YAML `endpoints` section must describe the **real production endpoints**: exact paths, HTTP methods and parameter mappings Telegraph will use. Representative request/response examples may be included in descriptions or structured parameter blocks.
+The official Telegraph Miner reference requires the standard identity fields (`version`, `kind`, numeric `id`, `slug`, `protocol`, `name`), endpoint declarations, request/response schemas and, for autonomous routing, endpoint `intents` plus a `semantics.supported_intents` declaration.
+
+The official `telegraphprotocol/telegraph-examples` repository is now the source of truth for YAML structure. Its `demo-miner.yaml` and annotated `example-miner.yaml` show the canonical Miner Standard shape. The example explicitly distinguishes `generic` HTTP APIs from `bittensor` subnet miners. Veridex is a normal public HTTP API, so its protocol is `generic`.
 
 ### On-chain layout
 
@@ -80,6 +86,10 @@ A later team response said the `breakdown_answer` requirement was deprecated/rem
 
 This Track 2 information must not be incorrectly applied to Track 1 Miner YAML.
 
+### Base Sepolia
+
+Ahmed Ali explicitly confirmed Base Sepolia is live for end-to-end testing. The official examples repository also documents Base Sepolia (`84532`) as the live testnet for registration and end-to-end examples.
+
 ## 4. Veridex Intent mapping — CONFIRMED
 
 On 15 Aug 2026, Ahmed Ali explicitly confirmed that `FRAUD_DETECTION` is a legitimate high-value use case for Veridex. His confirmation specifically described parsing contract state and logic such as ownership, mint/pause authority, and upgradeability to output verifiable risk/safety signals that agents can rely on.
@@ -87,7 +97,15 @@ On 15 Aug 2026, Ahmed Ali explicitly confirmed that `FRAUD_DETECTION` is a legit
 Therefore the Track 1 Miner mapping is:
 
 ```yaml
-supported_intents:
+semantics:
+  supported_intents:
+    - FRAUD_DETECTION
+```
+
+and the `/analyze` endpoint declares:
+
+```yaml
+intents:
   - FRAUD_DETECTION
 ```
 
@@ -162,13 +180,33 @@ Success envelope:
 }
 ```
 
-## 7. Miner YAML
+## 7. Miner YAML — reconciled against official template
 
-The repository now contains `telegraph/miner.yaml` with the confirmed `FRAUD_DETECTION` mapping, public `none` authentication, `/analyze` POST endpoint, input schema, output schema and real H1 limitations.
+The previous candidate YAML was **not** fully aligned with the official Telegraph Miner Standard. This was identified after the Telegraph validator returned HTTP 400 and the official `telegraphprotocol/telegraph-examples` templates were inspected.
 
-The YAML intentionally omits `on_chain` because this is an API-only inference Miner and the on-chain layout is optional.
+The corrected `telegraph/miner.yaml` now follows the official structure:
 
-The YAML has been syntax-parsed successfully. Final validation must still be performed by the official Telegraph integration wizard/import validator because that is the authoritative schema validator for the registration format.
+- `version: "1"`
+- `kind: miner`
+- numeric `id`
+- unique lowercase `slug`
+- `protocol: generic` because Veridex is a normal HTTP API, not a Bittensor subnet
+- `name` and description
+- production `base_url`
+- optional docs links
+- `auth.type: none`
+- operational rate/cache/circuit fields
+- endpoint `path` + `external_path` + method
+- endpoint `intents: [FRAUD_DETECTION]`
+- JSON `input_schema`
+- JSON `output_schema`
+- required `semantics.signal_mapping`
+- `semantics.supported_intents: [FRAUD_DETECTION]`
+- no unnecessary `on_chain` block
+- no unsupported top-level `supported_intents`
+- no custom `limitations` block until the official validator confirms a need for one
+
+This reconciled structure is based directly on the official `demo-miner.yaml` and annotated `example-miner.yaml` in `telegraphprotocol/telegraph-examples`.
 
 ## 8. H1 work order before registration
 
@@ -178,6 +216,7 @@ The YAML has been syntax-parsed successfully. Final validation must still be per
 - [x] exact production path identified: `/analyze`
 - [x] public auth behavior verified
 - [x] input/output contract documented
+- [x] request/response schema aligned with official Miner template
 - [ ] official Telegraph YAML/import validation
 
 ### 3 — Production Miner endpoint
@@ -192,12 +231,15 @@ The YAML has been syntax-parsed successfully. Final validation must still be per
 ### 4 — YAML/configuration
 
 - [x] exact Intent mapping verified by Telegraph team
-- [x] base_url points to production API
+- [x] official Miner identity fields added
+- [x] protocol correctly set to `generic`
+- [x] endpoint Intent mapping added
+- [x] semantics mapping added
+- [x] base_url points to production API host
 - [x] auth is `none`
 - [x] endpoint definition matches production
 - [x] input schema matches API contract
 - [x] output schema matches API contract
-- [x] real limitations documented
 - [x] optional on-chain layout omitted
 - [ ] official Telegraph import/sandbox validation
 
@@ -248,13 +290,13 @@ Implemented/foundation work already exists on `main`, including:
 - H1 owner runbook
 - standalone Miner/production response-envelope parity
 - production response-schema verification script
-- `telegraph/miner.yaml` candidate registration manifest
+- reconciled `telegraph/miner.yaml` based on official Telegraph Miner templates
 
 ## 10. Latest production checkpoint
 
 The current production deployment has been observed serving successful `/health`, `/metrics`, and POST `/analyze` requests with HTTP 200. A GET request to `/analyze` correctly returns 405 because the Miner endpoint is POST-only.
 
-The latest Vercel build completed successfully for commit `31b2c7585b8d1afc1f6cc4881bfb1064ff607419` before subsequent documentation/YAML commits encountered the Vercel build-rate-limit status. Do not claim the newest commits are production-deployed until Vercel accepts a new build.
+The latest successful Vercel deployment contains the previously verified runtime response-envelope changes. The reconciled YAML commit is a configuration/documentation change and must not be called production-deployed until Vercel accepts a build containing it.
 
 ## 11. Address-first contract
 
@@ -305,7 +347,8 @@ Required before calling H1 complete:
 - Read `AGENTS.md`, `PROJECT_STATE.md`, `docs/ROADMAP.md`, `docs/ARCHITECTURE.md`, `docs/DECISIONS.md` and this file first.
 - Inspect the actual repository before changing code.
 - Official Telegraph docs/rules/Discord team answers outrank assumptions.
-- `FRAUD_DETECTION` is now confirmed as the legitimate Veridex Intent.
+- The official `telegraphprotocol/telegraph-examples` Miner templates are the YAML structure source of truth.
+- `FRAUD_DETECTION` is confirmed as the legitimate Veridex Intent.
 - Never add an unrelated Intent for convenience.
 - Never claim production readiness from documentation alone.
 - Never treat selector presence as semantic proof.
@@ -318,4 +361,4 @@ Required before calling H1 complete:
 
 ## 15. Immediate next action
 
-**Use the confirmed `FRAUD_DETECTION` mapping to validate/import `telegraph/miner.yaml` through the official Telegraph integration validator, then complete IPFS/registration prerequisites and a real Telegraph-routed request before declaring Track 1 complete.**
+**Re-import the reconciled `telegraph/miner.yaml` into the official Telegraph Miner Registry, verify the parsed identity/protocol/intent/endpoint fields, then run the sandbox validation. Do not proceed to IPFS or on-chain registration until the validator returns success.**
