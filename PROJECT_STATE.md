@@ -95,6 +95,10 @@ Recognized formats currently include EVM, Sui-style 32-byte hex, Aptos/Move-styl
 - live CI artifact capture for correctness/performance
 - failure-injection/recovery regression tests
 - H1 owner-action runbook
+- standalone Miner HTTP response now matches the production `veridex.miner.v1` envelope, including `capabilityIntelligence`
+- regression coverage for the standalone Miner response envelope
+- production response-schema verification script added to CI
+- production endpoint contract documented: `POST /analyze`, JSON request, no auth, Ethereum chain normalized to `1`
 
 ## H1 classification
 
@@ -111,12 +115,13 @@ Recognized formats currently include EVM, Sui-style 32-byte hex, Aptos/Move-styl
 - resilience/security baseline
 - ground-truth harness
 - performance harness
+- production API request/response contract
 
 ### H1_CRITICAL — NEXT / PENDING
 
-- verify exact official Telegraph Intent/request-response contract
+- verify exact live canonical Telegraph Intent and select only a semantically correct mapping
 - connect deployed Veridex API through official Telegraph Miner flow
-- generate/validate Miner YAML/config
+- generate/validate final Miner YAML/config after Intent is confirmed
 - IPFS pin and on-chain Miner registration where required
 - real Telegraph request/routing test
 - Track 1 submission evidence package
@@ -153,6 +158,40 @@ Current integration UI exposes:
 - Submit WASM — **Track 2 optional secondary path**
 - Consume Intelligence — **Track 3 after Track 1/2**
 
+## Current exact API contract
+
+Production URL: `https://veridex-ecru.vercel.app`
+
+Telegraph-facing endpoint:
+
+```text
+POST https://veridex-ecru.vercel.app/analyze
+Content-Type: application/json
+auth: none
+```
+
+Request:
+
+```json
+{
+  "chain": "1",
+  "contractAddress": "0x...",
+  "codeAddress": "0x..."
+}
+```
+
+`codeAddress` is optional. `chain` accepts Ethereum labels but is normalized to canonical chain ID `1`; unsupported chains are rejected.
+
+Success envelope:
+
+```text
+schema: veridex.miner.v1
+result: normalized analysis
+capabilityIntelligence: derived capability map/evidence graph
+```
+
+The Vercel production route has been observed receiving POST `/analyze` requests with HTTP 200 on the current production deployment, alongside successful `/health` and `/metrics` requests.
+
 ## Performance
 
 Current hackathon rules evaluate Miner performance/ranking plus X progress/engagement and other official criteria. Veridex tracks:
@@ -173,17 +212,17 @@ Never optimize latency by weakening correctness.
 
 Track 3 requires live Miners and real application usage. No mocked or fabricated demand. If an Intent/category has ecosystem-wide participation thresholds, Veridex must not attempt to game them.
 
-## Known risks
+## Known risks / blockers
 
 1. Address formats can overlap across ecosystems.
 2. Four-byte selectors are not semantic proof.
 3. Verified ABI absence does not automatically prove capability absence.
 4. Mint authorization requires authority evidence, not just a `mint` selector.
 5. Beacon implementation must not be guessed.
-6. Exact Telegraph Intent mapping remains the principal integration gate.
+6. **Exact Telegraph canonical Intent mapping remains the principal external integration gate.**
 7. Provider latency/failure can dominate Miner performance.
-8. Wallet approval coverage requires explicit freshness/indexing semantics.
-9. X engagement must remain authentic.
+8. X engagement must remain authentic.
+9. Vercel currently reports a build-rate-limit status failure for the newest post-31b2c7585b8d1afc1f6cc4881bfb1064ff607419 commits; the production deployment itself remains healthy on the last successful deployment. Do not claim the newest docs/CI-only commits are deployed until Vercel accepts a build.
 
 ## Owner actions
 
@@ -210,14 +249,16 @@ Never send seed phrases, private keys, API secrets or Vercel secrets in chat/Git
 
 ## Next single highest-priority task
 
-**Verify the official Telegraph H1 Intent/request-response contract and complete the Connect API Miner registration path without inventing an Intent.**
+**Get an official, semantically correct canonical Telegraph Intent for contract-capability intelligence, then generate and validate the final Miner YAML against the live production endpoint.**
 
 After that:
 
-1. real Telegraph request test
-2. Track 1 submission package
-3. live performance evidence
-4. Track 3 application/agent consumption
+1. official Miner sandbox validation
+2. IPFS pin / on-chain registration prerequisites
+3. real Telegraph request/routing test
+4. Track 1 submission package
+5. live performance evidence
+6. Track 3 application/agent consumption
 
 ## Never claim
 
