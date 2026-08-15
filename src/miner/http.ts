@@ -7,18 +7,15 @@ import { LatencyTracker, measureAsync } from "../infrastructure/metrics.js";
 import { JsonRpcClient } from "../infrastructure/rpc.js";
 import { SourcifyVerificationProvider } from "../infrastructure/sourcify.js";
 import { NotConfiguredVerificationProvider, VerificationClient } from "../infrastructure/verification.js";
+import { normalizeMinerRequest } from "./request.js";
+import type { MinerRequest } from "./request.js";
 
 const MAX_BODY_BYTES = 64 * 1024;
-const ADDRESS_RE = /^0x[0-9a-fA-F]{40}$/;
 const DEFAULT_SOURCIFY_CHAIN_ID = "1";
 const DEFAULT_CACHE_TTL_MS = 15_000;
 const DEFAULT_CACHE_MAX_ENTRIES = 256;
 
-export interface MinerRequest {
-  chain: string;
-  contractAddress: string;
-  codeAddress?: string;
-}
+export type { MinerRequest } from "./request.js";
 
 export interface MinerDependencies {
   analyze: (request: MinerRequest) => Promise<NormalizedAnalysis>;
@@ -50,15 +47,6 @@ function cacheKey(request: MinerRequest): string {
     request.contractAddress.toLowerCase(),
     request.codeAddress?.toLowerCase() ?? "",
   ].join(":");
-}
-
-function validRequest(value: unknown): value is MinerRequest {
-  if (typeof value !== "object" || value === null) return false;
-  const input = value as Record<string, unknown>;
-  if (typeof input.chain !== "string" || input.chain.trim().length === 0 || input.chain.length > 64) return false;
-  if (typeof input.contractAddress !== "string" || !ADDRESS_RE.test(input.contractAddress)) return false;
-  if (input.codeAddress !== undefined && (typeof input.codeAddress !== "string" || !ADDRESS_RE.test(input.codeAddress))) return false;
-  return true;
 }
 
 async function readJson(request: IncomingMessage): Promise<unknown> {
@@ -100,7 +88,7 @@ export function createMinerDependencies(env: Record<string, string | undefined> 
     cache,
     analyze: (request) => cache.getOrCompute(
       cacheKey(request),
-      () => measureAsync(latency, () => analyzeContract({ rpc, verification }, request)),
+      () => measureAsync(latency, () => analyzeContract({ rpc, verification }, request),
     ),
   };
 }
@@ -124,12 +112,13 @@ export function createMinerServer(dependencies: MinerDependencies): ReturnType<t
       }
 
       const input = await readJson(request);
-      if (!validRequest(input)) {
-        json(response, 400, { error: "invalid_request", detail: "Expected chain, contractAddress and optional codeAddress" });
+      const normalized = normalizeMinerRequest(input);
+      if (normalized === undefined) {
+        json(response, 400, { error: "invalid_request", detail: "Expected Ethereum mainnet chain (1/ethereum), a valid contractAddress, and optional codeAddress" });
         return;
       }
 
-      const analysis = await dependencies.analyze(input);
+      const analysis = await dependencies.analyze(normalized);
       json(response, 200, {
         schema: "veridex.miner.v1",
         result: analysis,
