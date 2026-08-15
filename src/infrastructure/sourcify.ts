@@ -5,6 +5,7 @@ export interface SourcifyProviderOptions {
   chainId: string;
   baseUrl?: string;
   timeoutMs?: number;
+  maxRetries?: number;
   fetchImpl?: typeof fetch;
 }
 
@@ -15,6 +16,7 @@ export interface SourcifyProviderOptions {
 export class SourcifyVerificationProvider implements VerificationProvider {
   private readonly baseUrl: string;
   private readonly timeoutMs: number;
+  private readonly maxRetries: number;
   private readonly fetchImpl: typeof fetch;
 
   public constructor(private readonly options: SourcifyProviderOptions) {
@@ -24,7 +26,30 @@ export class SourcifyVerificationProvider implements VerificationProvider {
     if (!Number.isInteger(this.timeoutMs) || this.timeoutMs < 100 || this.timeoutMs > 30_000) {
       throw new Error("Sourcify timeout must be an integer in [100, 30000]");
     }
+    this.maxRetries = options.maxRetries ?? 2;
+    if (!Number.isInteger(this.maxRetries) || this.maxRetries < 0 || this.maxRetries > 4) {
+      throw new Error("Sourcify maxRetries must be an integer in [0, 4]");
+    }
     this.fetchImpl = options.fetchImpl ?? fetch;
+  }
+
+  private async fetchWithRetry(url: string, signal: AbortSignal): Promise<Response> {
+    let lastResponse: Response | undefined;
+    for (let attempt = 0; attempt <= this.maxRetries; attempt += 1) {
+      const response = await this.fetchImpl(url, {
+        method: "GET",
+        headers: { accept: "application/json" },
+        signal,
+      });
+      if (![429, 500, 502, 503, 504].includes(response.status) || attempt === this.maxRetries) return response;
+      lastResponse = response;
+      const retryAfter = response.headers.get("retry-after");
+      const retryAfterMs = retryAfter && /^\d+(?:\.\d+)?$/.test(retryAfter)
+        ? Math.min(Number(retryAfter) * 1_000, 5_000)
+        : Math.min(250 * 2 ** attempt, 2_000);
+      await new Promise((resolve) => setTimeout(resolve, retryAfterMs));
+    }
+    return lastResponse ?? new Response(null, { status: 503 });
   }
 
   public async lookup(contractAddress: string): Promise<VerificationProviderResult> {
@@ -34,11 +59,7 @@ export class SourcifyVerificationProvider implements VerificationProvider {
     const timer = setTimeout(() => controller.abort(), this.timeoutMs);
 
     try {
-      const response = await this.fetchImpl(url, {
-        method: "GET",
-        headers: { accept: "application/json" },
-        signal: controller.signal,
-      });
+      const response = await this.fetchWithRetry(url, controller.signal);
 
       if (response.status === 404) {
         return { status: "unverified_contract", httpStatus: 404, detail: "Sourcify has no verified contract record" };
@@ -50,7 +71,7 @@ export class SourcifyVerificationProvider implements VerificationProvider {
           status: "api_failure",
           httpStatus: 429,
           ...(retryAfterMs !== undefined ? { retryAfterMs } : {}),
-          detail: "Sourcify rate limit",
+          detail: "Sourcify rate limit after retries",
         };
       }
       if (!response.ok) {
