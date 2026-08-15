@@ -88,7 +88,7 @@ export function createMinerDependencies(env: Record<string, string | undefined> 
     cache,
     analyze: (request) => cache.getOrCompute(
       cacheKey(request),
-      () => measureAsync(latency, () => analyzeContract({ rpc, verification }, request),
+      () => measureAsync(latency, () => analyzeContract({ rpc, verification }, request)),
     ),
   };
 }
