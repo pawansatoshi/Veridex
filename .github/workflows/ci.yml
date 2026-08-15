@@ -47,6 +47,11 @@ jobs:
         run: |
           mkdir -p artifacts
           npm run benchmark:miner | tee artifacts/production-benchmark.json
+      - name: Production response schema
+        if: github.ref == 'refs/heads/main'
+        env:
+          VERIDEX_MINER_URL: https://veridex-ecru.vercel.app
+        run: npm run verify:production-schema | tee artifacts/production-schema.json
       - name: Upload verification artifacts
         if: always() && github.ref == 'refs/heads/main'
         uses: actions/upload-artifact@v4
