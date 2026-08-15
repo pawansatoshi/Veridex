@@ -15,7 +15,8 @@
     "typecheck": "tsc --noEmit",
     "telegraph:intents": "node scripts/check-telegraph-intents.mjs",
     "benchmark:miner": "node scripts/benchmark-miner.mjs",
-    "verify:real-chain": "node scripts/verify-real-chain.mjs"
+    "verify:real-chain": "node scripts/verify-real-chain.mjs",
+    "verify:production-schema": "node scripts/verify-production-schema.mjs"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
