@@ -1,15 +1,16 @@
-# Veridex — Telegraph H1 Complete Handoff
+# Veridex — Telegraph H1 Current Handoff
 
-> Continuity document for a new chat/agent. Read this before changing code or filling the Telegraph registration form.
+> Continuity document for a new chat/agent. Read this before changing code or filling/submitting any Telegraph material.
 
-**Last reviewed:** 15 Aug 2026  
-**Repository:** `pawansatoshi/Veridex`  
-**Branch:** `main`  
+**Last reviewed:** 19 Aug 2026
+**Repository:** `pawansatoshi/Veridex`
+**Branch:** `main`
+**Current Miner:** #1001 / `veridex-contract-risk-miner`
 **H1 window:** Track 1/2: 17–31 Aug 2026; Track 3: 31 Aug–7 Sep 2026
 
-## 1. Mission
+## 1. Current mission
 
-Build **Veridex — Verifiable On-Chain Intelligence** into a winning Telegraph Miner and a durable evidence-first smart-contract capability intelligence product.
+Build **Veridex — Verifiable On-Chain Intelligence** into a winning Telegraph Miner and durable evidence-first smart-contract capability intelligence product.
 
 Core promise:
 
@@ -19,18 +20,53 @@ Trust rule:
 
 > No evidence → no certainty.
 
-The H1 wedge is intentionally narrow and reliable:
+H1 remains intentionally narrow:
 
 1. ownership/control
 2. upgradeability/proxy surface
 3. pause capability/state
 4. mint capability/authority where evidence permits
 
-Do not expand this capability matrix until these four are reliable in production.
+Do not expand this matrix before these four are reliable in production.
 
-## 2. Telegraph model — important correction
+## 2. Current status — important rebaseline
 
-A Telegraph Miner is an API/model/dataset/tool wrapped for the Telegraph network. Veridex therefore has two layers:
+### Completed
+
+- Phase 00 Constitution & Continuity
+- deterministic EVM analysis foundation
+- address-first detection
+- wallet vs contract gate
+- evidence-first architecture
+- proxy/code-vs-storage semantics
+- ownership/pause/mint foundations
+- resilience/security baseline
+- normalized `veridex.miner.v1` result
+- ground-truth evaluator foundation
+- latency/concurrency instrumentation
+- production API
+- official Telegraph Miner YAML reconciliation
+- `FRAUD_DETECTION` Intent confirmation
+- Miner registration
+- Miner #1001 created/registered
+
+### Remaining
+
+The project is now in **Phase 01 FINAL EXIT AUDIT / H1 production evidence**.
+
+Remaining high-priority engineering/evidence work:
+
+- real-chain proxy/non-proxy integration tests
+- curated real-chain ground-truth corpus and TP/TN/FP/FN/inconclusive accounting
+- controlled RPC timeout regression
+- Telegraph request/response tests
+- genuine Telegraph-routed request verification
+- final p50/p95/p99 and reliability evidence
+- final Track 1 submission/evidence package
+
+## 3. Telegraph integration contract
+
+A Telegraph Miner wraps an API/model/dataset/tool. Veridex therefore has two layers:
 
 ```text
 Veridex deterministic intelligence core
@@ -40,107 +76,27 @@ Telegraph Miner adapter / API contract
 Telegraph protocol envelope
 ```
 
-Do **not** redesign the Veridex engine around a guessed Telegraph Intent. The adapter is the integration boundary.
+Do not redesign the Veridex engine around a guessed Intent.
 
-## 3. Official information confirmed by Telegraph team in Discord
+### Confirmed Intent
 
-The following points were answered by Telegraph team members in the hackathon Discord and are treated as the current protocol guidance for this project.
-
-### Registration timing
-
-Ahmed Ali confirmed registration can be submitted anytime; it does not require waiting for a particular day. The project can register when ready.
-
-### Base URL
-
-The official Miner examples define `base_url` as the production host to which endpoint paths are appended. Veridex therefore uses:
-
-```text
-https://veridex-ecru.vercel.app
-```
-
-with the Telegraph-facing endpoint `/analyze`.
-
-Do not use the Veridex website as the API base URL.
-
-### Authentication
-
-If the production API is publicly accessible without credentials, the YAML auth type should be `none`. This means Telegraph does not inject auth headers/query parameters.
-
-### Endpoints and request contracts
-
-The official Telegraph Miner reference requires the standard identity fields (`version`, `kind`, numeric `id`, `slug`, `protocol`, `name`), endpoint declarations, request/response schemas and, for autonomous routing, endpoint `intents` plus a `semantics.supported_intents` declaration.
-
-The official `telegraphprotocol/telegraph-examples` repository is now the source of truth for YAML structure. Its `demo-miner.yaml` and annotated `example-miner.yaml` show the canonical Miner Standard shape. The example explicitly distinguishes `generic` HTTP APIs from `bittensor` subnet miners. Veridex is a normal public HTTP API, so its protocol is `generic`.
-
-### On-chain layout
-
-The `on_chain` YAML block is optional. It is only required if the integration maps API response values to on-chain storage. A pure inference service can omit the YAML `on_chain` layout.
-
-The team clarified that a floor price is still set through the on-chain registration transaction; that does not make the YAML `on_chain` block mandatory.
-
-### Intent ↔ WASM mapping
-
-The team confirmed WASM scorers are **per Intent**. Ahmed Ali also said the contract-side Intent mapping was being fixed and that miners should not wait for that fix: deploy/register the WASM and re-register later once the binding is fixed.
-
-A later team response said the `breakdown_answer` requirement was deprecated/removed and only `rank_answer` is required for the updated scoring-module interface.
-
-This Track 2 information must not be incorrectly applied to Track 1 Miner YAML.
-
-### Base Sepolia
-
-Ahmed Ali explicitly confirmed Base Sepolia is live for end-to-end testing. The official examples repository also documents Base Sepolia (`84532`) as the live testnet for registration and end-to-end examples.
-
-## 4. Veridex Intent mapping — CONFIRMED
-
-On 15 Aug 2026, Ahmed Ali explicitly confirmed that `FRAUD_DETECTION` is a legitimate high-value use case for Veridex. His confirmation specifically described parsing contract state and logic such as ownership, mint/pause authority, and upgradeability to output verifiable risk/safety signals that agents can rely on.
-
-Therefore the Track 1 Miner mapping is:
+Telegraph team explicitly confirmed:
 
 ```yaml
-semantics:
-  supported_intents:
-    - FRAUD_DETECTION
+FRAUD_DETECTION
 ```
 
-and the `/analyze` endpoint declares:
+This is the legitimate H1 use case for Veridex's evidence-backed contract capability/control analysis.
 
-```yaml
-intents:
-  - FRAUD_DETECTION
-```
+Do not add `AGENT_TASK` or another unrelated Intent merely for convenience.
 
-This is an explicit protocol-team semantic confirmation, not a guessed or convenience mapping.
-
-Ahmed also confirmed that a single Miner endpoint may subscribe to multiple Intents. Veridex will not add `AGENT_TASK` merely because dual-intent registration is technically supported; the current Track 1 integration remains intentionally narrow and uses only `FRAUD_DETECTION`.
-
-## 5. Hackathon timing confirmed in official email/Discord
-
-- Track 1 — Miners: starts 17 Aug, closes 31 Aug.
-- Track 2 — Evaluation Scripts: starts 17 Aug, closes 31 Aug.
-- Track 3 — Applications: 31 Aug–7 Sep.
-- Final winner/announcement window was communicated as approximately 19–25 Sep.
-- Ahmed Ali clarified that 17 Aug is the date builders can start; submissions happen at the end of the relevant track.
-
-Registration is allowed anytime, but the engineering gate remains stricter: complete and verify the integration first, then register with production-ready values.
-
-## 6. Current exact Veridex Miner contract
-
-Production base URL:
+### Production API
 
 ```text
-https://veridex-ecru.vercel.app
-```
-
-Telegraph-facing endpoint:
-
-```text
-POST /analyze
-```
-
-Authentication:
-
-```text
-none
+Base URL: https://veridex-ecru.vercel.app
+Method: POST
+Path: /analyze
+Auth: none
 ```
 
 Request:
@@ -153,165 +109,117 @@ Request:
 }
 ```
 
-`codeAddress` is optional. `chain` accepts `1`, `ethereum`, and `ethereum-mainnet`, and responses normalize the chain to canonical `1`. Other chains are rejected because H1 semantic analysis is Ethereum-mainnet only.
+`codeAddress` is optional. H1 semantic analysis is Ethereum mainnet; chain is normalized to canonical `1`.
 
-Success envelope:
-
-```json
-{
-  "schema": "veridex.miner.v1",
-  "result": {
-    "contract": {},
-    "proxy": {},
-    "verification": {},
-    "capabilities": [],
-    "evidence": [],
-    "confidence": 0,
-    "conclusive": false,
-    "providerStatus": {}
-  },
-  "capabilityIntelligence": {
-    "subject": {},
-    "capabilityMap": [],
-    "evidenceGraph": [],
-    "state": "established",
-    "confidence": 0
-  }
-}
-```
-
-## 7. Miner YAML — reconciled against official template
-
-The previous candidate YAML was **not** fully aligned with the official Telegraph Miner Standard. This was identified after the Telegraph validator returned HTTP 400 and the official `telegraphprotocol/telegraph-examples` templates were inspected.
-
-The corrected `telegraph/miner.yaml` now follows the official structure:
-
-- `version: "1"`
-- `kind: miner`
-- numeric `id`
-- unique lowercase `slug`
-- `protocol: generic` because Veridex is a normal HTTP API, not a Bittensor subnet
-- `name` and description
-- production `base_url`
-- optional docs links
-- `auth.type: none`
-- operational rate/cache/circuit fields
-- endpoint `path` + `external_path` + method
-- endpoint `intents: [FRAUD_DETECTION]`
-- JSON `input_schema`
-- JSON `output_schema`
-- required `semantics.signal_mapping`
-- `semantics.supported_intents: [FRAUD_DETECTION]`
-- no unnecessary `on_chain` block
-- no unsupported top-level `supported_intents`
-- no custom `limitations` block until the official validator confirms a need for one
-
-This reconciled structure is based directly on the official `demo-miner.yaml` and annotated `example-miner.yaml` in `telegraphprotocol/telegraph-examples`.
-
-## 8. H1 work order before registration
-
-### 2 — Telegraph integration contract
-
-- [x] legitimate Intent confirmed: `FRAUD_DETECTION`
-- [x] exact production path identified: `/analyze`
-- [x] public auth behavior verified
-- [x] input/output contract documented
-- [x] request/response schema aligned with official Miner template
-- [ ] official Telegraph YAML/import validation
-
-### 3 — Production Miner endpoint
-
-- [x] production URL reachable
-- [x] exact HTTP method/path verified
-- [x] deterministic request validation
-- [x] stable machine-readable response envelope
-- [x] no website URL used as `base_url`
-- [x] no secrets exposed
-
-### 4 — YAML/configuration
-
-- [x] exact Intent mapping verified by Telegraph team
-- [x] official Miner identity fields added
-- [x] protocol correctly set to `generic`
-- [x] endpoint Intent mapping added
-- [x] semantics mapping added
-- [x] base_url points to production API host
-- [x] auth is `none`
-- [x] endpoint definition matches production
-- [x] input schema matches API contract
-- [x] output schema matches API contract
-- [x] optional on-chain layout omitted
-- [ ] official Telegraph import/sandbox validation
-
-### 5 — Registration/infrastructure readiness
-
-- [ ] IPFS pin through official integration UI
-- [ ] on-chain registration prerequisites verified
-- [ ] floor price/payment fields handled according to official UI/docs
-- [ ] wallet/network/transaction details verified before signing
-- [x] no private keys or seed phrases required by the Miner itself
-
-### 6 — End-to-end verification
-
-- [ ] real Telegraph-routed request
-- [ ] response compared against direct Veridex API response
-- [ ] Miner routing/latency/failure evidence captured
-- [ ] submission evidence package complete
-
-## 9. Current Veridex implementation state
-
-Implemented/foundation work already exists on `main`, including:
-
-- strict EVM validation
-- multi-chain address-format detection
-- EVM wallet-vs-contract gate using `eth_getCode`
-- non-EVM safe-stop behavior
-- `/detect`, `/analyze`, `/health`, `/metrics`
-- evidence-first architecture
-- bounded EVM instruction walking
-- selector-collision protection
-- malformed/truncated bytecode regression coverage
-- RPC timeout/retry/circuit breaker/failure classification
-- JSON-RPC revert vs infrastructure failure classification
-- verification abstraction/Sourcify provider
-- EIP-1967 and legacy proxy handling
-- ownership, pause and mint capability foundations
-- normalized Miner result
-- deterministic Capability Diff primitive
-- ground-truth evaluator foundation
-- p50/p95/p99 instrumentation
-- bounded concurrency
-- production analysis cache and request coalescing
-- CI dependency audit gate
-- public Ethereum RPC fallback
-- benchmark harness
-- real Ethereum mainnet ground-truth harness
-- failure-injection/recovery tests
-- H1 owner runbook
-- standalone Miner/production response-envelope parity
-- production response-schema verification script
-- reconciled `telegraph/miner.yaml` based on official Telegraph Miner templates
-
-## 10. Latest production checkpoint
-
-The current production deployment has been observed serving successful `/health`, `/metrics`, and POST `/analyze` requests with HTTP 200. A GET request to `/analyze` correctly returns 405 because the Miner endpoint is POST-only.
-
-The latest successful Vercel deployment contains the previously verified runtime response-envelope changes. The reconciled YAML commit is a configuration/documentation change and must not be called production-deployed until Vercel accepts a build containing it.
-
-## 11. Address-first contract
+### Miner identity
 
 ```text
-Any address
-  → detect family
-  → EVM wallet? explain and stop contract analysis
-  → EVM contract? analyze
-  → known non-EVM format? identify family and stop unsupported semantic analysis
-  → unknown/ambiguous? do not guess
+Miner ID: 1001
+Slug: veridex-contract-risk-miner
+Protocol: generic
+Intent: FRAUD_DETECTION
 ```
 
-Format recognition is a safety/usability gate, not proof of full semantic analysis for every chain.
+Registration has been completed successfully.
 
-## 12. Evidence contract
+## 4. Current Telegraph operational state
+
+The Miner is registered, but the Telegraph UI currently shows **Unranked / 0 Requests**.
+
+Current working interpretation: this is a known Telegraph-side routing/ranking issue based on team feedback. It must not be presented as a confirmed Veridex defect without new evidence.
+
+Next verification target:
+
+```text
+Telegraph-routed request
+        ↓
+Miner #1001
+        ↓
+Veridex /analyze
+        ↓
+compare with direct API result
+        ↓
+record latency/result/failure evidence
+```
+
+Never fabricate requests, traffic, users, ranking, demand or performance.
+
+## 5. Hackathon timing
+
+- **Track 1 — Miners:** 17 Aug–31 Aug 2026
+- **Track 2 — Evaluation Scripts:** 17 Aug–31 Aug 2026
+- **Track 3 — Applications/Agents:** 31 Aug–7 Sep 2026
+- **H1 final operational boundary:** 7 Sep 2026
+
+Re-verify official rules immediately before final submission because dates/criteria can change.
+
+## 6. Execution plan from 19 Aug
+
+### Gate A — Phase 01 final correctness
+
+1. real-chain proxy/non-proxy tests
+2. curated ground-truth corpus
+3. RPC timeout regression
+4. Telegraph request/response tests
+5. full tests + typecheck + build
+6. production smoke test
+
+### Gate B — Performance/reliability
+
+Measure and preserve evidence for:
+
+- p50/p95/p99 end-to-end latency
+- RPC latency
+- verification latency
+- analysis latency
+- serialization latency
+- error/failure rate
+- cache effectiveness
+- duplicate-request coalescing
+- bounded concurrency
+- failure recovery
+
+Correctness cannot be traded for latency.
+
+### Gate C — Track 1 package
+
+Target package completion: 28–30 Aug; final submission by 31 Aug.
+
+Include:
+
+- live Miner identity
+- production endpoint
+- confirmed Intent
+- deterministic correctness evidence
+- evidence provenance
+- ground-truth results
+- adversarial/security results
+- benchmark results
+- reliability evidence
+- reproducible demo
+- honest limitations/inconclusive cases
+
+## 7. Track 2 — optional
+
+WASM evaluation is secondary. It must not delay Track 1.
+
+Only proceed if the official evaluation contract is confirmed and Track 1 correctness is secure.
+
+## 8. Track 3 — 31 Aug to 7 Sep
+
+If we enter Track 3, build a real application/agent that consumes live Telegraph Miners.
+
+Do not fake demand with:
+
+```text
+agent → Veridex → same agent
+```
+
+Prefer a genuine multi-Miner consumption/selection/decision workflow when justified.
+
+No mocks or fabricated usage.
+
+## 9. Evidence and security invariants
 
 Evidence hierarchy:
 
@@ -321,44 +229,40 @@ Tier 2 — supported verified structural evidence
 Tier 3 — instruction-boundary bytecode fallback
 ```
 
-Every result should preserve requested address, contract/code address, chain, capability, evidence, detection method/tier, verification state, confidence, conclusive/inconclusive state, fallback reason, provider/API status and relevant observation metadata.
+A selector is not semantic proof. Provider failure is never a negative contract finding. Mint authority must not be guessed. Beacon addresses must not be treated as implementations without supported resolution. Every correctness bug gets a regression test.
 
-Provider failure must never become a negative contract finding.
+## 10. Explicit H1 non-goals
 
-## 13. Security/correctness gates
+Do not block Track 1 on:
 
-Required before calling H1 complete:
+- final UI redesign
+- LLM explanation layer
+- broad risk scoring
+- Capability Passport persistence
+- Continuous Watch
+- Time Machine persistence
+- Policy Engine
+- alerts/email/webhooks/mobile
+- native mobile
+- 3D Contract Core
+- broad multi-chain semantic analysis
+- large capability expansion
 
-- strict address and bytecode validation
-- bounded parser work
-- EVM instruction-boundary scanning
-- selector-collision protection
-- malformed ABI/bytecode handling
-- RPC timeout/retry/circuit breaker
-- expected application-level revert classification
-- infrastructure failure classification
-- no client-supplied evidence treated as canonical
-- no secrets in client code
-- dependency/CI security gates
-- regression test for every correctness bug
+These remain post-H1/optional.
 
-## 14. Non-negotiable rules for the next chat
+## 11. Continuation rule
 
-- Read `AGENTS.md`, `PROJECT_STATE.md`, `docs/ROADMAP.md`, `docs/ARCHITECTURE.md`, `docs/DECISIONS.md` and this file first.
-- Inspect the actual repository before changing code.
-- Official Telegraph docs/rules/Discord team answers outrank assumptions.
-- The official `telegraphprotocol/telegraph-examples` Miner templates are the YAML structure source of truth.
-- `FRAUD_DETECTION` is confirmed as the legitimate Veridex Intent.
-- Never add an unrelated Intent for convenience.
-- Never claim production readiness from documentation alone.
-- Never treat selector presence as semantic proof.
-- Never convert RPC/provider failure into a negative finding.
-- Every bug gets a regression test.
-- Run tests/typecheck/build and verify the live deployment after material changes.
-- Keep Track 1 Miner correctness ahead of Track 2 and post-H1 features.
-- Do not fabricate traffic, users, rankings, demand or performance.
-- Do not expose secrets.
+For a new chat/agent:
 
-## 15. Immediate next action
+1. read `PROJECT_STATE.md`
+2. read `AGENTS.md`
+3. read `docs/ROADMAP.md`
+4. read `docs/ARCHITECTURE.md`
+5. read `docs/DECISIONS.md`
+6. read this handoff
+7. read `docs/phases/PHASE-00-CONSTITUTION.md`
+8. read `docs/phases/PHASE-01-EVM-CORE.md`
+9. inspect the actual current `main` tree and recent commits
+10. verify live deployment before making production-readiness claims
 
-**Re-import the reconciled `telegraph/miner.yaml` into the official Telegraph Miner Registry, verify the parsed identity/protocol/intent/endpoint fields, then run the sandbox validation. Do not proceed to IPFS or on-chain registration until the validator returns success.**
+**Next single engineering action:** run the Phase 01 final exit audit, starting with real-chain integration/ground-truth gaps and Telegraph request/response tests. Do not begin post-H1 feature work until this gate is closed.
