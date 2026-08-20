@@ -6,6 +6,7 @@ export * from "./domain/ownership.js";
 export * from "./domain/analyzer.js";
 export * from "./domain/capabilityIntelligence.js";
 export * from "./domain/capabilityPassport.js";
+export * from "./domain/capabilityWatch.js";
 export * from "./evaluation/ground-truth.js";
 export * from "./infrastructure/concurrency.js";
 export * from "./infrastructure/config.js";
