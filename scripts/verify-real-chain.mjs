@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+import { addClassification, createConfusionCounts } from "../src/evaluation/confusion.js";
+
 const endpoint = (process.env.VERIDEX_MINER_URL ?? "https://veridex-ecru.vercel.app").replace(/\/$/, "");
 const rpcUrl = process.env.VERIDEX_RPC_URL ?? "https://ethereum-rpc.publicnode.com";
 const outputPath = process.env.VERIDEX_GROUND_TRUTH_OUTPUT ?? "artifacts/real-chain-ground-truth.json";
@@ -152,28 +154,18 @@ for (const testCase of corpus) {
   });
 }
 
-const confusion = Object.fromEntries(CAPABILITIES.map((capability) => [capability, {
-  truePositive: 0,
-  trueNegative: 0,
-  falsePositive: 0,
-  falseNegative: 0,
-  inconclusive: 0,
-  unavailable: 0,
-  error: 0,
-  total: 0,
-}]));
+const confusion = Object.fromEntries(CAPABILITIES.map((capability) => [capability, createConfusionCounts()]));
 
 for (const testCase of cases) {
   for (const [capability, observation] of Object.entries(testCase.evaluation.observations)) {
-    confusion[capability][observation.classification] += 1;
-    confusion[capability].total += 1;
+    addClassification(confusion[capability], observation.classification);
   }
 }
 
-const totals = Object.values(confusion).reduce((sum, metric) => {
-  for (const key of Object.keys(sum)) sum[key] += metric[key];
-  return sum;
-}, { truePositive: 0, trueNegative: 0, falsePositive: 0, falseNegative: 0, inconclusive: 0, unavailable: 0, error: 0, total: 0 });
+const totals = createConfusionCounts();
+for (const metric of Object.values(confusion)) {
+  for (const key of Object.keys(totals)) totals[key] += metric[key];
+}
 
 const evaluated = totals.truePositive + totals.trueNegative + totals.falsePositive + totals.falseNegative;
 const report = {
