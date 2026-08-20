@@ -72,7 +72,7 @@ output_schema:
 
 semantics:
   signal_mapping:
-    label_field: capabilityIntelligence
+    label_field: capabilityIntelligence.state
     confidence_field: capabilityIntelligence.confidence
     reason_field: result.evidence
   supported_intents:
