@@ -14,6 +14,7 @@ export type ProxyCompositionStatus =
   | "cycle_detected"
   | "max_depth"
   | "unavailable"
+  | "beacon_unresolved"
   | "error";
 
 export interface ProxyComposition {
