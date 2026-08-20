@@ -3,6 +3,11 @@
 const endpoint = (process.env.VERIDEX_MINER_URL ?? "https://veridex-ecru.vercel.app").replace(/\/$/, "");
 const rpcUrl = process.env.VERIDEX_RPC_URL ?? "https://ethereum-rpc.publicnode.com";
 const outputPath = process.env.VERIDEX_GROUND_TRUTH_OUTPUT ?? "artifacts/real-chain-ground-truth.json";
+const timeoutMs = Number.parseInt(process.env.VERIDEX_REAL_CHAIN_TIMEOUT_MS ?? "15000", 10);
+const retries = Number.parseInt(process.env.VERIDEX_REAL_CHAIN_RETRIES ?? "3", 10);
+
+if (!Number.isInteger(timeoutMs) || timeoutMs < 1000 || timeoutMs > 60000) throw new Error("timeout must be in [1000,60000]");
+if (!Number.isInteger(retries) || retries < 0 || retries > 5) throw new Error("retries must be in [0,5]");
 
 const corpus = [
   {
@@ -38,26 +43,45 @@ const corpus = [
 
 const CAPABILITIES = ["ownership", "upgradeability", "pause", "mint"];
 
+async function fetchWithRetry(url, init = {}, label = url) {
+  let lastError;
+  for (let attempt = 0; attempt <= retries; attempt += 1) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const response = await fetch(url, { ...init, signal: controller.signal });
+      if (response.ok) return response;
+      const body = await response.text().catch(() => "");
+      throw new Error(`${label} HTTP ${response.status}${body ? `: ${body.slice(0, 300)}` : ""}`);
+    } catch (error) {
+      lastError = error;
+      if (attempt >= retries) break;
+      await new Promise((resolve) => setTimeout(resolve, 250 * 2 ** attempt));
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error(`${label} failed`);
+}
+
 async function rpc(method, params = []) {
-  const response = await fetch(rpcUrl, {
+  const response = await fetchWithRetry(rpcUrl, {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: { "content-type": "application/json", accept: "application/json" },
     body: JSON.stringify({ jsonrpc: "2.0", id: Date.now(), method, params }),
-  });
-  if (!response.ok) throw new Error(`RPC HTTP ${response.status}`);
+  }, `RPC ${method}`);
   const body = await response.json();
   if (body.error) throw new Error(`RPC ${body.error.code}: ${body.error.message}`);
   return body.result;
 }
 
 async function analyze(address) {
-  const response = await fetch(`${endpoint}/analyze`, {
+  const response = await fetchWithRetry(`${endpoint}/analyze`, {
     method: "POST",
     headers: { "content-type": "application/json", accept: "application/json" },
     body: JSON.stringify({ chain: "1", contractAddress: address }),
-  });
+  }, `Miner /analyze ${address}`);
   const body = await response.json();
-  if (!response.ok) throw new Error(`Miner returned ${response.status}: ${JSON.stringify(body)}`);
   if (!body.result || !Array.isArray(body.result.capabilities)) {
     throw new Error(`Miner returned an invalid result envelope: ${JSON.stringify(body)}`);
   }
@@ -159,6 +183,7 @@ const report = {
   network: "ethereum",
   observedAt,
   blockNumber,
+  retryPolicy: { timeoutMs, retries, backoffMs: [250, 500, 1000, 2000, 4000].slice(0, retries) },
   corpus: corpus.map(({ id, name, address, expected, sources }) => ({ id, name, address, expected, sources })),
   caseCount: cases.length,
   passed: cases.filter((item) => item.passed).length,
