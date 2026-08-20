@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
 
 jobs:
   test:
@@ -14,11 +15,12 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      - run: mkdir -p artifacts
       - run: npm install
-      - run: npm audit --audit-level=high
-      - run: npm run typecheck
-      - run: npm run build:core
-      - run: npm test
+      - run: npm audit --audit-level=high | tee artifacts/npm-audit.txt
+      - run: npm run typecheck | tee artifacts/typecheck.txt
+      - run: npm run build:core | tee artifacts/build.txt
+      - run: npm test | tee artifacts/unit-tests.txt
       - name: Wait for live Miner
         if: github.ref == 'refs/heads/main'
         run: |
@@ -31,6 +33,16 @@ jobs:
           done
           echo 'live Miner did not become reachable in time'
           exit 1
+      - name: Capture live Telegraph Intent registry
+        if: github.ref == 'refs/heads/main'
+        continue-on-error: true
+        run: |
+          npm run telegraph:intents > artifacts/telegraph-intents.json 2> artifacts/telegraph-intents-error.txt
+      - name: Capture live Telegraph integration registry
+        if: github.ref == 'refs/heads/main'
+        continue-on-error: true
+        run: |
+          curl -fsS --max-time 10 https://devnode.telegraphprotocol.com/miner-dispatcher/integrations > artifacts/telegraph-integrations.json
       - name: Real-chain ground truth
         if: github.ref == 'refs/heads/main'
         env:
@@ -45,7 +57,6 @@ jobs:
           VERIDEX_BENCHMARK_REQUESTS: 5
           VERIDEX_BENCHMARK_CONCURRENCY: 3
         run: |
-          mkdir -p artifacts
           npm run benchmark:miner | tee artifacts/production-benchmark.json
       - name: Production response schema
         if: github.ref == 'refs/heads/main'
@@ -59,3 +70,4 @@ jobs:
           name: veridex-h1-verification-${{ github.sha }}
           path: artifacts/
           if-no-files-found: ignore
+          retention-days: 14
