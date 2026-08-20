@@ -104,7 +104,8 @@ function severityFor(diff: CapabilityDiff): Exclude<WatchChangeSeverity, "inconc
 }
 
 function isComparable(analysis: NormalizedAnalysis): boolean {
-  return analysis.providerStatus.rpc === "ok" && analysis.providerStatus.verification !== "unavailable" && analysis.providerStatus.verification !== "error";
+  const verificationFailed = ["api_failure", "timeout", "malformed_response", "not_configured"].includes(analysis.providerStatus.verification);
+  return analysis.providerStatus.rpc === "ok" && !verificationFailed;
 }
 
 function describe(diff: CapabilityDiff): string {
@@ -228,8 +229,15 @@ export class CapabilityWatchScheduler {
         passport: previous ?? buildCapabilityPassport({
           contract: { requestedAddress: watch.address, contractAddress: watch.address, chain: watch.chain },
           proxy: { contractAddress: watch.address, status: "unavailable", evidence: { error: String(error) } } as NormalizedAnalysis["proxy"],
-          verification: { status: "unavailable", abiAvailable: false } as NormalizedAnalysis["verification"],
-          capabilities: [], evidence: [], confidence: 0, conclusive: false, providerStatus: { verification: "unavailable", rpc: "unavailable" },
+          verification: {
+            status: "api_failure",
+            contractAddress: watch.address,
+            verified: false,
+            abiAvailable: false,
+            sourceAvailable: false,
+            provenance: "none",
+          },
+          capabilities: [], evidence: [], confidence: 0, conclusive: false, providerStatus: { verification: "api_failure", rpc: "unavailable" },
         }, now.toISOString()),
         comparison: "inconclusive",
         severity: "inconclusive",
