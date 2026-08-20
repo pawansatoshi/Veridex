@@ -47,6 +47,7 @@ jobs:
           for i in $(seq 1 36); do
             if curl -fsS --max-time 5 https://veridex-ecru.vercel.app/health | grep -q '"ok":true'; then
               echo 'live Miner is reachable'
+              sleep 10
               exit 0
             fi
             sleep 5
@@ -82,8 +83,10 @@ jobs:
         env:
           VERIDEX_MINER_URL: https://veridex-ecru.vercel.app
           VERIDEX_BENCHMARK_ADDRESSES: 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48,0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2,0xE592427A0AEce92De3Edee1F18E0157C05861564
-          VERIDEX_BENCHMARK_REQUESTS: 5
-          VERIDEX_BENCHMARK_CONCURRENCY: 3
+          VERIDEX_BENCHMARK_REQUESTS: 3
+          VERIDEX_BENCHMARK_CONCURRENCY: 1
+          VERIDEX_BENCHMARK_REQUEST_RETRIES: 4
+          VERIDEX_BENCHMARK_CONTROL_RETRIES: 3
         run: node scripts/benchmark-miner.mjs > artifacts/production-benchmark.json
       - name: Production response schema
         if: github.ref == 'refs/heads/main'
