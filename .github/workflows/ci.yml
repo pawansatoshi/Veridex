@@ -83,8 +83,9 @@ jobs:
         run: node scripts/check-telegraph-intents.mjs > artifacts/telegraph-intents.json
 
       - name: Verify live Telegraph Miner integration
-        if: github.ref == 'refs/heads/main'
+        id: integration
         continue-on-error: true
+        if: github.ref == 'refs/heads/main'
         run: node scripts/verify-telegraph-integration.mjs > artifacts/telegraph-integration-verification.json
 
       - name: Capture live Telegraph integration registry
@@ -102,7 +103,7 @@ jobs:
         env:
           VERIDEX_RESILIENCE_URL: https://veridex-hbegu6s5z-pawansatoshis-projects.vercel.app/api/phase01-resilience
         run: |
-          curl -fsS --show-error --retry 3 --retry-delay 2 --max-time 15 \
+          curl -L -fsS --show-error --retry 3 --retry-delay 2 --max-time 15 \
             "$VERIDEX_RESILIENCE_URL" > artifacts/phase01-resilience.json
           node <<'NODE'
           const fs = require('node:fs');
@@ -171,14 +172,14 @@ jobs:
           console.log('## Veridex H1 Runtime Evidence');
           console.log(`- commit: \`${process.env.GITHUB_SHA}\``);
           console.log(`- Miner YAML: ${yaml?.valid ? 'valid' : 'artifact unavailable'}`);
-          console.log(`- live Telegraph integration: ${integration?.valid ? 'verified' : 'unavailable/non-blocking'}`);
+          console.log(`- live Telegraph integration: ${integration?.valid ? 'verified' : 'failed/unavailable'}`);
           console.log(`- deployed resilience recovery: ${resilience?.valid ? 'verified' : 'artifact unavailable'}`);
           console.log(`- real-chain cases: ${gt ? `${gt.passed}/${gt.caseCount} passed` : 'artifact unavailable'}`);
           if (gt?.metrics) console.log(`- real-chain metrics: TP=${gt.metrics.truePositive}, TN=${gt.metrics.trueNegative}, FP=${gt.metrics.falsePositive}, FN=${gt.metrics.falseNegative}, inconclusive=${gt.metrics.inconclusive}, unavailable=${gt.metrics.unavailable}, error=${gt.metrics.error}`);
           if (gt?.metrics) console.log(`- real-chain accuracy: ${gt.metrics.accuracy}`);
           if (bench) for (const item of bench.results ?? []) console.log(`- benchmark ${item.contractAddress}: cold=${item.cold_ms}ms warm_p50=${item.warm_p50_ms}ms warm_p95=${item.warm_p95_ms}ms warm_p99=${item.warm_p99_ms}ms overall_p50=${item.p50_ms}ms overall_p95=${item.p95_ms}ms overall_p99=${item.p99_ms}ms success=${item.success}/${item.requests} timeouts=${item.timeouts} errors=${item.errors}`);
           if (schema) console.log(`- production schema: \`${schema.schema}\``);
-          console.log('- Telegraph live registry snapshots are informational and do not block CI when the external testnet registry is unavailable.');
+          console.log('- Telegraph live Intent/integration checks are blocking gates when the live registry is reachable.');
           NODE
 
       - name: Enforce blocking H1 gates
@@ -190,6 +191,7 @@ jobs:
           UNIT: ${{ steps.unit.outcome }}
           HEALTH: ${{ steps.health.outcome }}
           YAML: ${{ steps.yaml.outcome }}
+          INTEGRATION: ${{ steps.integration.outcome }}
           RESILIENCE: ${{ steps.resilience.outcome }}
           GROUNDTRUTH: ${{ steps.groundtruth.outcome }}
           BENCHMARK: ${{ steps.benchmark.outcome }}
@@ -203,12 +205,13 @@ jobs:
             "unit=$UNIT" \
             "health=$HEALTH" \
             "yaml=$YAML" \
+            "integration=$INTEGRATION" \
             "resilience=$RESILIENCE" \
             "groundtruth=$GROUNDTRUTH" \
             "benchmark=$BENCHMARK" \
             "schema=$SCHEMA"
           failed=0
-          for value in "$AUDIT" "$TYPECHECK" "$BUILD" "$UNIT" "$HEALTH" "$YAML" "$RESILIENCE" "$GROUNDTRUTH" "$BENCHMARK" "$SCHEMA"; do
+          for value in "$AUDIT" "$TYPECHECK" "$BUILD" "$UNIT" "$HEALTH" "$YAML" "$INTEGRATION" "$RESILIENCE" "$GROUNDTRUTH" "$BENCHMARK" "$SCHEMA"; do
             if [ "$value" != "success" ]; then failed=1; fi
           done
           if [ "$failed" -ne 0 ]; then
