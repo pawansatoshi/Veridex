@@ -14,6 +14,7 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "telegraph:intents": "node scripts/check-telegraph-intents.mjs",
+    "telegraph:yaml": "node scripts/verify-telegraph-yaml.mjs",
     "benchmark:miner": "node scripts/benchmark-miner.mjs",
     "verify:real-chain": "node scripts/verify-real-chain.mjs",
     "verify:production-schema": "node scripts/verify-production-schema.mjs"
