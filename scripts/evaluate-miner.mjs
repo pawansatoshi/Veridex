@@ -26,10 +26,11 @@ const correct = classified.filter((item) => item.classification === "true_positi
 const accuracy = classified.length === 0 ? 0 : correct / classified.length;
 
 const evidenceChecks = cases.flatMap((item) => {
-  const capabilities = item.observed?.capabilities ?? [];
+  const capabilities = Array.isArray(item.observed?.capabilities) ? item.observed.capabilities : [];
   return capabilities.map((capability) => {
-    const evidence = Array.isArray(capability.evidence) ? capability.evidence : [];
-    return { present: evidence.length > 0, capability: capability.capability, caseId: item.id };
+    const evidence = capability?.evidence;
+    const present = evidence !== null && typeof evidence === "object" && !Array.isArray(evidence) && Object.keys(evidence).length > 0;
+    return { present, capability: capability?.capability, caseId: item.id };
   });
 });
 const evidenceCoverage = evidenceChecks.length === 0 ? 0 : evidenceChecks.filter((item) => item.present).length / evidenceChecks.length;
