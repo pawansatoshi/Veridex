@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CircuitBreaker, classifyRpcFailure } from "../../src/infrastructure/resilience.js";
+import { CircuitBreaker, classifyRpcFailure, runResilienceSelfTest } from "../../src/infrastructure/resilience.js";
 
 describe("RPC failure classification", () => {
   it("does not classify an expected contract revert as infrastructure failure", () => {
@@ -42,5 +42,19 @@ describe("CircuitBreaker", () => {
 
     expect(circuit.getState()).toBe("closed");
     expect(circuit.canRequest()).toBe(true);
+  });
+});
+
+describe("deployed resilience self-test", () => {
+  it("proves timeout classification, circuit opening, half-open probe and recovery", () => {
+    const result = runResilienceSelfTest();
+
+    expect(result.schema).toBe("veridex.phase01.resilience-self-test.v1");
+    expect(result.valid).toBe(true);
+    expect(result.injectedFailure).toBe("rpc_timeout");
+    expect(result.timeoutFailures).toBe(3);
+    expect(result.circuitOpened).toBe(true);
+    expect(result.halfOpenProbeAllowed).toBe(true);
+    expect(result.recovery).toBe(true);
   });
 });
