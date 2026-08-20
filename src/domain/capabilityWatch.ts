@@ -228,7 +228,16 @@ export class CapabilityWatchScheduler {
         watchId: watch.id,
         passport: previous ?? buildCapabilityPassport({
           contract: { requestedAddress: watch.address, contractAddress: watch.address, chain: watch.chain },
-          proxy: { contractAddress: watch.address, status: "unavailable", evidence: { error: String(error) } } as NormalizedAnalysis["proxy"],
+          proxy: {
+            contractAddress: watch.address,
+            status: "unavailable",
+            evidence: {
+              implementationSlot: "unavailable",
+              beaconSlot: "unavailable",
+              adminSlot: "unavailable",
+              detail: `proxy resolution unavailable because analysis failed: ${String(error)}`,
+            },
+          },
           verification: {
             status: "api_failure",
             contractAddress: watch.address,
