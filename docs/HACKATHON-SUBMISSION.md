@@ -5,17 +5,17 @@
 - Miner ID: `1001`
 - Slug: `veridex-contract-risk-miner`
 - Historical superseded registration: `122` — `FRAUD_DETECTION`
-- Historical active registration: `142` — `CONTENT_VERIFICATION`
-- Current intended registration: `FRAUD_DETECTION`
+- Historical superseded registration: `142` — `CONTENT_VERIFICATION`
+- Current registration: `144` — `FRAUD_DETECTION`
 - Registration network: Base Sepolia
-- Latest registration transaction: `0xd730f6510e3f61069a709a6693d1e8de54a3d7db67b616152131b2d3cb5abbf3`
+- Current registration transaction: `0xe9df234aaf7c9f7501e9971f01705e52172b81bd4a2fd96932b22d5bc4b7ce6a`
 - Primary production endpoint: `https://veridex-ecru.vercel.app`
 - Endpoint: `POST /analyze`
 - Repository Miner intent: `FRAUD_DETECTION`
 
-The repository Miner YAML has been restored to the project's original `FRAUD_DETECTION` intent. The Telegraph registry must be re-synchronized through the official edit/re-registration flow; do not claim the live registry is aligned until the new active registration is independently verified.
+The current Telegraph registration flow reported registration ID `144` successfully on Base Sepolia. The transaction is confirmed successful on Base Sepolia. The registry UI may require indexing time before the new entry appears as the active indexed configuration.
 
-The transaction above was reported successful by the Telegraph registration flow. Final H1 GREEN still requires the current commit's blocking GitHub Actions gates to pass, including live Telegraph registry verification.
+Final H1 GREEN still requires the current commit's blocking GitHub Actions gates to pass, including live Telegraph registry verification. Do not claim final registry alignment until the live registry check independently confirms registration `144` and the expected `FRAUD_DETECTION` intent.
 
 ## Track coverage
 
@@ -86,6 +86,6 @@ Never claim:
 - unsupported Intent mapping
 - fake Track 3 usage
 - green CI without a successful current-commit run
-- live registry alignment before re-registration is verified
+- live registry alignment before registration `144` is independently verified
 
 Submission claims must be backed by reproducible artifacts or live endpoints.
