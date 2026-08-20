@@ -29,7 +29,7 @@ H1 remains intentionally narrow:
 
 Do not expand this matrix before these four are reliable in production.
 
-## 2. Current status — important rebaseline
+## 2. Current status — rebaseline
 
 ### Completed engineering
 
@@ -45,26 +45,23 @@ Do not expand this matrix before these four are reliable in production.
 - ground-truth evaluator foundation
 - latency/concurrency instrumentation
 - production API
-- current official Telegraph Miner YAML structure reconciliation
-- Miner registration
-- Miner #1001 created/registered
-- CI evidence parsing fixed and passing on the previous verification lane
-- current Telegraph YAML canonical-Intent validation added to CI
-- live Miner integration verification added to CI
+- Telegraph Miner YAML integration
+- Miner #1001 registration flow
+- Phase 03 Capability Passport
+- Phase 04 Capability Watch
+- CI evidence parsing and blocking gates
+- live Miner integration verification
 
 ### Remaining
 
-The project is now in **Phase 01 FINAL EXIT AUDIT / H1 production evidence**.
-
-Remaining high-priority engineering/evidence work:
-
-- real-chain proxy/non-proxy integration tests
+- reconcile and verify the live Telegraph registration after restoring the original intent
+- real-chain proxy/non-proxy integration evidence
 - curated real-chain ground-truth and TP/TN/FP/FN/inconclusive accounting
 - controlled RPC timeout and recovery evidence
 - Telegraph request/response contract verification
-- genuine Telegraph-routed request verification
 - final p50/p95/p99 and reliability evidence
 - final Track 1 submission/evidence package
+- current-commit GitHub Actions GREEN exit gate
 
 ## 3. Telegraph integration contract
 
@@ -78,21 +75,27 @@ Telegraph Miner adapter / API contract
 Telegraph protocol envelope
 ```
 
-Do not redesign the Veridex engine around a guessed Intent.
+Do not redesign the Veridex engine around an unverified Intent.
 
-### Current canonical Intent
+### Current repository Intent
 
-The current official Telegraph Miner YAML standard publishes canonical Intents and does **not** list `FRAUD_DETECTION`. It does list `CONTENT_VERIFICATION`, which is semantically aligned with Veridex's evidence-backed contract capability verification.
+**`FRAUD_DETECTION` is the intended Veridex Miner Intent.** It was the original project configuration and matches the live Explorer's historical Veridex registration state.
 
-The repository Miner YAML therefore declares:
+The repository Miner YAML must declare:
 
 ```yaml
+endpoints:
+  - path: /analyze
+    method: POST
+    intents:
+      - FRAUD_DETECTION
+
 semantics:
   supported_intents:
-    - CONTENT_VERIFICATION
+    - FRAUD_DETECTION
 ```
 
-Historical Telegraph team confirmation of `FRAUD_DETECTION` remains preserved as project history, but it is not treated as the current canonical protocol value without live registry confirmation.
+`CONTENT_VERIFICATION` was introduced in a later configuration change and is now removed from the repository's intended Miner configuration. Do not restore it merely to satisfy a CI check; if the live protocol rejects `FRAUD_DETECTION`, verify the current official Telegraph intent registry before making another protocol change.
 
 Do not add `AGENT_TASK` or another unrelated Intent merely for convenience.
 
@@ -123,20 +126,32 @@ Request:
 Miner ID: 1001
 Slug: veridex-contract-risk-miner
 Protocol: generic
-Intent: CONTENT_VERIFICATION (current repository standard)
+Intent: FRAUD_DETECTION
 ```
 
-Registration was previously completed successfully. Because the Intent/YAML schema changed to match the current official standard, the live Telegraph registry must now prove that Miner #1001 has synchronized/re-registered the current configuration before the protocol gate can pass.
+### Registration history
+
+- `REG #122` — `FRAUD_DETECTION` — superseded
+- `REG #142` — `CONTENT_VERIFICATION` — active at the time of this handoff
+- Latest registration transaction recorded in submission docs: `0xd730f6510e3f61069a709a6693d1e8de54a3d7db67b616152131b2d3cb5abbf3`
+
+The repository has now been restored to `FRAUD_DETECTION`. The live Telegraph registry must be re-synchronized through the official edit/re-registration flow. Do not claim live registry alignment until the new active registration is independently verified.
 
 ## 4. Current Telegraph operational state
 
-The Miner is registered, but the Telegraph UI previously showed **Unranked / 0 Requests**.
+The live Explorer has shown Veridex as Active and has shown recent routed signals. Those signals are network-generated requests; they must not be presented as Veridex-generated demand or as proof of scoring/ranking.
 
-Current working interpretation: this is a known Telegraph-side routing/ranking issue based on team feedback. It must not be presented as a confirmed Veridex defect without new evidence.
+The Explorer previously showed `FRAUD DETECTION` for the superseded registration and `CONTENT_VERIFICATION` for registration #142. This is why the current repository intent and live registry must be reconciled before H1 GREEN.
 
 Next verification target:
 
 ```text
+updated FRAUD_DETECTION YAML
+        ↓
+official Telegraph edit/re-registration
+        ↓
+new active registry entry
+        ↓
 Telegraph-routed request
         ↓
 Miner #1001
@@ -145,7 +160,7 @@ Veridex /analyze
         ↓
 compare with direct API result
         ↓
-record latency/result/failure evidence
+CI live integration gate
 ```
 
 Never fabricate requests, traffic, users, ranking, demand or performance.
@@ -161,7 +176,7 @@ Re-verify official rules immediately before final submission because dates/crite
 
 ## 6. Execution plan
 
-### Gate A — Phase 01 final correctness
+### Gate A — correctness
 
 1. real-chain proxy/non-proxy tests
 2. curated ground-truth corpus
@@ -170,7 +185,7 @@ Re-verify official rules immediately before final submission because dates/crite
 5. full tests + typecheck + build
 6. production smoke test
 
-### Gate B — Performance/reliability
+### Gate B — performance/reliability
 
 Measure and preserve evidence for:
 
@@ -189,13 +204,11 @@ Correctness cannot be traded for latency.
 
 ### Gate C — Track 1 package
 
-Target package completion: 28–30 Aug; final submission by 31 Aug.
-
 Include:
 
 - live Miner identity
 - production endpoint
-- current canonical Intent
+- `FRAUD_DETECTION` Intent evidence
 - deterministic correctness evidence
 - evidence provenance
 - ground-truth results
@@ -213,17 +226,7 @@ Only proceed if the official evaluation contract is confirmed and Track 1 correc
 
 ## 8. Track 3 — 31 Aug to 7 Sep
 
-If we enter Track 3, build a real application/agent that consumes live Telegraph Miners.
-
-Do not fake demand with:
-
-```text
-agent → Veridex → same agent
-```
-
-Prefer a genuine multi-Miner consumption/selection/decision workflow when justified.
-
-No mocks or fabricated usage.
+If we enter Track 3, build a real application/agent that consumes live Telegraph Miners. Do not fake demand with an agent calling the same agent. Prefer a genuine multi-Miner consumption/selection/decision workflow when justified. No mocks or fabricated usage.
 
 ## 9. Evidence and security invariants
 
@@ -247,7 +250,7 @@ Do not block Track 1 on:
 - LLM explanation layer
 - broad risk scoring
 - Capability Passport persistence
-- Continuous Watch
+- Continuous Watch persistence beyond the H1 contract
 - Time Machine persistence
 - Policy Engine
 - alerts/email/webhooks/mobile
@@ -255,8 +258,6 @@ Do not block Track 1 on:
 - 3D Contract Core
 - broad multi-chain semantic analysis
 - large capability expansion
-
-These remain post-H1/optional.
 
 ## 11. Continuation rule
 
@@ -268,9 +269,9 @@ For a new chat/agent:
 4. read `docs/ARCHITECTURE.md`
 5. read `docs/DECISIONS.md`
 6. read this handoff
-7. read `docs/phases/PHASE-00-CONSTITUTION.md`
-8. read `docs/phases/PHASE-01-EVM-CORE.md`
-9. inspect the actual current `main` tree and recent commits
-10. verify live deployment before making production-readiness claims
+7. read the phase documents
+8. inspect the actual current `main` tree and recent commits
+9. verify live deployment before making production-readiness claims
+10. verify live Telegraph registry state before claiming Miner integration is green
 
-**Next single engineering action:** close every remaining Phase 01 runtime/protocol evidence blocker. Do not begin post-H1 feature work until this gate is closed.
+**Next single engineering action:** synchronize the live Telegraph registration with the restored `FRAUD_DETECTION` YAML, then run the complete current-commit CI exit gate. Do not begin unrelated post-H1 feature work until this gate is closed.
