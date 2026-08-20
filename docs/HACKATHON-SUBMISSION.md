@@ -1,5 +1,18 @@
 # Veridex — Hackathon Submission Package
 
+## Telegraph Miner registration
+
+- Miner ID: `1001`
+- Slug: `veridex-contract-risk-miner`
+- Registration ID: `142`
+- Registration network: Base Sepolia
+- Registration transaction: `0xd730f6510e3f61069a709a6693d1e8de54a3d7db67b616152131b2d3cb5abbf3`
+- Primary production endpoint: `https://veridex-ecru.vercel.app`
+- Endpoint: `POST /analyze`
+- Supported intent: `CONTENT_VERIFICATION`
+
+The transaction above was reported successful by the Telegraph registration flow. The registration is now part of the H1 evidence trail. Final H1 GREEN still requires the current commit's blocking GitHub Actions gates to pass, including live Telegraph registry verification.
+
 ## Track coverage
 
 ### Track 1 — Miner
@@ -17,10 +30,6 @@ Core capabilities:
 - resilience and bounded parsing
 - Capability Passport
 - Continuous Watch
-
-Primary production endpoint:
-
-`https://veridex-ecru.vercel.app`
 
 ### Track 2 — Evaluation / quality script
 
