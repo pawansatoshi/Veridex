@@ -18,7 +18,8 @@
     "telegraph:integration": "node scripts/verify-telegraph-integration.mjs",
     "benchmark:miner": "node scripts/benchmark-miner.mjs",
     "verify:real-chain": "node scripts/verify-real-chain.mjs",
-    "verify:production-schema": "node scripts/verify-production-schema.mjs"
+    "verify:production-schema": "node scripts/verify-production-schema.mjs",
+    "evaluate:miner": "node scripts/evaluate-miner.mjs"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
