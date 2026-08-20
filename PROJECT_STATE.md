@@ -28,9 +28,9 @@ The core rule remains: **No evidence → no certainty.**
 
 ## Phase 02 final verification evidence
 
-Final state commit: `1590ca928981115a98bf0ef9ba1f648569f93629`
+Final state commit: `04bee6ff16e9ad21dc7c05c0d05b26ef8c684a25`
 
-Final CI run: `32344021846` — SUCCESS.
+Final CI run: `32344164361` — SUCCESS.
 
 The final CI run completed all blocking gates successfully, including:
 
@@ -50,11 +50,7 @@ The final CI run completed all blocking gates successfully, including:
 14. blocking H1 + Phase 02 enforcement
 15. verification artifact upload
 
-Verification artifact:
-
-`veridex-h1-phase02-verification-1590ca928981115a98bf0ef9ba1f648569f93629`
-
-Matching production deployment for the final state commit is `READY` and the live `/health` endpoint returns HTTP 200 with `ok=true`. The deployed resilience endpoint returns `valid=true` and `recovery=true`.
+Verification artifacts were produced by the final CI run and the matching production deployment is READY. The live `/health` endpoint returns HTTP 200 with `ok=true`, and the deployed resilience check returns `valid=true` and `recovery=true`.
 
 No fabricated proxy lineage, benchmark, ground-truth, Telegraph routing, ranking, traffic, demand, or deployment evidence is used.
 
