@@ -18,6 +18,7 @@ export type ProxyCompositionStatus =
 
 export interface ProxyComposition {
   rootAddress: string;
+  rootResolution: ProxyResolution;
   effectiveCodeAddress?: string;
   status: ProxyCompositionStatus;
   maxDepth: number;
@@ -50,8 +51,11 @@ export async function resolveProxyComposition(
   for (let depth = 0; depth <= maxDepth; depth += 1) {
     const normalizedAddress = currentAddress.toLowerCase();
     if (visited.has(normalizedAddress)) {
+      const rootResolution = layers[0]?.resolution;
+      if (rootResolution === undefined) throw new Error("Proxy composition cycle detected before root resolution");
       return {
         rootAddress: contractAddress,
+        rootResolution,
         status: "cycle_detected",
         maxDepth,
         layers,
@@ -70,6 +74,7 @@ export async function resolveProxyComposition(
     if (resolution.status === "unavailable" || resolution.status === "error" || resolution.status === "beacon_unresolved") {
       return {
         rootAddress: contractAddress,
+        rootResolution: layers[0]!.resolution,
         status: resolution.status,
         maxDepth,
         layers,
@@ -82,6 +87,7 @@ export async function resolveProxyComposition(
     if (resolution.codeAddress === undefined || resolution.codeAddress.toLowerCase() === currentAddress.toLowerCase()) {
       return {
         rootAddress: contractAddress,
+        rootResolution: layers[0]!.resolution,
         status: lineage.length === 0 ? "direct" : "composed",
         maxDepth,
         layers,
@@ -95,6 +101,7 @@ export async function resolveProxyComposition(
     if (depth === maxDepth) {
       return {
         rootAddress: contractAddress,
+        rootResolution: layers[0]!.resolution,
         status: "max_depth",
         maxDepth,
         layers,
@@ -109,6 +116,7 @@ export async function resolveProxyComposition(
 
   return {
     rootAddress: contractAddress,
+    rootResolution: layers[0]!.resolution,
     status: "max_depth",
     maxDepth,
     layers,
