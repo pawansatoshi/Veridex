@@ -19,29 +19,45 @@ jobs:
           node-version: 22
           cache: npm
       - run: mkdir -p artifacts
+
       - name: Install dependencies
         run: npm install --no-audit --no-fund
+
       - name: Security audit
+        id: audit
+        continue-on-error: true
         shell: bash
         run: |
           set -o pipefail
           npm audit --audit-level=high | tee artifacts/npm-audit.txt
+
       - name: Typecheck
+        id: typecheck
+        continue-on-error: true
         shell: bash
         run: |
           set -o pipefail
           npm run typecheck | tee artifacts/typecheck.txt
+
       - name: Build
+        id: build
+        continue-on-error: true
         shell: bash
         run: |
           set -o pipefail
           npm run build:core | tee artifacts/build.txt
+
       - name: Unit tests
+        id: unit
+        continue-on-error: true
         shell: bash
         run: |
           set -o pipefail
           npm test | tee artifacts/unit-tests.txt
+
       - name: Wait for live Miner
+        id: health
+        continue-on-error: true
         if: github.ref == 'refs/heads/main'
         run: |
           for i in $(seq 1 36); do
@@ -54,17 +70,23 @@ jobs:
           done
           echo 'live Miner did not become reachable in time'
           exit 1
+
       - name: Validate Miner YAML against current Telegraph standard
+        id: yaml
+        continue-on-error: true
         if: github.ref == 'refs/heads/main'
         run: node scripts/verify-telegraph-yaml.mjs > artifacts/telegraph-yaml-validation.json
+
       - name: Capture live Telegraph Intent registry
         if: github.ref == 'refs/heads/main'
         continue-on-error: true
         run: node scripts/check-telegraph-intents.mjs > artifacts/telegraph-intents.json
+
       - name: Verify live Telegraph Miner integration
         if: github.ref == 'refs/heads/main'
         continue-on-error: true
         run: node scripts/verify-telegraph-integration.mjs > artifacts/telegraph-integration-verification.json
+
       - name: Capture live Telegraph integration registry
         if: github.ref == 'refs/heads/main'
         continue-on-error: true
@@ -72,13 +94,19 @@ jobs:
           curl -fsS --show-error --retry 4 --retry-delay 2 --retry-all-errors --max-time 10 \
             https://devnode.telegraphprotocol.com/miner-dispatcher/integrations \
             > artifacts/telegraph-integrations.json
+
       - name: Real-chain ground truth
+        id: groundtruth
+        continue-on-error: true
         if: github.ref == 'refs/heads/main'
         env:
           VERIDEX_MINER_URL: https://veridex-ecru.vercel.app
           VERIDEX_GROUND_TRUTH_OUTPUT: artifacts/real-chain-ground-truth.json
         run: node scripts/verify-real-chain.mjs
+
       - name: Production performance benchmark
+        id: benchmark
+        continue-on-error: true
         if: github.ref == 'refs/heads/main'
         env:
           VERIDEX_MINER_URL: https://veridex-ecru.vercel.app
@@ -88,11 +116,15 @@ jobs:
           VERIDEX_BENCHMARK_REQUEST_RETRIES: 4
           VERIDEX_BENCHMARK_CONTROL_RETRIES: 3
         run: node scripts/benchmark-miner.mjs > artifacts/production-benchmark.json
+
       - name: Production response schema
+        id: schema
+        continue-on-error: true
         if: github.ref == 'refs/heads/main'
         env:
           VERIDEX_MINER_URL: https://veridex-ecru.vercel.app
         run: node scripts/verify-production-schema.mjs > artifacts/production-schema.json
+
       - name: Publish H1 evidence summary
         if: always() && github.ref == 'refs/heads/main'
         run: |
@@ -122,6 +154,41 @@ jobs:
           if (schema) console.log(`- production schema: \`${schema.schema}\``);
           console.log('- Telegraph live registry snapshots are informational and do not block CI when the external testnet registry is unavailable.');
           NODE
+
+      - name: Enforce blocking H1 gates
+        if: always() && github.ref == 'refs/heads/main'
+        env:
+          AUDIT: ${{ steps.audit.outcome }}
+          TYPECHECK: ${{ steps.typecheck.outcome }}
+          BUILD: ${{ steps.build.outcome }}
+          UNIT: ${{ steps.unit.outcome }}
+          HEALTH: ${{ steps.health.outcome }}
+          YAML: ${{ steps.yaml.outcome }}
+          GROUNDTRUTH: ${{ steps.groundtruth.outcome }}
+          BENCHMARK: ${{ steps.benchmark.outcome }}
+          SCHEMA: ${{ steps.schema.outcome }}
+        run: |
+          echo "Blocking gate outcomes:"
+          printf '%s\n' \
+            "audit=$AUDIT" \
+            "typecheck=$TYPECHECK" \
+            "build=$BUILD" \
+            "unit=$UNIT" \
+            "health=$HEALTH" \
+            "yaml=$YAML" \
+            "groundtruth=$GROUNDTRUTH" \
+            "benchmark=$BENCHMARK" \
+            "schema=$SCHEMA"
+          failed=0
+          for value in "$AUDIT" "$TYPECHECK" "$BUILD" "$UNIT" "$HEALTH" "$YAML" "$GROUNDTRUTH" "$BENCHMARK" "$SCHEMA"; do
+            if [ "$value" != "success" ]; then failed=1; fi
+          done
+          if [ "$failed" -ne 0 ]; then
+            echo 'One or more blocking H1 gates failed.'
+            exit 1
+          fi
+          echo 'ALL BLOCKING H1 GATES PASSED.'
+
       - name: Upload verification artifacts
         if: always() && github.ref == 'refs/heads/main'
         uses: actions/upload-artifact@v4
