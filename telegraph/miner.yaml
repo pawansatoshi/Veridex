@@ -6,10 +6,9 @@ protocol: generic
 name: Veridex
 
 description: >-
-  Evidence-backed smart-contract capability and safety intelligence for agents.
-  Veridex analyzes Ethereum contract state and logic to produce traceable
-  signals for ownership/control, upgradeability, pause capability, and mint
-  authority.
+  Evidence-backed smart-contract risk and safety inference for agents. Veridex
+  parses Ethereum contract state and logic to produce verifiable signals for
+  ownership/control, upgradeability, pause capability, and mint authority.
 
 base_url: https://veridex-ecru.vercel.app
 
@@ -30,8 +29,11 @@ endpoints:
     external_path: /analyze
     method: POST
     description: >-
-      Analyze an Ethereum smart contract and return evidence-backed capability
-      intelligence for ownership, upgradeability, pause and mint authority.
+      Analyze an Ethereum smart contract and return evidence-backed risk and
+      capability intelligence for ownership, upgradeability, pause and mint
+      authority.
+    intents:
+      - FRAUD_DETECTION
 
 input_schema:
   type: object
@@ -76,4 +78,4 @@ semantics:
     confidence_field: capabilityIntelligence.confidence
     reason_field: result.evidence
   supported_intents:
-    - CONTENT_VERIFICATION
+    - FRAUD_DETECTION
