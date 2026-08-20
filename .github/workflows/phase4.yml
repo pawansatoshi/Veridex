@@ -1,0 +1,29 @@
+name: Phase 04 Continuous Watch
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  phase4:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm install --no-audit --no-fund
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Build
+        run: npm run build:core
+      - name: Phase 04 capability watch tests
+        run: npm test -- tests/unit/capabilityWatch.test.ts
+      - name: Phase 03 passport regression tests
+        run: npm test -- tests/unit/capabilityPassport.test.ts
