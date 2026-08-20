@@ -2,47 +2,61 @@
 
 **Repository:** `pawansatoshi/Veridex`  
 **Branch:** `main`  
-**Current phase:** Phase 02 PROXY-AWARE COMPOSITION — FINAL VERIFICATION
+**Current phase:** Phase 03 CAPABILITY PASSPORT — READY TO START
 
 ## Phase 01
 
-Phase 01 is complete and its engineering/runtime gates were verified on the prior release state. Do not reopen Phase 01 unless a Phase 02 regression is discovered.
+Phase 01 is complete and its engineering/runtime gates remain verified. Do not reopen Phase 01 unless a genuine regression is discovered.
 
-## Phase 02 implementation
+## Phase 02
 
-Implemented bounded proxy-aware composition with:
+Phase 02 Proxy-Aware Composition is **COMPLETE / VERIFIED GREEN**.
 
-- recursive implementation lineage
+Implemented:
+
+- bounded recursive implementation lineage
 - EIP-1967 / legacy / beacon resolution reuse
 - terminal effective code-address selection
 - cycle detection
 - bounded depth with hard cap
 - explicit unavailable/error/unresolved semantics
 - analyzer integration using the composition result
-- regression tests for nested lineage, depth limits and provider failure
+- provenance-preserving observed implementation lineage
+- regression coverage for nested lineage, depth limits, cycles, unresolved beacons and provider failure
 
-The implementation preserves the core rule: **No evidence → no certainty.**
+The core rule remains: **No evidence → no certainty.**
 
-## Phase 02 verification gate
+## Phase 02 final verification evidence
 
-Phase 02 is **NOT PASS** until the current `main` commit has a successful machine-verifiable CI run covering the full existing Phase 01 gates plus the new proxy-composition test suite, and the matching production deployment is healthy.
+Final state commit: `1590ca928981115a98bf0ef9ba1f648569f93629`
 
-Required evidence:
+Final CI run: `32344021846` — SUCCESS.
 
-1. unit tests
+The final CI run completed all blocking gates successfully, including:
+
+1. security audit
 2. typecheck
 3. build
-4. security audit
-5. production health
-6. Telegraph YAML/integration verification
-7. deployed resilience recovery
-8. real-chain ground truth
-9. production p50/p95/p99 benchmark
-10. production response schema
-11. proxy composition regression suite
-12. matching production deployment
+4. full unit suite: 22 files / 83 tests passed
+5. dedicated Phase 02 proxy-composition suite: 5 / 5 tests passed
+6. production health
+7. Telegraph YAML validation
+8. live Telegraph integration verification
+9. live Telegraph registry capture
+10. deployed resilience recovery
+11. real-chain ground truth: 3 / 3 cases passed; TP=4, TN=8, FP=0, FN=0, inconclusive=0
+12. production p50/p95/p99 benchmark
+13. production response schema
+14. blocking H1 + Phase 02 enforcement
+15. verification artifact upload
 
-No fabricated benchmark, ground-truth, proxy lineage, Telegraph routing, ranking, traffic, demand, or deployment evidence.
+Verification artifact:
+
+`veridex-h1-phase02-verification-1590ca928981115a98bf0ef9ba1f648569f93629`
+
+Matching production deployment for the final state commit is `READY` and the live `/health` endpoint returns HTTP 200 with `ok=true`. The deployed resilience endpoint returns `valid=true` and `recovery=true`.
+
+No fabricated proxy lineage, benchmark, ground-truth, Telegraph routing, ranking, traffic, demand, or deployment evidence is used.
 
 ## Phase 02 history boundary
 
@@ -50,4 +64,4 @@ Current RPC state proves observed implementation lineage only. Temporal implemen
 
 ## Exit rule
 
-Do not start Phase 03 until Phase 02 is objectively GREEN on the current `main` commit.
+Phase 02 is closed. **Phase 03 may begin.** Do not reopen Phase 02 unless a genuine regression is discovered.
