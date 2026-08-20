@@ -32,8 +32,6 @@ endpoints:
       Analyze an Ethereum smart contract and return evidence-backed risk and
       capability intelligence for ownership, upgradeability, pause and mint
       authority.
-    intents:
-      - FRAUD_DETECTION
 
 input_schema:
   type: object
