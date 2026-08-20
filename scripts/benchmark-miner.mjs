@@ -10,6 +10,7 @@ const requestsPerAddress = Number.parseInt(process.env.VERIDEX_BENCHMARK_REQUEST
 const concurrency = Number.parseInt(process.env.VERIDEX_BENCHMARK_CONCURRENCY ?? "3", 10);
 const timeoutMs = Number.parseInt(process.env.VERIDEX_BENCHMARK_TIMEOUT_MS ?? "20000", 10);
 const controlRetries = Number.parseInt(process.env.VERIDEX_BENCHMARK_CONTROL_RETRIES ?? "2", 10);
+const requestRetries = Number.parseInt(process.env.VERIDEX_BENCHMARK_REQUEST_RETRIES ?? "2", 10);
 
 for (const address of addresses) {
   if (!/^0x[0-9a-fA-F]{40}$/.test(address)) throw new Error(`Invalid benchmark address: ${address}`);
@@ -18,6 +19,7 @@ if (!Number.isInteger(requestsPerAddress) || requestsPerAddress < 3 || requestsP
 if (!Number.isInteger(concurrency) || concurrency < 1 || concurrency > 32) throw new Error("concurrency must be in [1,32]");
 if (!Number.isInteger(timeoutMs) || timeoutMs < 1000 || timeoutMs > 60_000) throw new Error("timeout must be in [1000,60000]");
 if (!Number.isInteger(controlRetries) || controlRetries < 0 || controlRetries > 5) throw new Error("controlRetries must be in [0,5]");
+if (!Number.isInteger(requestRetries) || requestRetries < 0 || requestRetries > 5) throw new Error("requestRetries must be in [0,5]");
 
 async function getJson(path) {
   let lastError;
@@ -42,22 +44,33 @@ async function getJson(path) {
 
 async function analyze(address) {
   const started = performance.now();
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    const response = await fetch(`${baseUrl}/analyze`, {
-      method: "POST",
-      headers: { "content-type": "application/json", accept: "application/json" },
-      body: JSON.stringify({ chain, contractAddress: address }),
-      signal: controller.signal,
-    });
-    const body = await response.json();
-    return { durationMs: performance.now() - started, status: response.status, body };
-  } catch (error) {
-    return { durationMs: performance.now() - started, status: 0, error: error?.name === "AbortError" ? "timeout" : String(error) };
-  } finally {
-    clearTimeout(timer);
+  let lastResult;
+
+  for (let attempt = 0; attempt <= requestRetries; attempt += 1) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const response = await fetch(`${baseUrl}/analyze`, {
+        method: "POST",
+        headers: { "content-type": "application/json", accept: "application/json" },
+        body: JSON.stringify({ chain, contractAddress: address }),
+        signal: controller.signal,
+      });
+      let body = null;
+      try { body = await response.json(); } catch { body = null; }
+      const transient = response.status === 429 || response.status === 502 || response.status === 503 || response.status === 504;
+      lastResult = { durationMs: performance.now() - started, status: response.status, body };
+      if (!transient || attempt >= requestRetries) return lastResult;
+    } catch (error) {
+      lastResult = { durationMs: performance.now() - started, status: 0, error: error?.name === "AbortError" ? "timeout" : String(error) };
+      if (attempt >= requestRetries) return lastResult;
+    } finally {
+      clearTimeout(timer);
+    }
+    await new Promise((resolve) => setTimeout(resolve, 250 * 2 ** attempt));
   }
+
+  return lastResult;
 }
 
 async function runAddress(address) {
@@ -91,6 +104,7 @@ async function runAddress(address) {
     contractAddress: address,
     requests: requestsPerAddress,
     concurrency,
+    requestRetries,
     success,
     unavailable,
     errors,
