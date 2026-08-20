@@ -68,7 +68,7 @@ async function runAddress(address) {
   await Promise.all(Array.from({ length: Math.min(concurrency, requestsPerAddress) }, worker));
   const durations = observations.map((item) => item.durationMs).sort((a, b) => a - b);
   const warmDurations = observations.filter((item) => item.index > 0).map((item) => item.durationMs).sort((a, b) => a - b);
-  const percentile = (values, q) => values[Math.min(values.length - 1, Math.max(0, Math.ceil(q * values.length) - 1))] ?? 0;
+  const percentile = (values, q) => values.length === 0 ? null : values[Math.min(values.length - 1, Math.max(0, Math.ceil(q * values.length) - 1))];
   const cold = observations.find((item) => item.index === 0);
 
   return {
@@ -81,12 +81,12 @@ async function runAddress(address) {
     timeouts,
     cold_ms: cold ? Number(cold.durationMs.toFixed(2)) : null,
     warm_requests: warmDurations.length,
-    warm_p50_ms: Number(percentile(warmDurations, 0.50).toFixed(2)),
-    warm_p95_ms: Number(percentile(warmDurations, 0.95).toFixed(2)),
-    warm_p99_ms: Number(percentile(warmDurations, 0.99).toFixed(2)),
-    p50_ms: Number(percentile(durations, 0.50).toFixed(2)),
-    p95_ms: Number(percentile(durations, 0.95).toFixed(2)),
-    p99_ms: Number(percentile(durations, 0.99).toFixed(2)),
+    warm_p50_ms: percentile(warmDurations, 0.50) === null ? null : Number(percentile(warmDurations, 0.50).toFixed(2)),
+    warm_p95_ms: percentile(warmDurations, 0.95) === null ? null : Number(percentile(warmDurations, 0.95).toFixed(2)),
+    warm_p99_ms: percentile(warmDurations, 0.99) === null ? null : Number(percentile(warmDurations, 0.99).toFixed(2)),
+    p50_ms: percentile(durations, 0.50) === null ? null : Number(percentile(durations, 0.50).toFixed(2)),
+    p95_ms: percentile(durations, 0.95) === null ? null : Number(percentile(durations, 0.95).toFixed(2)),
+    p99_ms: percentile(durations, 0.99) === null ? null : Number(percentile(durations, 0.99).toFixed(2)),
   };
 }
 
@@ -111,3 +111,9 @@ const result = {
 };
 
 console.log(JSON.stringify(result, null, 2));
+
+const failed = results.filter((item) => item.success !== item.requests || item.unavailable > 0 || item.errors > 0 || item.timeouts > 0 || item.warm_requests !== item.requests - 1);
+if (failed.length > 0) {
+  console.error(`Production benchmark failed for ${failed.length} address(es).`);
+  process.exit(1);
+}
