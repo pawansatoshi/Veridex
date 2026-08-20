@@ -144,6 +144,18 @@ jobs:
           VERIDEX_GROUND_TRUTH_OUTPUT: artifacts/real-chain-ground-truth.json
         run: node scripts/verify-real-chain.mjs
 
+      - name: Deterministic Miner quality evaluation
+        id: evaluation
+        continue-on-error: true
+        if: github.ref == 'refs/heads/main'
+        env:
+          VERIDEX_EVAL_INPUT: artifacts/real-chain-ground-truth.json
+          VERIDEX_EVAL_OUTPUT: artifacts/miner-evaluation.json
+          VERIDEX_EVAL_MIN_ACCURACY: "0.95"
+          VERIDEX_EVAL_MIN_EVIDENCE: "0.95"
+          VERIDEX_EVAL_MIN_SCORE: "0.90"
+        run: node scripts/evaluate-miner.mjs
+
       - name: Production performance benchmark
         id: benchmark
         continue-on-error: true
@@ -165,17 +177,17 @@ jobs:
           VERIDEX_MINER_URL: https://veridex-ecru.vercel.app
         run: node scripts/verify-production-schema.mjs > artifacts/production-schema.json
 
-      - name: Publish H1, Phase 02, Phase 03 and Phase 04 evidence summary
+      - name: Publish H1, Phase 02, Phase 03, Phase 04 and evaluation evidence summary
         if: always() && github.ref == 'refs/heads/main'
         run: |
           node <<'NODE' >> "$GITHUB_STEP_SUMMARY"
           const fs = require('node:fs');
           const readJson = p => { if (!fs.existsSync(p)) return null; try { return JSON.parse(fs.readFileSync(p,'utf8')); } catch { return null; } };
-          const gt=readJson('artifacts/real-chain-ground-truth.json'); const b=readJson('artifacts/production-benchmark.json'); const s=readJson('artifacts/production-schema.json'); const y=readJson('artifacts/telegraph-yaml-validation.json'); const i=readJson('artifacts/telegraph-integration-verification.json'); const r=readJson('artifacts/phase01-resilience.json');
+          const gt=readJson('artifacts/real-chain-ground-truth.json'); const e=readJson('artifacts/miner-evaluation.json'); const b=readJson('artifacts/production-benchmark.json'); const s=readJson('artifacts/production-schema.json'); const y=readJson('artifacts/telegraph-yaml-validation.json'); const i=readJson('artifacts/telegraph-integration-verification.json'); const r=readJson('artifacts/phase01-resilience.json');
           console.log('## Veridex H1 / Phase 02 / Phase 03 / Phase 04 Runtime Evidence');
           console.log(`- commit: \`${process.env.GITHUB_SHA}\``);
-          console.log(`- Phase 03 capability passport tests: ${process.env.PASSPORT ?? 'see step result'}`);
-          console.log(`- Phase 04 capability watch tests: ${process.env.WATCH ?? 'see step result'}`);
+          console.log(`- deterministic Miner evaluation: ${e?.passed ? 'PASSED' : 'failed/unavailable'}`);
+          if(e?.metrics) console.log(`- quality: score=${e.metrics.qualityScore}, accuracy=${e.metrics.accuracy}, evidence=${e.metrics.evidenceCoverage}, conclusive=${e.metrics.conclusiveRate}, FP=${e.metrics.falsePositive}, FN=${e.metrics.falseNegative}`);
           console.log(`- Miner YAML: ${y?.valid ? 'valid' : 'failed/unavailable'}`);
           console.log(`- live Telegraph integration: ${i?.valid ? 'verified' : 'failed/unavailable'}`);
           console.log(`- resilience recovery: ${r?.valid ? 'verified' : 'failed/unavailable'}`);
@@ -185,7 +197,7 @@ jobs:
           if(s) console.log(`- production schema: \`${s.schema}\``);
           NODE
 
-      - name: Enforce blocking H1, Phase 02, Phase 03 and Phase 04 gates
+      - name: Enforce blocking H1, Phase 02, Phase 03, Phase 04 and evaluation gates
         if: always() && github.ref == 'refs/heads/main'
         env:
           AUDIT: ${{ steps.audit.outcome }}
@@ -200,13 +212,14 @@ jobs:
           INTEGRATION: ${{ steps.integration.outcome }}
           RESILIENCE: ${{ steps.resilience.outcome }}
           GROUNDTRUTH: ${{ steps.groundtruth.outcome }}
+          EVALUATION: ${{ steps.evaluation.outcome }}
           BENCHMARK: ${{ steps.benchmark.outcome }}
           SCHEMA: ${{ steps.schema.outcome }}
         run: |
           failed=0
-          for value in "$AUDIT" "$TYPECHECK" "$BUILD" "$UNIT" "$PROXY" "$PASSPORT" "$WATCH" "$HEALTH" "$YAML" "$INTEGRATION" "$RESILIENCE" "$GROUNDTRUTH" "$BENCHMARK" "$SCHEMA"; do [ "$value" = success ] || failed=1; done
-          [ "$failed" -eq 0 ] || { echo 'One or more blocking H1/Phase 02/Phase 03/Phase 04 gates failed.'; exit 1; }
-          echo 'ALL BLOCKING H1, PHASE 02, PHASE 03 AND PHASE 04 GATES PASSED.'
+          for value in "$AUDIT" "$TYPECHECK" "$BUILD" "$UNIT" "$PROXY" "$PASSPORT" "$WATCH" "$HEALTH" "$YAML" "$INTEGRATION" "$RESILIENCE" "$GROUNDTRUTH" "$EVALUATION" "$BENCHMARK" "$SCHEMA"; do [ "$value" = success ] || failed=1; done
+          [ "$failed" -eq 0 ] || { echo 'One or more blocking H1/Phase 02/Phase 03/Phase 04/evaluation gates failed.'; exit 1; }
+          echo 'ALL BLOCKING H1, PHASE 02, PHASE 03, PHASE 04 AND EVALUATION GATES PASSED.'
 
       - name: Upload verification artifacts
         if: always() && github.ref == 'refs/heads/main'
