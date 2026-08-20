@@ -88,3 +88,44 @@ export function classifyJsonRpcError(message: string): Failure {
   }
   return { class: "rpc_application_error", message, retryable: false, countsTowardCircuit: false };
 }
+
+export interface ResilienceSelfTestResult {
+  schema: "veridex.phase01.resilience-self-test.v1";
+  valid: boolean;
+  injectedFailure: "rpc_timeout";
+  timeoutFailures: number;
+  circuitOpened: boolean;
+  halfOpenProbeAllowed: boolean;
+  recovery: boolean;
+}
+
+export function runResilienceSelfTest(): ResilienceSelfTestResult {
+  let now = 0;
+  const circuit = new CircuitBreaker(3, 100, () => now);
+  const timeoutError = Object.assign(new Error("synthetic RPC timeout"), { name: "AbortError" });
+  const failure = classifyRpcFailure(undefined, timeoutError);
+  let timeoutFailures = 0;
+
+  for (let i = 0; i < 3; i += 1) {
+    if (!circuit.canRequest()) break;
+    circuit.recordFailure(failure);
+    timeoutFailures += 1;
+  }
+
+  const circuitOpened = circuit.getState() === "open" && circuit.canRequest() === false;
+  now = 100;
+  const halfOpenProbeAllowed = circuit.canRequest();
+  circuit.recordSuccess();
+  const recovery = circuit.getState() === "closed" && circuit.canRequest();
+
+  return {
+    schema: "veridex.phase01.resilience-self-test.v1",
+    valid: failure.class === "timeout" && failure.retryable && failure.countsTowardCircuit &&
+      timeoutFailures === 3 && circuitOpened && halfOpenProbeAllowed && recovery,
+    injectedFailure: "rpc_timeout",
+    timeoutFailures,
+    circuitOpened,
+    halfOpenProbeAllowed,
+    recovery,
+  };
+}
