@@ -9,6 +9,7 @@ const addresses = (process.env.VERIDEX_BENCHMARK_ADDRESSES ?? process.env.VERIDE
 const requestsPerAddress = Number.parseInt(process.env.VERIDEX_BENCHMARK_REQUESTS ?? "10", 10);
 const concurrency = Number.parseInt(process.env.VERIDEX_BENCHMARK_CONCURRENCY ?? "3", 10);
 const timeoutMs = Number.parseInt(process.env.VERIDEX_BENCHMARK_TIMEOUT_MS ?? "20000", 10);
+const controlRetries = Number.parseInt(process.env.VERIDEX_BENCHMARK_CONTROL_RETRIES ?? "2", 10);
 
 for (const address of addresses) {
   if (!/^0x[0-9a-fA-F]{40}$/.test(address)) throw new Error(`Invalid benchmark address: ${address}`);
@@ -16,12 +17,27 @@ for (const address of addresses) {
 if (!Number.isInteger(requestsPerAddress) || requestsPerAddress < 3 || requestsPerAddress > 1000) throw new Error("requests must be in [3,1000]");
 if (!Number.isInteger(concurrency) || concurrency < 1 || concurrency > 32) throw new Error("concurrency must be in [1,32]");
 if (!Number.isInteger(timeoutMs) || timeoutMs < 1000 || timeoutMs > 60_000) throw new Error("timeout must be in [1000,60000]");
+if (!Number.isInteger(controlRetries) || controlRetries < 0 || controlRetries > 5) throw new Error("controlRetries must be in [0,5]");
 
 async function getJson(path) {
-  const response = await fetch(`${baseUrl}${path}`, { headers: { accept: "application/json" } });
-  const body = await response.json();
-  if (!response.ok) throw new Error(`${path} returned ${response.status}: ${JSON.stringify(body)}`);
-  return body;
+  let lastError;
+  for (let attempt = 0; attempt <= controlRetries; attempt += 1) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const response = await fetch(`${baseUrl}${path}`, { headers: { accept: "application/json" }, signal: controller.signal });
+      const body = await response.json();
+      if (!response.ok) throw new Error(`${path} returned ${response.status}: ${JSON.stringify(body)}`);
+      return body;
+    } catch (error) {
+      lastError = error;
+      if (attempt >= controlRetries) break;
+      await new Promise((resolve) => setTimeout(resolve, 250 * 2 ** attempt));
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error(`${path} failed`);
 }
 
 async function analyze(address) {
@@ -103,7 +119,7 @@ const result = {
   chain,
   startedAt,
   finishedAt: new Date().toISOString(),
-  health,
+  controlRetryPolicy: { timeoutMs, retries: controlRetries, backoffMs: [250, 500, 1000, 2000, 4000].slice(0, controlRetries) },
   corpus: addresses,
   results,
   metricsBefore: before,
