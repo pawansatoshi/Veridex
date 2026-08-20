@@ -1,5 +1,6 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { buildCapabilityIntelligence } from "../domain/capabilityIntelligence.js";
+import { buildCapabilityPassport } from "../domain/capabilityPassport.js";
 import type { NormalizedAnalysis } from "../domain/analyzer.js";
 import { analyzeContract } from "../domain/analyzer.js";
 import { AnalysisCache } from "../infrastructure/cache.js";
@@ -131,6 +132,7 @@ export function createMinerServer(dependencies: MinerDependencies): ReturnType<t
         schema: "veridex.miner.v1",
         result: analysis,
         capabilityIntelligence: buildCapabilityIntelligence(analysis),
+        capabilityPassport: buildCapabilityPassport(analysis),
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
