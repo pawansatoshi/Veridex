@@ -80,9 +80,7 @@ Historical registrations `#122` and `#142` are superseded. The canonical current
 
 ## Latest verified H1 CI evidence
 
-Latest successful blocking CI evidence is recorded by the successful GitHub Actions run shown for the H1 verification lane.
-
-Verified runtime summary:
+The latest successful blocking CI evidence recorded for the H1 verification lane showed:
 
 - deterministic Miner evaluation: **PASSED**
 - quality score: **1.0**
@@ -97,7 +95,7 @@ Verified runtime summary:
 - live Telegraph integration: **verified**
 - resilience recovery: **verified**
 
-The blocking workflow explicitly requires successful outcomes for audit, typecheck, build, unit tests, Phase 02 proxy tests, Phase 03 passport tests, Phase 04 watch tests, live health, YAML validation, live Telegraph integration, resilience, real-chain ground truth, deterministic evaluation, benchmark, and production schema. fileciteturn174file0L2-L2
+The blocking workflow requires successful outcomes for audit, typecheck, build, unit tests, Phase 02 proxy tests, Phase 03 passport tests, Phase 04 watch tests, live health, YAML validation, live Telegraph integration, resilience, real-chain ground truth, deterministic evaluation, benchmark, and production schema.
 
 ## H1 status
 
