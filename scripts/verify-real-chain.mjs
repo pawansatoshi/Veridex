@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { addClassification, createConfusionCounts } from "../src/evaluation/confusion.js";
+import { addClassification, createConfusionCounts } from "../dist/evaluation/confusion.js";
 
 const endpoint = (process.env.VERIDEX_MINER_URL ?? "https://veridex-ecru.vercel.app").replace(/\/$/, "");
 const rpcUrl = process.env.VERIDEX_RPC_URL ?? "https://ethereum-rpc.publicnode.com";
