@@ -2,7 +2,7 @@
 
 > Continuity document for a new chat/agent. Read this before changing code or filling/submitting any Telegraph material.
 
-**Last reviewed:** 19 Aug 2026
+**Last reviewed:** 20 Aug 2026
 **Repository:** `pawansatoshi/Veridex`
 **Branch:** `main`
 **Current Miner:** #1001 / `veridex-contract-risk-miner`
@@ -31,7 +31,7 @@ Do not expand this matrix before these four are reliable in production.
 
 ## 2. Current status — important rebaseline
 
-### Completed
+### Completed engineering
 
 - Phase 00 Constitution & Continuity
 - deterministic EVM analysis foundation
@@ -45,10 +45,12 @@ Do not expand this matrix before these four are reliable in production.
 - ground-truth evaluator foundation
 - latency/concurrency instrumentation
 - production API
-- official Telegraph Miner YAML reconciliation
-- `FRAUD_DETECTION` Intent confirmation
+- current official Telegraph Miner YAML structure reconciliation
 - Miner registration
 - Miner #1001 created/registered
+- CI evidence parsing fixed and passing on the previous verification lane
+- current Telegraph YAML canonical-Intent validation added to CI
+- live Miner integration verification added to CI
 
 ### Remaining
 
@@ -57,9 +59,9 @@ The project is now in **Phase 01 FINAL EXIT AUDIT / H1 production evidence**.
 Remaining high-priority engineering/evidence work:
 
 - real-chain proxy/non-proxy integration tests
-- curated real-chain ground-truth corpus and TP/TN/FP/FN/inconclusive accounting
-- controlled RPC timeout regression
-- Telegraph request/response tests
+- curated real-chain ground-truth and TP/TN/FP/FN/inconclusive accounting
+- controlled RPC timeout and recovery evidence
+- Telegraph request/response contract verification
 - genuine Telegraph-routed request verification
 - final p50/p95/p99 and reliability evidence
 - final Track 1 submission/evidence package
@@ -78,15 +80,19 @@ Telegraph protocol envelope
 
 Do not redesign the Veridex engine around a guessed Intent.
 
-### Confirmed Intent
+### Current canonical Intent
 
-Telegraph team explicitly confirmed:
+The current official Telegraph Miner YAML standard publishes canonical Intents and does **not** list `FRAUD_DETECTION`. It does list `CONTENT_VERIFICATION`, which is semantically aligned with Veridex's evidence-backed contract capability verification.
+
+The repository Miner YAML therefore declares:
 
 ```yaml
-FRAUD_DETECTION
+semantics:
+  supported_intents:
+    - CONTENT_VERIFICATION
 ```
 
-This is the legitimate H1 use case for Veridex's evidence-backed contract capability/control analysis.
+Historical Telegraph team confirmation of `FRAUD_DETECTION` remains preserved as project history, but it is not treated as the current canonical protocol value without live registry confirmation.
 
 Do not add `AGENT_TASK` or another unrelated Intent merely for convenience.
 
@@ -117,14 +123,14 @@ Request:
 Miner ID: 1001
 Slug: veridex-contract-risk-miner
 Protocol: generic
-Intent: FRAUD_DETECTION
+Intent: CONTENT_VERIFICATION (current repository standard)
 ```
 
-Registration has been completed successfully.
+Registration was previously completed successfully. Because the Intent/YAML schema changed to match the current official standard, the live Telegraph registry must now prove that Miner #1001 has synchronized/re-registered the current configuration before the protocol gate can pass.
 
 ## 4. Current Telegraph operational state
 
-The Miner is registered, but the Telegraph UI currently shows **Unranked / 0 Requests**.
+The Miner is registered, but the Telegraph UI previously showed **Unranked / 0 Requests**.
 
 Current working interpretation: this is a known Telegraph-side routing/ranking issue based on team feedback. It must not be presented as a confirmed Veridex defect without new evidence.
 
@@ -153,13 +159,13 @@ Never fabricate requests, traffic, users, ranking, demand or performance.
 
 Re-verify official rules immediately before final submission because dates/criteria can change.
 
-## 6. Execution plan from 19 Aug
+## 6. Execution plan
 
 ### Gate A — Phase 01 final correctness
 
 1. real-chain proxy/non-proxy tests
 2. curated ground-truth corpus
-3. RPC timeout regression
+3. RPC timeout/recovery evidence
 4. Telegraph request/response tests
 5. full tests + typecheck + build
 6. production smoke test
@@ -189,7 +195,7 @@ Include:
 
 - live Miner identity
 - production endpoint
-- confirmed Intent
+- current canonical Intent
 - deterministic correctness evidence
 - evidence provenance
 - ground-truth results
@@ -231,6 +237,8 @@ Tier 3 — instruction-boundary bytecode fallback
 
 A selector is not semantic proof. Provider failure is never a negative contract finding. Mint authority must not be guessed. Beacon addresses must not be treated as implementations without supported resolution. Every correctness bug gets a regression test.
 
+The preview-only Phase 01 resilience verifier is never enabled in production; production routing remains limited to the documented public API.
+
 ## 10. Explicit H1 non-goals
 
 Do not block Track 1 on:
@@ -265,4 +273,4 @@ For a new chat/agent:
 9. inspect the actual current `main` tree and recent commits
 10. verify live deployment before making production-readiness claims
 
-**Next single engineering action:** run the Phase 01 final exit audit, starting with real-chain integration/ground-truth gaps and Telegraph request/response tests. Do not begin post-H1 feature work until this gate is closed.
+**Next single engineering action:** close every remaining Phase 01 runtime/protocol evidence blocker. Do not begin post-H1 feature work until this gate is closed.
