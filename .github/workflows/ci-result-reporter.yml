@@ -29,24 +29,19 @@ jobs:
               `status: ${run.status}`,
               `conclusion: ${conclusion}`,
               '',
-              'This issue is an internal machine-readable CI result checkpoint.',
+              'Internal machine-readable CI result checkpoint.',
             ].join('\n');
             const existing = await github.paginate(github.rest.issues.listForRepo, {
               owner: context.repo.owner,
               repo: context.repo.repo,
               state: 'open',
-              labels: 'ci-result',
               per_page: 100,
             });
-            const duplicate = existing.find((issue) => issue.title === title);
-            if (!duplicate) {
+            if (!existing.some((issue) => issue.title === title)) {
               await github.rest.issues.create({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 title,
                 body,
-                labels: ['ci-result'],
               });
-            } else {
-              await github.rest.issues.updateComment;
             }
