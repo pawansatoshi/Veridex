@@ -76,4 +76,4 @@ semantics:
     confidence_field: capabilityIntelligence.confidence
     reason_field: result.evidence
   supported_intents:
-    - FRAUD_DETECTION
+    - CONTENT_VERIFICATION
