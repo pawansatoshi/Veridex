@@ -18,10 +18,10 @@ try {
   const intents = Array.isArray(body) ? body : Array.isArray(body.intents) ? body.intents : null;
   if (!intents) throw new Error("Unexpected Telegraph intent-list response shape");
 
-  console.log(JSON.stringify({ endpoint, checkedAt: new Date().toISOString(), intents }, null, 2));
+  console.log(JSON.stringify({ endpoint, checkedAt: new Date().toISOString(), available: true, intents }, null, 2));
 } catch (error) {
   const message = error instanceof Error ? error.message : String(error);
-  console.error(`Unable to verify live Telegraph intents: ${message}`);
+  console.log(JSON.stringify({ endpoint, checkedAt: new Date().toISOString(), available: false, error: message }, null, 2));
   process.exitCode = 1;
 } finally {
   clearTimeout(timeout);
