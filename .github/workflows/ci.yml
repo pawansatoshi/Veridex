@@ -52,14 +52,19 @@ jobs:
           done
           echo 'live Miner did not become reachable in time'
           exit 1
+      - name: Validate Miner YAML against current Telegraph standard
+        if: github.ref == 'refs/heads/main'
+        run: node scripts/verify-telegraph-yaml.mjs > artifacts/telegraph-yaml-validation.json
       - name: Capture live Telegraph Intent registry
         if: github.ref == 'refs/heads/main'
         continue-on-error: true
         run: |
           node scripts/check-telegraph-intents.mjs > artifacts/telegraph-intents.json
+      - name: Verify live Telegraph Miner integration
+        if: github.ref == 'refs/heads/main'
+        run: node scripts/verify-telegraph-integration.mjs > artifacts/telegraph-integration-verification.json
       - name: Capture live Telegraph integration registry
         if: github.ref == 'refs/heads/main'
-        continue-on-error: true
         run: |
           curl -fsS --max-time 10 https://devnode.telegraphprotocol.com/miner-dispatcher/integrations > artifacts/telegraph-integrations.json
       - name: Real-chain ground truth
@@ -97,14 +102,18 @@ jobs:
           const gt = readJson('artifacts/real-chain-ground-truth.json');
           const bench = readJson('artifacts/production-benchmark.json');
           const schema = readJson('artifacts/production-schema.json');
+          const yaml = readJson('artifacts/telegraph-yaml-validation.json');
+          const integration = readJson('artifacts/telegraph-integration-verification.json');
           console.log('## Veridex H1 Runtime Evidence');
           console.log(`- commit: \`${process.env.GITHUB_SHA}\``);
+          console.log(`- Miner YAML: ${yaml?.valid ? 'valid' : 'artifact unavailable'}`);
+          console.log(`- live Telegraph integration: ${integration?.valid ? 'verified' : 'artifact unavailable'}`);
           console.log(`- real-chain cases: ${gt ? `${gt.passed}/${gt.caseCount} passed` : 'artifact unavailable'}`);
           if (gt?.metrics) console.log(`- real-chain metrics: TP=${gt.metrics.truePositive}, TN=${gt.metrics.trueNegative}, FP=${gt.metrics.falsePositive}, FN=${gt.metrics.falseNegative}, inconclusive=${gt.metrics.inconclusive}, unavailable=${gt.metrics.unavailable}, error=${gt.metrics.error}`);
           if (gt?.metrics) console.log(`- real-chain accuracy: ${gt.metrics.accuracy}`);
           if (bench) for (const item of bench.results ?? []) console.log(`- benchmark ${item.contractAddress}: p50=${item.p50_ms}ms p95=${item.p95_ms}ms p99=${item.p99_ms}ms success=${item.success}/${item.requests} timeouts=${item.timeouts} errors=${item.errors}`);
           if (schema) console.log(`- production schema: \`${schema.schema}\``);
-          console.log('- Telegraph live registry snapshots are uploaded as artifacts; they remain a protocol gate until independently confirmed.');
+          console.log('- Telegraph live Intent snapshot remains informational when the testnet intent registry endpoint is unavailable.');
           NODE
       - name: Upload verification artifacts
         if: always() && github.ref == 'refs/heads/main'
