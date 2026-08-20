@@ -76,8 +76,11 @@ Implemented/foundation work on `main` includes:
 - standalone Miner response matches the production `veridex.miner.v1` envelope, including `capabilityIntelligence`
 - production response-schema verification script
 - production endpoint contract: `POST /analyze`, JSON request, no auth, Ethereum chain normalized to `1`
-- Telegraph Miner YAML reconciled against official Miner template structure
+- Telegraph Miner YAML reconciled against the current official Miner standard structure
 - real-chain evaluator now emits per-capability TP/TN/FP/FN/inconclusive/unavailable/error metrics
+- CI now validates the Miner YAML against the current Telegraph canonical Intent list
+- CI now verifies the live Telegraph Miner #1001 integration registry
+- preview-only deployed resilience self-test exists on a dedicated non-production branch and is never exposed in production
 
 ## Telegraph H1 integration — CURRENT REALITY
 
@@ -91,38 +94,42 @@ Implemented/foundation work on `main` includes:
 - payment/x402 path was integrated before registration
 - production endpoint has returned successful `/health`, `/metrics`, and POST `/analyze` responses
 
+### Intent reconciliation
+
+Historical Telegraph team confirmation recorded `FRAUD_DETECTION` for Miner #1001. The current official Telegraph Miner YAML standard publishes a canonical Intent list that does **not** include `FRAUD_DETECTION`; it does include `CONTENT_VERIFICATION`, which directly matches Veridex's evidence-backed contract verification function. The repository YAML therefore now declares `CONTENT_VERIFICATION` and removes endpoint-level `intents` in accordance with the current standard.
+
+This is a protocol correctness correction, not an attempt to force ranking. The live registry must confirm that Miner #1001 has synchronized/re-registered with the current canonical configuration before the protocol gate can pass.
+
 ### Current operational issue
 
 Telegraph UI previously showed the registered Miner as **Unranked / 0 Requests**. This remains an external routing/ranking state unless new evidence proves a Veridex defect. Do not fabricate traffic, users, ranking or demand.
 
 ### Current protocol gate
 
-Telegraph's current Miner documentation states that canonical Intents are live/on-chain and can change, and explicitly instructs miners to read the live canonical set rather than rely on a static list. Historical team confirmation for `FRAUD_DETECTION` remains part of project history, but current canonical-Intent evidence must be captured before the Phase 01 protocol gate is closed.
-
-Do not substitute an unrelated Intent merely to force ranking or registration.
+Telegraph's current Miner documentation defines `semantics.supported_intents` as the canonical Intent declaration and instructs miners to keep the YAML accurate and complete. Current protocol documentation also states that miner registration feeds the routing pool and that routing depends on validator scoring.
 
 ## Runtime evidence captured 20 Aug 2026
 
-The latest production deployment corresponding to commit `c187291d165d2111a3d53d82469e2a7838279bc2` reached Vercel `READY`.
+The latest production deployment corresponding to commit `2f12b53d76ed5d51d1103aa766a8e85b998a52e3` reached Vercel `READY`.
 
 Observed production evidence:
 
 - `/health`: HTTP 200, `ok: true`, service `veridex-miner`
 - `/metrics`: HTTP 200
-- Vercel runtime logs: **19 POST `/analyze` requests, all HTTP 200** during the verification window immediately after deployment
-- Vercel runtime error aggregation: **no runtime errors** in the selected 24-hour window
+- Vercel runtime logs: repeated successful production `/analyze`, `/health`, and `/metrics` traffic during the verification window
+- Vercel runtime error aggregation: no runtime errors in the selected verification window
 
-The 19-request fingerprint matches the configured H1 verification lane (3 real-chain cases + 15 benchmark requests + 1 production-schema request). This is strong evidence that the production verification lane exercised the live endpoint, but response bodies are not exposed in Vercel runtime logs, so semantic correctness and benchmark values are not claimed from this evidence alone.
+Production HTTP availability is proven, but semantic correctness and benchmark values are only claimed from machine-readable CI artifacts, not from HTTP status codes alone.
 
 ## Remaining H1 exit blockers
 
-1. complete unit/integration suite result from GitHub Actions
-2. real-chain ground-truth artifact with TP/TN/FP/FN/inconclusive accounting
-3. controlled deployed RPC timeout/failure-injection evidence
-4. recovery verification after provider outage
-5. cold/warm benchmark artifact with p50/p95/p99 values
-6. exact current Telegraph canonical Intent/request/response contract verification
-7. official Telegraph protocol-path health/readiness and genuine routed-request evidence
+1. latest CI run must pass the strengthened current Telegraph YAML/integration gate
+2. real-chain ground-truth artifact with TP/TN/FP/FN/inconclusive accounting must be attached to the passing run
+3. controlled deployed resilience evidence must be attached; a preview-only self-test is prepared for this purpose while production remains free of diagnostic routes
+4. recovery verification after provider outage must be recorded
+5. cold/warm benchmark artifact with p50/p95/p99 values must be attached
+6. current canonical Telegraph Intent and live Miner registry must agree
+7. official Telegraph protocol-path health/readiness and genuine routed-request evidence remain external dependencies; they cannot be fabricated or replaced by direct `/analyze` traffic
 
 ## Hackathon schedule — H1
 
