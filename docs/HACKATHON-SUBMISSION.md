@@ -4,14 +4,18 @@
 
 - Miner ID: `1001`
 - Slug: `veridex-contract-risk-miner`
-- Registration ID: `142`
+- Historical superseded registration: `122` — `FRAUD_DETECTION`
+- Historical active registration: `142` — `CONTENT_VERIFICATION`
+- Current intended registration: `FRAUD_DETECTION`
 - Registration network: Base Sepolia
-- Registration transaction: `0xd730f6510e3f61069a709a6693d1e8de54a3d7db67b616152131b2d3cb5abbf3`
+- Latest registration transaction: `0xd730f6510e3f61069a709a6693d1e8de54a3d7db67b616152131b2d3cb5abbf3`
 - Primary production endpoint: `https://veridex-ecru.vercel.app`
 - Endpoint: `POST /analyze`
-- Supported intent: `CONTENT_VERIFICATION`
+- Repository Miner intent: `FRAUD_DETECTION`
 
-The transaction above was reported successful by the Telegraph registration flow. The registration is now part of the H1 evidence trail. Final H1 GREEN still requires the current commit's blocking GitHub Actions gates to pass, including live Telegraph registry verification.
+The repository Miner YAML has been restored to the project's original `FRAUD_DETECTION` intent. The Telegraph registry must be re-synchronized through the official edit/re-registration flow; do not claim the live registry is aligned until the new active registration is independently verified.
+
+The transaction above was reported successful by the Telegraph registration flow. Final H1 GREEN still requires the current commit's blocking GitHub Actions gates to pass, including live Telegraph registry verification.
 
 ## Track coverage
 
@@ -82,5 +86,6 @@ Never claim:
 - unsupported Intent mapping
 - fake Track 3 usage
 - green CI without a successful current-commit run
+- live registry alignment before re-registration is verified
 
 Submission claims must be backed by reproducible artifacts or live endpoints.
