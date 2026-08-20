@@ -63,6 +63,14 @@ jobs:
           set -o pipefail
           npm test -- tests/unit/proxy-composition.test.ts | tee artifacts/proxy-composition-tests.txt
 
+      - name: Phase 03 capability passport tests
+        id: passport
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          npm test -- tests/unit/capabilityPassport.test.ts | tee artifacts/capability-passport-tests.txt
+
       - name: Wait for live Miner
         id: health
         continue-on-error: true
@@ -149,16 +157,17 @@ jobs:
           VERIDEX_MINER_URL: https://veridex-ecru.vercel.app
         run: node scripts/verify-production-schema.mjs > artifacts/production-schema.json
 
-      - name: Publish H1 and Phase 02 evidence summary
+      - name: Publish H1, Phase 02 and Phase 03 evidence summary
         if: always() && github.ref == 'refs/heads/main'
         run: |
           node <<'NODE' >> "$GITHUB_STEP_SUMMARY"
           const fs = require('node:fs');
           const readJson = p => { if (!fs.existsSync(p)) return null; try { return JSON.parse(fs.readFileSync(p,'utf8')); } catch { return null; } };
           const gt=readJson('artifacts/real-chain-ground-truth.json'); const b=readJson('artifacts/production-benchmark.json'); const s=readJson('artifacts/production-schema.json'); const y=readJson('artifacts/telegraph-yaml-validation.json'); const i=readJson('artifacts/telegraph-integration-verification.json'); const r=readJson('artifacts/phase01-resilience.json');
-          console.log('## Veridex H1 / Phase 02 Runtime Evidence');
+          console.log('## Veridex H1 / Phase 02 / Phase 03 Runtime Evidence');
           console.log(`- commit: \`${process.env.GITHUB_SHA}\``);
           console.log(`- Phase 02 proxy tests: ${process.env.PROXY ?? 'see step result'}`);
+          console.log(`- Phase 03 capability passport tests: ${process.env.PASSPORT ?? 'see step result'}`);
           console.log(`- Miner YAML: ${y?.valid ? 'valid' : 'failed/unavailable'}`);
           console.log(`- live Telegraph integration: ${i?.valid ? 'verified' : 'failed/unavailable'}`);
           console.log(`- resilience recovery: ${r?.valid ? 'verified' : 'failed/unavailable'}`);
@@ -168,7 +177,7 @@ jobs:
           if(s) console.log(`- production schema: \`${s.schema}\``);
           NODE
 
-      - name: Enforce blocking H1 and Phase 02 gates
+      - name: Enforce blocking H1, Phase 02 and Phase 03 gates
         if: always() && github.ref == 'refs/heads/main'
         env:
           AUDIT: ${{ steps.audit.outcome }}
@@ -176,6 +185,7 @@ jobs:
           BUILD: ${{ steps.build.outcome }}
           UNIT: ${{ steps.unit.outcome }}
           PROXY: ${{ steps.proxy.outcome }}
+          PASSPORT: ${{ steps.passport.outcome }}
           HEALTH: ${{ steps.health.outcome }}
           YAML: ${{ steps.yaml.outcome }}
           INTEGRATION: ${{ steps.integration.outcome }}
@@ -185,15 +195,15 @@ jobs:
           SCHEMA: ${{ steps.schema.outcome }}
         run: |
           failed=0
-          for value in "$AUDIT" "$TYPECHECK" "$BUILD" "$UNIT" "$PROXY" "$HEALTH" "$YAML" "$INTEGRATION" "$RESILIENCE" "$GROUNDTRUTH" "$BENCHMARK" "$SCHEMA"; do [ "$value" = success ] || failed=1; done
-          [ "$failed" -eq 0 ] || { echo 'One or more blocking H1/Phase 02 gates failed.'; exit 1; }
-          echo 'ALL BLOCKING H1 AND PHASE 02 GATES PASSED.'
+          for value in "$AUDIT" "$TYPECHECK" "$BUILD" "$UNIT" "$PROXY" "$PASSPORT" "$HEALTH" "$YAML" "$INTEGRATION" "$RESILIENCE" "$GROUNDTRUTH" "$BENCHMARK" "$SCHEMA"; do [ "$value" = success ] || failed=1; done
+          [ "$failed" -eq 0 ] || { echo 'One or more blocking H1/Phase 02/Phase 03 gates failed.'; exit 1; }
+          echo 'ALL BLOCKING H1, PHASE 02 AND PHASE 03 GATES PASSED.'
 
       - name: Upload verification artifacts
         if: always() && github.ref == 'refs/heads/main'
         uses: actions/upload-artifact@v4
         with:
-          name: veridex-h1-phase02-verification-${{ github.sha }}
+          name: veridex-h1-phase03-verification-${{ github.sha }}
           path: artifacts/
           if-no-files-found: ignore
           retention-days: 14
