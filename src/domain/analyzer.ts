@@ -5,6 +5,7 @@ import type { ContractTarget } from "../types/analysis.js";
 import type { JsonRpcClient } from "../infrastructure/rpc.js";
 import type { ProxyResolution } from "../infrastructure/proxy.js";
 import { resolveProxy } from "../infrastructure/proxy.js";
+import { resolveProxyComposition } from "../infrastructure/proxy-composition.js";
 import type { VerificationClient, VerificationEvidence } from "../infrastructure/verification.js";
 
 export interface NormalizedCapability {
@@ -130,7 +131,8 @@ export async function analyzeContract(
 
   const contractAddress = target.contractAddress;
   const proxy = await resolveProxy(dependencies.rpc, contractAddress);
-  const codeAddress = target.codeAddress ?? proxy.codeAddress ?? contractAddress;
+  const composition = await resolveProxyComposition(dependencies.rpc, contractAddress);
+  const codeAddress = target.codeAddress ?? composition.effectiveCodeAddress ?? proxy.codeAddress ?? contractAddress;
 
   const [verification, bytecodeResult, ownership] = await Promise.all([
     dependencies.verification.lookup(codeAddress),
@@ -167,12 +169,18 @@ export async function analyzeContract(
       : { ...pause.evidence, pausedStateStatus: pausedState.status, pausedStateDetail: pausedState.evidence.detail };
   }
 
-  const rpcStatus = bytecodeResult.kind === "failure" || proxy.status === "unavailable" || ownership.status === "unavailable" || pausedState.status === "unavailable"
+  const rpcStatus = bytecodeResult.kind === "failure"
+    || proxy.status === "unavailable"
+    || composition.status === "unavailable"
+    || ownership.status === "unavailable"
+    || pausedState.status === "unavailable"
     ? "unavailable"
     : "ok";
   const conclusive = capabilities.every((capability) => capability.conclusive)
     && verification.status === "verified"
-    && bytecodeResult.kind === "success";
+    && bytecodeResult.kind === "success"
+    && composition.status !== "cycle_detected"
+    && composition.status !== "max_depth";
   const confidence = capabilities.length === 0
     ? 0
     : capabilities.reduce((sum, capability) => sum + capability.confidence, 0) / capabilities.length;
