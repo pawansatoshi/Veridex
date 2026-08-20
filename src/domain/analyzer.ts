@@ -4,7 +4,6 @@ import { observeOwner, type OwnershipObservation } from "./ownership.js";
 import type { ContractTarget } from "../types/analysis.js";
 import type { JsonRpcClient } from "../infrastructure/rpc.js";
 import type { ProxyResolution } from "../infrastructure/proxy.js";
-import { resolveProxy } from "../infrastructure/proxy.js";
 import { resolveProxyComposition } from "../infrastructure/proxy-composition.js";
 import type { VerificationClient, VerificationEvidence } from "../infrastructure/verification.js";
 
@@ -130,8 +129,8 @@ export async function analyzeContract(
   if (!target.chain.trim()) throw new Error("Chain is required");
 
   const contractAddress = target.contractAddress;
-  const proxy = await resolveProxy(dependencies.rpc, contractAddress);
   const composition = await resolveProxyComposition(dependencies.rpc, contractAddress);
+  const proxy = composition.rootResolution;
   const codeAddress = target.codeAddress ?? composition.effectiveCodeAddress ?? proxy.codeAddress ?? contractAddress;
 
   const [verification, bytecodeResult, ownership] = await Promise.all([
