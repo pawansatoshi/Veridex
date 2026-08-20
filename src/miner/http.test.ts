@@ -106,14 +106,14 @@ describe("Miner HTTP bridge", () => {
     }
   });
 
-  it("returns the production-compatible response envelope", async () => {
+  it("returns the production-compatible response envelope with a capability passport", async () => {
     const analysis = fixtureAnalysis();
     const server = createMinerServer(dependencies(analysis));
     await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", () => resolve()));
     try {
       const result = await post(server, JSON.stringify({ chain: "ethereum", contractAddress: ADDRESS }));
       expect(result.status).toBe(200);
-      const body = JSON.parse(result.body) as Record<string, unknown>;
+      const body = JSON.parse(result.body) as Record<string, any>;
       expect(body.schema).toBe("veridex.miner.v1");
       expect(body.result).toEqual(analysis);
       expect(body.capabilityIntelligence).toMatchObject({
@@ -121,6 +121,13 @@ describe("Miner HTTP bridge", () => {
         state: "established",
         confidence: 1,
       });
+      expect(body.capabilityPassport).toMatchObject({
+        schema: "veridex.capability-passport.v1",
+        subject: analysis.contract,
+        posture: { state: "established", confidence: 1, conclusive: true },
+      });
+      expect(body.capabilityPassport.identity.passportId).toMatch(/^vp_[0-9a-f]{24}$/);
+      expect(body.capabilityPassport.identity.evidenceFingerprint).toMatch(/^[0-9a-f]{64}$/);
     } finally {
       await new Promise<void>((resolve) => server.close(() => resolve()));
     }
