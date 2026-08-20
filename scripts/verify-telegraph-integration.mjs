@@ -1,10 +1,33 @@
 #!/usr/bin/env node
 
 const endpoint = process.env.TELEGRAPH_INTEGRATIONS_URL ?? "https://devnode.telegraphprotocol.com/miner-dispatcher/integrations";
-const response = await fetch(endpoint, { headers: { accept: "application/json" }, signal: AbortSignal.timeout(10_000) });
-if (!response.ok) throw new Error(`Telegraph integration registry returned HTTP ${response.status}`);
+const timeoutMs = Number.parseInt(process.env.TELEGRAPH_INTEGRATIONS_TIMEOUT_MS ?? "10000", 10);
+const retries = Number.parseInt(process.env.TELEGRAPH_INTEGRATIONS_RETRIES ?? "3", 10);
 
-const body = await response.json();
+if (!Number.isInteger(timeoutMs) || timeoutMs < 1000 || timeoutMs > 60000) throw new Error("timeout must be in [1000,60000]");
+if (!Number.isInteger(retries) || retries < 0 || retries > 5) throw new Error("retries must be in [0,5]");
+
+async function fetchRegistry() {
+  let lastError;
+  for (let attempt = 0; attempt <= retries; attempt += 1) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const response = await fetch(endpoint, { headers: { accept: "application/json" }, signal: controller.signal });
+      if (!response.ok) throw new Error(`Telegraph integration registry returned HTTP ${response.status}`);
+      return await response.json();
+    } catch (error) {
+      lastError = error;
+      if (attempt >= retries) break;
+      await new Promise((resolve) => setTimeout(resolve, 250 * 2 ** attempt));
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error("Telegraph integration registry request failed");
+}
+
+const body = await fetchRegistry();
 const entries = Array.isArray(body) ? body : Array.isArray(body.integrations) ? body.integrations : null;
 if (!entries) throw new Error("Unexpected Telegraph integration registry response shape");
 
@@ -21,6 +44,7 @@ if (!/CONTENT_VERIFICATION/.test(raw)) throw new Error("Live registry does not a
 console.log(JSON.stringify({
   checkedAt: new Date().toISOString(),
   endpoint,
+  retryPolicy: { timeoutMs, retries, backoffMs: [250, 500, 1000, 2000, 4000].slice(0, retries) },
   miner,
   valid: true,
 }, null, 2));
