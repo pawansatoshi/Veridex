@@ -5,6 +5,7 @@ import type { JsonRpcClient } from "../../src/infrastructure/rpc.js";
 const ROOT = "0x0000000000000000000000000000000000000001";
 const IMPLEMENTATION = "0x1111111111111111111111111111111111111111";
 const IMPLEMENTATION_2 = "0x2222222222222222222222222222222222222222";
+const BEACON = "0x3333333333333333333333333333333333333333";
 const ZERO = `0x${"0".repeat(64)}`;
 const slotFor = (address: string) => `0x${"0".repeat(24)}${address.slice(2)}`;
 
@@ -53,6 +54,46 @@ describe("proxy-aware composition", () => {
     expect(result.status).toBe("max_depth");
     expect(result.layers).toHaveLength(2);
     expect(result.effectiveCodeAddress).toBe(IMPLEMENTATION_2);
+  });
+
+  it("detects repeated proxy addresses as a cycle", async () => {
+    const queue: unknown[] = [
+      { kind: "success", value: slotFor(IMPLEMENTATION) },
+      { kind: "success", value: ZERO },
+      { kind: "success", value: ZERO },
+      { kind: "success", value: ZERO },
+      { kind: "success", value: ZERO },
+      { kind: "success", value: slotFor(ROOT) },
+      { kind: "success", value: ZERO },
+      { kind: "success", value: ZERO },
+      { kind: "success", value: ZERO },
+      { kind: "success", value: ZERO },
+    ];
+    const rpc = { call: vi.fn(async () => queue.shift()) } as unknown as JsonRpcClient;
+    const result = await resolveProxyComposition(rpc, ROOT, { maxDepth: 4 });
+
+    expect(result.status).toBe("cycle_detected");
+    expect(result.cycleAddress).toBe(ROOT);
+    expect(result.conclusive).toBeUndefined();
+    expect(result.observedImplementationLineage).toEqual([IMPLEMENTATION, ROOT]);
+  });
+
+  it("preserves an unresolved beacon instead of treating it as an implementation", async () => {
+    const queue: unknown[] = [
+      { kind: "success", value: ZERO },
+      { kind: "success", value: slotFor(BEACON) },
+      { kind: "success", value: ZERO },
+      { kind: "success", value: ZERO },
+      { kind: "success", value: ZERO },
+      { kind: "failure", failure: { class: "application_revert", message: "beacon implementation unavailable" } },
+    ];
+    const rpc = { call: vi.fn(async () => queue.shift()) } as unknown as JsonRpcClient;
+    const result = await resolveProxyComposition(rpc, ROOT);
+
+    expect(result.status).toBe("beacon_unresolved");
+    expect(result.effectiveCodeAddress).toBeUndefined();
+    expect(result.observedImplementationLineage).toEqual([]);
+    expect(result.layers[0]?.resolution.status).toBe("beacon_unresolved");
   });
 
   it("preserves unavailable provider state instead of inventing composition", async () => {
