@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   test:
@@ -20,10 +20,26 @@ jobs:
           cache: npm
       - run: mkdir -p artifacts
       - run: npm install
-      - run: npm audit --audit-level=high | tee artifacts/npm-audit.txt
-      - run: npm run typecheck | tee artifacts/typecheck.txt
-      - run: npm run build:core | tee artifacts/build.txt
-      - run: npm test | tee artifacts/unit-tests.txt
+      - name: Security audit
+        shell: bash
+        run: |
+          set -o pipefail
+          npm audit --audit-level=high | tee artifacts/npm-audit.txt
+      - name: Typecheck
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run typecheck | tee artifacts/typecheck.txt
+      - name: Build
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run build:core | tee artifacts/build.txt
+      - name: Unit tests
+        shell: bash
+        run: |
+          set -o pipefail
+          npm test | tee artifacts/unit-tests.txt
       - name: Wait for live Miner
         if: github.ref == 'refs/heads/main'
         run: |
@@ -40,7 +56,7 @@ jobs:
         if: github.ref == 'refs/heads/main'
         continue-on-error: true
         run: |
-          npm run telegraph:intents > artifacts/telegraph-intents.json 2> artifacts/telegraph-intents-error.txt
+          node scripts/check-telegraph-intents.mjs > artifacts/telegraph-intents.json
       - name: Capture live Telegraph integration registry
         if: github.ref == 'refs/heads/main'
         continue-on-error: true
@@ -51,7 +67,7 @@ jobs:
         env:
           VERIDEX_MINER_URL: https://veridex-ecru.vercel.app
           VERIDEX_GROUND_TRUTH_OUTPUT: artifacts/real-chain-ground-truth.json
-        run: npm run verify:real-chain
+        run: node scripts/verify-real-chain.mjs
       - name: Production performance benchmark
         if: github.ref == 'refs/heads/main'
         env:
@@ -59,64 +75,37 @@ jobs:
           VERIDEX_BENCHMARK_ADDRESSES: 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48,0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2,0xE592427A0AEce92De3Edee1F18E0157C05861564
           VERIDEX_BENCHMARK_REQUESTS: 5
           VERIDEX_BENCHMARK_CONCURRENCY: 3
-        run: |
-          npm run benchmark:miner | tee artifacts/production-benchmark.json
+        run: node scripts/benchmark-miner.mjs > artifacts/production-benchmark.json
       - name: Production response schema
         if: github.ref == 'refs/heads/main'
         env:
           VERIDEX_MINER_URL: https://veridex-ecru.vercel.app
-        run: npm run verify:production-schema | tee artifacts/production-schema.json
+        run: node scripts/verify-production-schema.mjs > artifacts/production-schema.json
       - name: Publish H1 evidence summary
         if: always() && github.ref == 'refs/heads/main'
         run: |
           node <<'NODE' >> "$GITHUB_STEP_SUMMARY"
           const fs = require('node:fs');
-          const read = (path) => fs.existsSync(path) ? JSON.parse(fs.readFileSync(path, 'utf8')) : null;
-          const gt = read('artifacts/real-chain-ground-truth.json');
-          const bench = read('artifacts/production-benchmark.json');
-          const schema = read('artifacts/production-schema.json');
+          const readJson = (path) => {
+            if (!fs.existsSync(path)) return null;
+            try { return JSON.parse(fs.readFileSync(path, 'utf8')); }
+            catch (error) {
+              console.log(`- ${path}: invalid JSON artifact (${error.message})`);
+              return null;
+            }
+          };
+          const gt = readJson('artifacts/real-chain-ground-truth.json');
+          const bench = readJson('artifacts/production-benchmark.json');
+          const schema = readJson('artifacts/production-schema.json');
           console.log('## Veridex H1 Runtime Evidence');
           console.log(`- commit: \`${process.env.GITHUB_SHA}\``);
           console.log(`- real-chain cases: ${gt ? `${gt.passed}/${gt.caseCount} passed` : 'artifact unavailable'}`);
-          if (gt) console.log(`- real-chain metrics: TP=${gt.metrics.truePositive}, TN=${gt.metrics.trueNegative}, FP=${gt.metrics.falsePositive}, FN=${gt.metrics.falseNegative}, inconclusive=${gt.metrics.inconclusive}, unavailable=${gt.metrics.unavailable}, error=${gt.metrics.error}`);
-          if (gt) console.log(`- real-chain accuracy: ${gt.metrics.accuracy}`);
+          if (gt?.metrics) console.log(`- real-chain metrics: TP=${gt.metrics.truePositive}, TN=${gt.metrics.trueNegative}, FP=${gt.metrics.falsePositive}, FN=${gt.metrics.falseNegative}, inconclusive=${gt.metrics.inconclusive}, unavailable=${gt.metrics.unavailable}, error=${gt.metrics.error}`);
+          if (gt?.metrics) console.log(`- real-chain accuracy: ${gt.metrics.accuracy}`);
           if (bench) for (const item of bench.results ?? []) console.log(`- benchmark ${item.contractAddress}: p50=${item.p50_ms}ms p95=${item.p95_ms}ms p99=${item.p99_ms}ms success=${item.success}/${item.requests} timeouts=${item.timeouts} errors=${item.errors}`);
           if (schema) console.log(`- production schema: \`${schema.schema}\``);
           console.log('- Telegraph live registry snapshots are uploaded as artifacts; they remain a protocol gate until independently confirmed.');
           NODE
-      - name: Persist passed Phase 01 runtime manifest
-        if: success() && github.ref == 'refs/heads/main'
-        run: |
-          mkdir -p docs/runtime
-          node <<'NODE' > docs/runtime/PHASE-01-LATEST.json
-          const fs = require('node:fs');
-          const read = (path) => fs.existsSync(path) ? JSON.parse(fs.readFileSync(path, 'utf8')) : null;
-          const gt = read('artifacts/real-chain-ground-truth.json');
-          const bench = read('artifacts/production-benchmark.json');
-          const schema = read('artifacts/production-schema.json');
-          const intents = read('artifacts/telegraph-intents.json');
-          const integrations = read('artifacts/telegraph-integrations.json');
-          const manifest = {
-            schema: 'veridex.phase01.runtime-evidence.v1',
-            commit: process.env.GITHUB_SHA,
-            observedAt: new Date().toISOString(),
-            realChain: gt ? { caseCount: gt.caseCount, passed: gt.passed, failed: gt.failed, metrics: gt.metrics, confusionByCapability: gt.confusionByCapability } : null,
-            benchmark: bench ?? null,
-            productionSchema: schema ?? null,
-            telegraphIntents: intents ?? null,
-            telegraphIntegrations: integrations ?? null,
-          };
-          process.stdout.write(JSON.stringify(manifest, null, 2) + '\n');
-          NODE
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add docs/runtime/PHASE-01-LATEST.json
-          if git diff --cached --quiet; then
-            echo 'runtime manifest unchanged'
-            exit 0
-          fi
-          git commit -m 'ci: record phase 1 runtime evidence [skip ci]'
-          git push origin HEAD:main
       - name: Upload verification artifacts
         if: always() && github.ref == 'refs/heads/main'
         uses: actions/upload-artifact@v4
