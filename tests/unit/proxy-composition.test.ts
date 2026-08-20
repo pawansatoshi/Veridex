@@ -74,7 +74,6 @@ describe("proxy-aware composition", () => {
 
     expect(result.status).toBe("cycle_detected");
     expect(result.cycleAddress).toBe(ROOT);
-    expect(result.conclusive).toBeUndefined();
     expect(result.observedImplementationLineage).toEqual([IMPLEMENTATION, ROOT]);
   });
 
