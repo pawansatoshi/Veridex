@@ -6,6 +6,9 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -81,6 +84,39 @@ jobs:
           if (schema) console.log(`- production schema: \`${schema.schema}\``);
           console.log('- Telegraph live registry snapshots are uploaded as artifacts; they remain a protocol gate until independently confirmed.');
           NODE
+      - name: Persist passed Phase 01 runtime manifest
+        if: success() && github.ref == 'refs/heads/main'
+        run: |
+          mkdir -p docs/runtime
+          node <<'NODE' > docs/runtime/PHASE-01-LATEST.json
+          const fs = require('node:fs');
+          const read = (path) => fs.existsSync(path) ? JSON.parse(fs.readFileSync(path, 'utf8')) : null;
+          const gt = read('artifacts/real-chain-ground-truth.json');
+          const bench = read('artifacts/production-benchmark.json');
+          const schema = read('artifacts/production-schema.json');
+          const intents = read('artifacts/telegraph-intents.json');
+          const integrations = read('artifacts/telegraph-integrations.json');
+          const manifest = {
+            schema: 'veridex.phase01.runtime-evidence.v1',
+            commit: process.env.GITHUB_SHA,
+            observedAt: new Date().toISOString(),
+            realChain: gt ? { caseCount: gt.caseCount, passed: gt.passed, failed: gt.failed, metrics: gt.metrics, confusionByCapability: gt.confusionByCapability } : null,
+            benchmark: bench ?? null,
+            productionSchema: schema ?? null,
+            telegraphIntents: intents ?? null,
+            telegraphIntegrations: integrations ?? null,
+          };
+          process.stdout.write(JSON.stringify(manifest, null, 2) + '\n');
+          NODE
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add docs/runtime/PHASE-01-LATEST.json
+          if git diff --cached --quiet; then
+            echo 'runtime manifest unchanged'
+            exit 0
+          fi
+          git commit -m 'ci: record phase 1 runtime evidence [skip ci]'
+          git push origin HEAD:main
       - name: Upload verification artifacts
         if: always() && github.ref == 'refs/heads/main'
         uses: actions/upload-artifact@v4
