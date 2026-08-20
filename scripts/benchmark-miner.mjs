@@ -45,7 +45,7 @@ async function analyze(address) {
 }
 
 async function runAddress(address) {
-  const durations = [];
+  const observations = [];
   let success = 0;
   let unavailable = 0;
   let errors = 0;
@@ -57,7 +57,7 @@ async function runAddress(address) {
       const index = cursor++;
       if (index >= requestsPerAddress) return;
       const result = await analyze(address);
-      durations.push(result.durationMs);
+      observations.push({ index, ...result });
       if (result.status >= 200 && result.status < 300) success += 1;
       else if (result.status === 503) unavailable += 1;
       else if (result.error === "timeout") timeouts += 1;
@@ -66,8 +66,11 @@ async function runAddress(address) {
   }
 
   await Promise.all(Array.from({ length: Math.min(concurrency, requestsPerAddress) }, worker));
-  durations.sort((a, b) => a - b);
-  const percentile = (q) => durations[Math.min(durations.length - 1, Math.max(0, Math.ceil(q * durations.length) - 1))] ?? 0;
+  const durations = observations.map((item) => item.durationMs).sort((a, b) => a - b);
+  const warmDurations = observations.filter((item) => item.index > 0).map((item) => item.durationMs).sort((a, b) => a - b);
+  const percentile = (values, q) => values[Math.min(values.length - 1, Math.max(0, Math.ceil(q * values.length) - 1))] ?? 0;
+  const cold = observations.find((item) => item.index === 0);
+
   return {
     contractAddress: address,
     requests: requestsPerAddress,
@@ -76,9 +79,14 @@ async function runAddress(address) {
     unavailable,
     errors,
     timeouts,
-    p50_ms: Number(percentile(0.50).toFixed(2)),
-    p95_ms: Number(percentile(0.95).toFixed(2)),
-    p99_ms: Number(percentile(0.99).toFixed(2)),
+    cold_ms: cold ? Number(cold.durationMs.toFixed(2)) : null,
+    warm_requests: warmDurations.length,
+    warm_p50_ms: Number(percentile(warmDurations, 0.50).toFixed(2)),
+    warm_p95_ms: Number(percentile(warmDurations, 0.95).toFixed(2)),
+    warm_p99_ms: Number(percentile(warmDurations, 0.99).toFixed(2)),
+    p50_ms: Number(percentile(durations, 0.50).toFixed(2)),
+    p95_ms: Number(percentile(durations, 0.95).toFixed(2)),
+    p99_ms: Number(percentile(durations, 0.99).toFixed(2)),
   };
 }
 
@@ -90,6 +98,7 @@ for (const address of addresses) results.push(await runAddress(address));
 const after = await getJson("/metrics");
 
 const result = {
+  schema: "veridex.production-benchmark.v2",
   endpoint: baseUrl,
   chain,
   startedAt,
