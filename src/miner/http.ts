@@ -6,6 +6,7 @@ import { AnalysisCache } from "../infrastructure/cache.js";
 import { loadRuntimeConfig } from "../infrastructure/config.js";
 import { LatencyTracker, measureAsync } from "../infrastructure/metrics.js";
 import { JsonRpcClient } from "../infrastructure/rpc.js";
+import { runResilienceSelfTest } from "../infrastructure/resilience.js";
 import { SourcifyVerificationProvider } from "../infrastructure/sourcify.js";
 import { NotConfiguredVerificationProvider, VerificationClient } from "../infrastructure/verification.js";
 import { normalizeMinerRequest } from "./request.js";
@@ -99,6 +100,12 @@ export function createMinerServer(dependencies: MinerDependencies): ReturnType<t
     try {
       if (request.method === "GET" && request.url === "/health") {
         json(response, 200, { ok: true, service: "veridex-miner", version: "0.1.0" });
+        return;
+      }
+
+      if (request.method === "GET" && request.url === "/health/resilience") {
+        const result = runResilienceSelfTest();
+        json(response, result.valid ? 200 : 503, result);
         return;
       }
 
