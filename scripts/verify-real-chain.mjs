@@ -36,6 +36,8 @@ const corpus = [
   },
 ];
 
+const CAPABILITIES = ["ownership", "upgradeability", "pause", "mint"];
+
 async function rpc(method, params = []) {
   const response = await fetch(rpcUrl, {
     method: "POST",
@@ -56,39 +58,64 @@ async function analyze(address) {
   });
   const body = await response.json();
   if (!response.ok) throw new Error(`Miner returned ${response.status}: ${JSON.stringify(body)}`);
+  if (!body.result || !Array.isArray(body.result.capabilities)) {
+    throw new Error(`Miner returned an invalid result envelope: ${JSON.stringify(body)}`);
+  }
   return body.result;
 }
 
-function checkCapabilities(expected, actual) {
+function evaluateCase(expected, actual) {
   const mismatches = [];
-  for (const [capability, expectedResult] of Object.entries(expected)) {
-    const observation = actual.capabilities?.find((item) => item.capability === capability);
+  const observations = {};
+
+  for (const capability of CAPABILITIES) {
+    const expectedResult = expected[capability];
+    if (expectedResult === undefined) continue;
+    const observation = actual.capabilities.find((item) => item.capability === capability);
     if (!observation) {
       mismatches.push(`${capability}: missing`);
+      observations[capability] = { expected: expectedResult, actual: "missing", classification: "error" };
       continue;
     }
-    if (observation.result !== expectedResult) {
-      mismatches.push(`${capability}: expected ${expectedResult}, got ${observation.result}`);
+
+    const actualResult = observation.result;
+    const classification = actualResult === "inconclusive"
+      ? "inconclusive"
+      : actualResult === "unavailable"
+        ? "unavailable"
+        : actualResult === "error"
+          ? "error"
+          : actualResult === expectedResult
+            ? expectedResult === "positive" ? "true_positive" : "true_negative"
+            : expectedResult === "positive" ? "false_negative" : "false_positive";
+
+    observations[capability] = { expected: expectedResult, actual: actualResult, classification };
+    if (classification === "false_positive" || classification === "false_negative") {
+      mismatches.push(`${capability}: expected ${expectedResult}, got ${actualResult}`);
+    }
+    if (classification === "error" || classification === "unavailable") {
+      mismatches.push(`${capability}: ${actualResult}`);
     }
   }
-  return mismatches;
+
+  return { observations, mismatches };
 }
 
 const blockNumber = await rpc("eth_blockNumber");
 const observedAt = new Date().toISOString();
 const cases = [];
-let failures = 0;
 
 for (const testCase of corpus) {
   const code = await rpc("eth_getCode", [testCase.address, "latest"]);
   const result = await analyze(testCase.address);
-  const mismatches = checkCapabilities(testCase.expected, result);
-  const passed = code !== "0x" && code !== "0x0" && mismatches.length === 0;
-  if (!passed) failures += 1;
+  const evaluation = evaluateCase(testCase.expected, result);
+  const codePresent = code !== "0x" && code !== "0x0";
+  const passed = codePresent && evaluation.mismatches.length === 0;
+
   cases.push({
     ...testCase,
     observed: {
-      codePresent: code !== "0x" && code !== "0x0",
+      codePresent,
       codeAddress: result.contract?.codeAddress ?? result.contract?.contractAddress,
       verificationStatus: result.verification?.status,
       providerStatus: result.providerStatus,
@@ -96,21 +123,52 @@ for (const testCase of corpus) {
       confidence: result.confidence,
       conclusive: result.conclusive,
     },
-    mismatches,
+    evaluation,
     passed,
   });
 }
 
+const confusion = Object.fromEntries(CAPABILITIES.map((capability) => [capability, {
+  truePositive: 0,
+  trueNegative: 0,
+  falsePositive: 0,
+  falseNegative: 0,
+  inconclusive: 0,
+  unavailable: 0,
+  error: 0,
+  total: 0,
+}]));
+
+for (const testCase of cases) {
+  for (const [capability, observation] of Object.entries(testCase.evaluation.observations)) {
+    confusion[capability][observation.classification] += 1;
+    confusion[capability].total += 1;
+  }
+}
+
+const totals = Object.values(confusion).reduce((sum, metric) => {
+  for (const key of Object.keys(sum)) sum[key] += metric[key];
+  return sum;
+}, { truePositive: 0, trueNegative: 0, falsePositive: 0, falseNegative: 0, inconclusive: 0, unavailable: 0, error: 0, total: 0 });
+
+const evaluated = totals.truePositive + totals.trueNegative + totals.falsePositive + totals.falseNegative;
 const report = {
-  schema: "veridex.real-chain-ground-truth.v1",
+  schema: "veridex.real-chain-ground-truth.v2",
   endpoint,
   rpcUrl,
   network: "ethereum",
   observedAt,
   blockNumber,
+  corpus: corpus.map(({ id, name, address, expected, sources }) => ({ id, name, address, expected, sources })),
   caseCount: cases.length,
   passed: cases.filter((item) => item.passed).length,
-  failed: failures,
+  failed: cases.filter((item) => !item.passed).length,
+  metrics: {
+    ...totals,
+    evaluated,
+    accuracy: evaluated === 0 ? 0 : (totals.truePositive + totals.trueNegative) / evaluated,
+  },
+  confusionByCapability: confusion,
   cases,
 };
 
@@ -118,4 +176,4 @@ const { mkdir, writeFile } = await import("node:fs/promises");
 await mkdir(outputPath.split("/").slice(0, -1).join("/") || ".", { recursive: true });
 await writeFile(outputPath, `${JSON.stringify(report, null, 2)}\n`, "utf8");
 console.log(JSON.stringify(report, null, 2));
-if (failures > 0) process.exit(1);
+if (report.failed > 0 || totals.falsePositive > 0 || totals.falseNegative > 0 || totals.error > 0 || totals.unavailable > 0) process.exit(1);
