@@ -103,22 +103,12 @@ jobs:
         env:
           VERIDEX_RESILIENCE_URL: https://veridex-ecru.vercel.app/health/resilience
         run: |
-          curl -fsS --show-error --retry 3 --retry-delay 2 --max-time 15 \
-            "$VERIDEX_RESILIENCE_URL" > artifacts/phase01-resilience.json
+          curl -fsS --show-error --retry 3 --retry-delay 2 --max-time 15 "$VERIDEX_RESILIENCE_URL" > artifacts/phase01-resilience.json
           node <<'NODE'
           const fs = require('node:fs');
           const result = JSON.parse(fs.readFileSync('artifacts/phase01-resilience.json', 'utf8'));
-          if (result.schema !== 'veridex.phase01.resilience-self-test.v1' ||
-              result.valid !== true ||
-              result.injectedFailure !== 'rpc_timeout' ||
-              result.timeoutFailures !== 3 ||
-              result.circuitOpened !== true ||
-              result.halfOpenProbeAllowed !== true ||
-              result.recovery !== true) {
-            console.error('Deployed resilience evidence failed validation:', result);
-            process.exit(1);
-          }
-          console.log('Deployed timeout -> circuit-open -> half-open -> recovery verification passed.');
+          if (result.schema !== 'veridex.phase01.resilience-self-test.v1' || result.valid !== true || result.injectedFailure !== 'rpc_timeout' || result.timeoutFailures !== 3 || result.circuitOpened !== true || result.halfOpenProbeAllowed !== true || result.recovery !== true) process.exit(1);
+          console.log('deployed resilience recovery passed');
           NODE
 
       - name: Real-chain ground truth
@@ -156,31 +146,17 @@ jobs:
         run: |
           node <<'NODE' >> "$GITHUB_STEP_SUMMARY"
           const fs = require('node:fs');
-          const readJson = (path) => {
-            if (!fs.existsSync(path)) return null;
-            try { return JSON.parse(fs.readFileSync(path, 'utf8')); }
-            catch (error) {
-              console.log(`- ${path}: invalid JSON artifact (${error.message})`);
-              return null;
-            }
-          };
-          const gt = readJson('artifacts/real-chain-ground-truth.json');
-          const bench = readJson('artifacts/production-benchmark.json');
-          const schema = readJson('artifacts/production-schema.json');
-          const yaml = readJson('artifacts/telegraph-yaml-validation.json');
-          const integration = readJson('artifacts/telegraph-integration-verification.json');
-          const resilience = readJson('artifacts/phase01-resilience.json');
+          const readJson = p => { if (!fs.existsSync(p)) return null; try { return JSON.parse(fs.readFileSync(p,'utf8')); } catch { return null; } };
+          const gt=readJson('artifacts/real-chain-ground-truth.json'); const b=readJson('artifacts/production-benchmark.json'); const s=readJson('artifacts/production-schema.json'); const y=readJson('artifacts/telegraph-yaml-validation.json'); const i=readJson('artifacts/telegraph-integration-verification.json'); const r=readJson('artifacts/phase01-resilience.json');
           console.log('## Veridex H1 Runtime Evidence');
           console.log(`- commit: \`${process.env.GITHUB_SHA}\``);
-          console.log(`- Miner YAML: ${yaml?.valid ? 'valid' : 'artifact unavailable'}`);
-          console.log(`- live Telegraph integration: ${integration?.valid ? 'verified' : 'failed/unavailable'}`);
-          console.log(`- deployed resilience recovery: ${resilience?.valid ? 'verified' : 'artifact unavailable'}`);
-          console.log(`- real-chain cases: ${gt ? `${gt.passed}/${gt.caseCount} passed` : 'artifact unavailable'}`);
-          if (gt?.metrics) console.log(`- real-chain metrics: TP=${gt.metrics.truePositive}, TN=${gt.metrics.trueNegative}, FP=${gt.metrics.falsePositive}, FN=${gt.metrics.falseNegative}, inconclusive=${gt.metrics.inconclusive}, unavailable=${gt.metrics.unavailable}, error=${gt.metrics.error}`);
-          if (gt?.metrics) console.log(`- real-chain accuracy: ${gt.metrics.accuracy}`);
-          if (bench) for (const item of bench.results ?? []) console.log(`- benchmark ${item.contractAddress}: cold=${item.cold_ms}ms warm_p50=${item.warm_p50_ms}ms warm_p95=${item.warm_p95_ms}ms warm_p99=${item.warm_p99_ms}ms overall_p50=${item.p50_ms}ms overall_p95=${item.p95_ms}ms overall_p99=${item.p99_ms}ms success=${item.success}/${item.requests} timeouts=${item.timeouts} errors=${item.errors}`);
-          if (schema) console.log(`- production schema: \`${schema.schema}\``);
-          console.log('- Telegraph live Intent/integration checks are blocking gates when the live registry is reachable.');
+          console.log(`- Miner YAML: ${y?.valid ? 'valid' : 'failed/unavailable'}`);
+          console.log(`- live Telegraph integration: ${i?.valid ? 'verified' : 'failed/unavailable'}`);
+          console.log(`- resilience recovery: ${r?.valid ? 'verified' : 'failed/unavailable'}`);
+          console.log(`- real-chain: ${gt ? `${gt.passed}/${gt.caseCount} passed` : 'failed/unavailable'}`);
+          if(gt?.metrics) console.log(`- metrics: TP=${gt.metrics.truePositive}, TN=${gt.metrics.trueNegative}, FP=${gt.metrics.falsePositive}, FN=${gt.metrics.falseNegative}, inconclusive=${gt.metrics.inconclusive}, unavailable=${gt.metrics.unavailable}, error=${gt.metrics.error}, accuracy=${gt.metrics.accuracy}`);
+          if(b) for(const x of b.results??[]) console.log(`- benchmark ${x.contractAddress}: cold=${x.cold_ms}ms warm_p50=${x.warm_p50_ms}ms warm_p95=${x.warm_p95_ms}ms warm_p99=${x.warm_p99_ms}ms success=${x.success}/${x.requests} timeouts=${x.timeouts} errors=${x.errors}`);
+          if(s) console.log(`- production schema: \`${s.schema}\``);
           NODE
 
       - name: Enforce blocking H1 gates
@@ -198,27 +174,9 @@ jobs:
           BENCHMARK: ${{ steps.benchmark.outcome }}
           SCHEMA: ${{ steps.schema.outcome }}
         run: |
-          echo "Blocking gate outcomes:"
-          printf '%s\n' \
-            "audit=$AUDIT" \
-            "typecheck=$TYPECHECK" \
-            "build=$BUILD" \
-            "unit=$UNIT" \
-            "health=$HEALTH" \
-            "yaml=$YAML" \
-            "integration=$INTEGRATION" \
-            "resilience=$RESILIENCE" \
-            "groundtruth=$GROUNDTRUTH" \
-            "benchmark=$BENCHMARK" \
-            "schema=$SCHEMA"
           failed=0
-          for value in "$AUDIT" "$TYPECHECK" "$BUILD" "$UNIT" "$HEALTH" "$YAML" "$INTEGRATION" "$RESILIENCE" "$GROUNDTRUTH" "$BENCHMARK" "$SCHEMA"; do
-            if [ "$value" != "success" ]; then failed=1; fi
-          done
-          if [ "$failed" -ne 0 ]; then
-            echo 'One or more blocking H1 gates failed.'
-            exit 1
-          fi
+          for value in "$AUDIT" "$TYPECHECK" "$BUILD" "$UNIT" "$HEALTH" "$YAML" "$INTEGRATION" "$RESILIENCE" "$GROUNDTRUTH" "$BENCHMARK" "$SCHEMA"; do [ "$value" = success ] || failed=1; done
+          [ "$failed" -eq 0 ] || { echo 'One or more blocking H1 gates failed.'; exit 1; }
           echo 'ALL BLOCKING H1 GATES PASSED.'
 
       - name: Upload verification artifacts
