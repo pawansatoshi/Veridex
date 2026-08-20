@@ -1,3 +1,5 @@
+import { buildCapabilityIntelligence } from "../src/domain/capabilityIntelligence.js";
+import { buildCapabilityPassport } from "../src/domain/capabilityPassport.js";
 import { minerDependencies } from "../src/miner/runtime.js";
 
 const ADDRESS_RE = /^0x[0-9a-fA-F]{40}$/;
@@ -22,7 +24,12 @@ export default async function handler(req: { method?: string; body?: unknown }, 
   try {
     const result = await minerDependencies.analyze({ chain: "1", contractAddress: input.contractAddress });
     res.statusCode = 200;
-    res.end(JSON.stringify({ schema: "veridex.miner.v1", result }));
+    res.end(JSON.stringify({
+      schema: "veridex.miner.v1",
+      result,
+      capabilityIntelligence: buildCapabilityIntelligence(result),
+      capabilityPassport: buildCapabilityPassport(result),
+    }));
   } catch (error) {
     res.statusCode = 503;
     res.end(JSON.stringify({ error: "analysis_unavailable", detail: error instanceof Error ? error.message : String(error) }));
