@@ -3,13 +3,13 @@
 **Repository:** `pawansatoshi/Veridex`  
 **Branch:** `main`  
 **State reviewed:** 24 Aug 2026  
-**Current phase:** H1 OPERATIONAL / UX RELEASE HARDENING — PHASE 05 COMPLETE
+**Current phase:** H1 OPERATIONAL / TELEGRAPH TRACK SURFACE HARDENING — PHASE 06 COMPLETE
 
 ## Current reality
 
-The deterministic EVM analysis core, proxy-aware composition, Capability Passport domain layer, Continuous Watch domain layer, evaluation harness, production Miner endpoint, Telegraph YAML/registration, dedicated product surfaces, progressive Evidence Explorer and evidence-backed spatial visualization are implemented.
+The deterministic EVM analysis core, proxy-aware composition, Capability Passport domain layer, Continuous Watch domain layer, evaluation harness, production Miner endpoint, Telegraph YAML/registration, dedicated product surfaces, progressive Evidence Explorer, evidence-backed spatial visualization and Telegraph Track 1/2/3 presentation surfaces are implemented.
 
-Phase 05 UX implementation is now complete. The current engineering posture is verification and operational hardening, not another feature family.
+Phase 05 UX implementation is complete. Phase 06 now separates the three H1 Telegraph tracks into focused judge-facing surfaces without changing Miner/core behavior.
 
 ## Phase 01 — EVM Analysis Core
 
@@ -33,41 +33,43 @@ A durable scheduler and production `WatchStore` are intentionally not claimed as
 
 **Status: COMPLETE — 05A through 05E implemented.**
 
-### 05A — Landing page clarity
+The landing page, Analyze, Evidence, Passport, Watch, Telegraph and Docs surfaces are separated and the evidence explorer/spatial layer is presentation-only.
 
-Single thesis, primary analyzer, evidence-first proof model, focused capability layer and progressive result hierarchy.
+## Phase 06 — Telegraph Track Surfaces
 
-### 05B — Dedicated product surfaces
+**Status: COMPLETE — 06A through 06H implemented at the presentation/documentation layer.**
 
-`/analyze/`, `/passport/`, `/watch/`, `/evidence/`, `/telegraph/` and `/docs/` are shipped and consume the existing analysis contract.
+### 06A — Telegraph hub
 
-### 05C — Progressive evidence
+`/telegraph/` is now a focused hub for the three H1 tracks with clear routing and a separate product-layer explanation for Passport and Watch.
 
-Evidence drawers, capability explanations, proxy composition, verification/provider diagnostics and uncertainty boundaries are shipped.
+### 06B — Track 1 Miner
 
-### 05D — Motion and spatial intelligence
+`/telegraph/miner/` documents Miner `1001`, registration `#144`, `FRAUD_DETECTION`, the deterministic pipeline, evidence hierarchy, failure semantics and machine-readable contract.
 
-The six-stage evidence flow, proxy/state/code relationship view, responsive layout and reduced-motion behavior are shipped. Visualization remains presentation-only and cannot create evidence.
+### 06C — Track 2 Evaluation
 
-### 05E — Accessibility and release QA
+`/telegraph/evaluation/` documents the ground-truth/evaluation workflow and deliberately shows unavailable current metrics as `—` until freshly measured.
 
-**Status: COMPLETE / implementation shipped.**
+### 06D — Track 3 Application
 
-Implemented:
+`/telegraph/application/` documents the real application-to-Miner flow and routes users to the live analyzer/evidence surfaces.
 
-- shared `assets/release-a11y.css` release accessibility layer
-- visible `:focus-visible` keyboard focus treatment
-- shared 44px minimum interaction targets
-- 360px-and-below width/wrapping safeguards
-- reduced-motion hardening
-- evidence expandable-control semantics and analyzer error semantics
-- spatial-layer touch/focus hardening
-- `scripts/verify-release-qa.mjs` static release audit
-- `npm run verify:release-qa` command
+### 06E — Passport integration
 
-The static audit covers all seven HTML release surfaces for viewport metadata, horizontal-overflow protection and reduced-motion support, plus analyzer/evidence-specific accessibility contracts.
+Passport remains a first-class product surface and is explicitly not mislabeled as a Telegraph track.
 
-The audit is not represented as real-device/browser/screen-reader proof. Those checks must be reproduced before making a fresh runtime accessibility claim.
+### 06F — Watch integration
+
+Watch remains a longitudinal product surface with current manual/browser-local boundaries preserved.
+
+### 06G — Navigation/mobile consistency
+
+Track pages use compact navigation, responsive layouts and reduced-motion support.
+
+### 06H — Judge journey
+
+The intended journey is Home → Analyze → Evidence, with Telegraph → Miner/Evaluation/Application and Passport/Watch as deeper product surfaces.
 
 ## Current Telegraph registration
 
@@ -82,12 +84,13 @@ The audit is not represented as real-device/browser/screen-reader proof. Those c
 
 The main verification lane requires audit, typecheck, build, unit tests, proxy/passport/watch tests, production health, YAML validation, live Telegraph integration, resilience recovery, real-chain ground truth, deterministic evaluation, production benchmark and production response-schema checks.
 
-**Current-main status:** not independently observed GREEN through the available connector. The latest repository commit may have a pending Vercel status, but no fresh complete blocking GitHub Actions run was observed.
+**Current-main status:** not independently observed GREEN through the available connector. Do not convert repository presence into runtime proof.
 
 ## H1 status
 
 **Product/Miner implementation: submission-ready.**  
 **UX implementation: complete.**  
+**Telegraph Track 1/2/3 presentation: complete.**  
 **Current-main verification: open.**
 
 ## Next milestones
@@ -95,8 +98,9 @@ The main verification lane requires audit, typecheck, build, unit tests, proxy/p
 1. reproduce the complete current-main verification lane
 2. verify live Telegraph registry alignment and preserve fresh evidence
 3. freeze the Track 1/H1 evidence package
-4. keep the production Miner stable through the operational window
-5. only then resume post-H1 WatchStore, alerts, agents/SDK/MCP and broader product expansion
+4. verify Track 2 evaluation output from the current commit
+5. keep the production Miner and Track 3 application stable through the operational window
+6. only then resume post-H1 WatchStore, alerts, agents/SDK/MCP and broader product expansion
 
 ## Evidence policy
 
