@@ -5,9 +5,11 @@ import { readFile } from "node:fs/promises";
 const yamlPath = new URL("../telegraph/miner.yaml", import.meta.url);
 const docsUrl = process.env.TELEGRAPH_YAML_STANDARD_URL ?? "https://raw.githubusercontent.com/telegraphprotocol/telegraph-docs/main/miners/yaml-config.md";
 const intentsUrl = process.env.TELEGRAPH_INTENTS_URL ?? "https://devnode.telegraphprotocol.com/engine/v1/intents";
+const expectedIntent = process.env.VERIDEX_TELEGRAPH_INTENT ?? "FRAUD_DETECTION";
 const timeoutMs = Number.parseInt(process.env.TELEGRAPH_YAML_TIMEOUT_MS ?? "10000", 10);
 const retries = Number.parseInt(process.env.TELEGRAPH_YAML_RETRIES ?? "3", 10);
 
+if (!/^[A-Z][A-Z0-9_]{2,63}$/.test(expectedIntent)) throw new Error("VERIDEX_TELEGRAPH_INTENT must be a canonical uppercase Intent identifier");
 if (!Number.isInteger(timeoutMs) || timeoutMs < 1000 || timeoutMs > 60000) throw new Error("timeout must be in [1000,60000]");
 if (!Number.isInteger(retries) || retries < 0 || retries > 5) throw new Error("retries must be in [0,5]");
 
@@ -22,6 +24,9 @@ if (!supportedMatch) throw new Error("Missing semantics.supported_intents in tel
 
 const configured = [...supportedMatch[1].matchAll(/^\s+-\s+([A-Z0-9_]+)\s*$/gm)].map((match) => match[1]);
 if (configured.length === 0) throw new Error("semantics.supported_intents must contain at least one Intent");
+if (configured.length !== 1 || configured[0] !== expectedIntent) {
+  throw new Error(`Veridex Miner must declare exactly ${expectedIntent}; configured: ${configured.join(", ") || "none"}`);
+}
 
 async function fetchJsonWithRetry(url) {
   let lastError;
@@ -61,6 +66,10 @@ const canonical = new Set(
     .filter(Boolean),
 );
 
+if (!canonical.has(expectedIntent)) {
+  throw new Error(`Required Veridex Intent is not canonical in the live Telegraph registry: ${expectedIntent}`);
+}
+
 const invalid = configured.filter((intent) => !canonical.has(intent));
 if (invalid.length > 0) {
   throw new Error(`Unsupported Telegraph Intent(s) in live canonical registry: ${invalid.join(", ")}`);
@@ -70,6 +79,7 @@ console.log(JSON.stringify({
   checkedAt: new Date().toISOString(),
   standard: docsUrl,
   liveIntentRegistry: intentsUrl,
+  expectedIntent,
   configuredIntents: configured,
   canonicalIntents: [...canonical].sort(),
   valid: true,
