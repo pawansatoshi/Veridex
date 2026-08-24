@@ -4,9 +4,7 @@
   "private": true,
   "description": "Verifiable on-chain intelligence for Telegraph Protocol",
   "type": "module",
-  "engines": {
-    "node": ">=20"
-  },
+  "engines": {"node": ">=20"},
   "scripts": {
     "build:core": "tsc",
     "start": "node dist/miner/main.js",
@@ -19,7 +17,8 @@
     "benchmark:miner": "node scripts/benchmark-miner.mjs",
     "verify:real-chain": "node scripts/verify-real-chain.mjs",
     "verify:production-schema": "node scripts/verify-production-schema.mjs",
-    "evaluate:miner": "node scripts/evaluate-miner.mjs"
+    "evaluate:miner": "node scripts/evaluate-miner.mjs",
+    "verify:release-qa": "node scripts/verify-release-qa.mjs"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
