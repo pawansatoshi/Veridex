@@ -116,6 +116,20 @@ Durable decisions live here so a future chat/agent does not reopen settled quest
 
 **Consequences:** the next H1 milestone is a normalized analysis orchestrator, then ground truth and the official Telegraph adapter. Passport, Watch, Policy, mobile and 3D UX remain post-H1.
 
+## D016 — Exact Telegraph Intent Verification
+
+**Date:** 2026-08-24
+
+**Context:** The previous live integration verifier checked only that the Miner advertised canonical Intents. That was insufficient: a Miner registered under a different canonical Intent could pass the integration gate even though the repository's intended Veridex mapping was `FRAUD_DETECTION`.
+
+**Decision:** Veridex's H1 Miner must declare and advertise exactly one Intent, `FRAUD_DETECTION`, and both repository YAML validation and live integration verification must confirm that Intent is canonical in the live Telegraph registry.
+
+**Alternatives considered:** accept any canonical Intent; trust the registration number without checking the live advertised Intent; permit multiple Intents in one Miner.
+
+**Evidence:** current repository registration state, the Veridex H1 intent contract, the official Telegraph YAML semantics contract, and the need for an exact protocol/evaluation mapping.
+
+**Consequences:** an Intent drift now fails CI instead of silently producing a false-green integration result. If Telegraph changes the canonical mapping, the failure becomes an explicit protocol decision requiring new evidence rather than an implicit configuration change.
+
 ## How to Add a Decision
 
 Use:
