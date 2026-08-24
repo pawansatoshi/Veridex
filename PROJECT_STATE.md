@@ -2,71 +2,94 @@
 
 **Repository:** `pawansatoshi/Veridex`  
 **Branch:** `main`  
-**Current phase:** H1 MINER SUBMISSION-READY — BLOCKING CI VERIFIED GREEN
+**State reviewed:** 24 Aug 2026  
+**Current phase:** H1 OPERATIONAL / SUBMISSION HARDENING
 
-## H1 / Phase 01
+## Current reality
 
-Phase 01 implementation and runtime evidence are complete for the current H1 verification lane.
+The repository is materially beyond the original H1 build roadmap. The deterministic EVM analysis core, proxy-aware composition, Capability Passport domain layer, Continuous Watch domain layer, evaluation harness, production Miner endpoint, Telegraph YAML and Miner registration are implemented.
 
-Verified evidence includes:
+The correct current engineering posture is **verification and operational hardening**, not another feature sprint.
 
-- production `/health` reachable with `ok: true`
-- production `/metrics` reachable
-- live `/analyze` traffic exercised successfully
-- resilience recovery verification
-- real-chain ground-truth verification
-- production performance benchmark
-- production response schema verification
+Historical H1 CI evidence was verified on an earlier commit. The available GitHub connector does not expose a fresh blocking Actions run for the newest main-branch commits, so the current main branch must **not** be described as current-commit CI GREEN until a new blocking run is independently observed.
 
-## Phase 02
+## Phase 01 — EVM Analysis Core
 
-Phase 02 Proxy-Aware Composition is **COMPLETE / VERIFIED GREEN**.
+**Status: COMPLETE / historical H1 runtime evidence verified.**
 
-Its proxy-composition regression gate is included in the blocking main CI workflow and passed in the latest successful H1 verification run.
+Verified capabilities and infrastructure include:
 
-## Phase 03
+- strict EVM validation
+- address-first detection and wallet/contract gate
+- resilient RPC
+- timeout/retry/circuit-breaker behavior
+- application-level revert classification
+- verification abstraction
+- instruction-boundary bytecode analysis
+- ownership/control
+- upgradeability/proxy foundation
+- pause capability/state
+- mint capability/authority
+- evidence provenance
+- normalized failure semantics
+- production `/health`, `/metrics`, `/analyze`
 
-Phase 03 Capability Passport is **COMPLETE / VERIFIED GREEN**.
+## Phase 02 — Proxy-Aware Composition
 
-Verified in the blocking CI workflow through the dedicated capability-passport regression suite and current H1 runtime evidence.
+**Status: COMPLETE / historical CI gate verified.**
 
 Implemented:
 
-- canonical capability passport schema
+- code/state address separation
+- implementation resolution
+- beacon semantics
+- composed/nested proxy handling
+- lineage and bounded depth
+- cycle/max-depth handling
+- proxy regression suite
+
+A beacon address is never treated as an implementation without supported resolution.
+
+## Phase 03 — Capability Passport
+
+**Status: COMPLETE / historical CI gate verified.**
+
+Implemented:
+
+- canonical passport schema
 - stable passport identity
 - evidence fingerprint
 - posture/conclusive state
 - capability evidence preservation
-- regression tests
+- regression suite
+
+Durable production persistence remains post-H1 infrastructure work.
 
 ## Phase 04 — Continuous Watch
 
-Phase 04 Continuous Watch is **IMPLEMENTED / VERIFIED GREEN for the H1 CI gate**.
-
-Verified through the dedicated capability-watch test gate and the blocking main CI workflow.
+**Status: IMPLEMENTED / historical CI gate verified.**
 
 Implemented:
 
-- Capability Watch lifecycle model
-- bounded minimum/maximum polling intervals
-- adaptive backoff after failures and interval growth after successful observations
+- watch lifecycle model
+- bounded polling intervals
+- adaptive backoff
 - per-tick observation budget
-- versioned Capability Passport observations
+- versioned Passport observations
 - baseline/unchanged/changed/inconclusive comparison states
-- evidence-backed capability diffing
-- critical/warning/informational severity classification
-- alert sink contract with evidence and previous/current passport state
-- provider failure treated as inconclusive, never as a contract change
-- pluggable `WatchStore` persistence boundary
-- deterministic in-memory store for regression tests
-- dedicated Phase 04 CI workflow
-- Phase 04 gate in the main blocking CI workflow
+- evidence-backed capability diffs
+- severity classification
+- alert sink contract
+- provider failure treated as inconclusive
+- pluggable `WatchStore`
+- deterministic in-memory store
+- dedicated tests and blocking CI gate
 
-The production persistence/scheduler boundary remains explicit: the domain layer does not pretend serverless memory is durable. A durable `WatchStore` and real scheduler must be supplied by deployment infrastructure before claiming a persistent production watch service. This does **not** block the H1 Miner submission gate.
+A durable scheduler and production `WatchStore` are intentionally not claimed as deployed functionality.
 
 ## Current Telegraph registration
 
-The active H1 Miner registration is:
+The current repository state records:
 
 - Miner ID: `1001`
 - Slug: `veridex-contract-risk-miner`
@@ -76,11 +99,24 @@ The active H1 Miner registration is:
 - Registration transaction: `0xe9df234aaf7c9f7501e9971f01705e52172b81bd4a2fd96932b22d5bc4b7ce6a`
 - Primary production endpoint: `https://veridex-ecru.vercel.app`
 
-Historical registrations `#122` and `#142` are superseded. The canonical current configuration is `#144 / FRAUD_DETECTION`.
+Historical registrations `#122` and `#142` are superseded.
 
-## Latest verified H1 CI evidence
+## Telegraph verification hardening — 24 Aug 2026
 
-The latest successful blocking CI evidence recorded for the H1 verification lane showed:
+A real verification gap was identified in the previous integration gate: it accepted any canonical Intent advertised by the live Miner registry. That could produce a false-green integration result if Veridex were registered under a different Intent.
+
+Implemented:
+
+- `scripts/verify-telegraph-yaml.mjs` now requires exactly one configured Intent and requires it to be `FRAUD_DETECTION` by default.
+- the YAML gate also requires `FRAUD_DETECTION` to be canonical in the live Intent registry.
+- `scripts/verify-telegraph-integration.mjs` now requires the live Miner to advertise exactly `FRAUD_DETECTION`.
+- a regression test locks the repository configuration and both exact-Intent checks.
+
+This is a correctness gate, not a claim that the live registry has already been re-verified after the change.
+
+## Historical H1 verification evidence
+
+The latest previously recorded successful H1 verification lane showed:
 
 - deterministic Miner evaluation: **PASSED**
 - quality score: **1.0**
@@ -92,19 +128,48 @@ The latest successful blocking CI evidence recorded for the H1 verification lane
 - real-chain: **3/3 passed**
 - production benchmark: **3/3 successful requests per benchmark target**
 - production schema: `veridex.miner.v1`
-- live Telegraph integration: **verified**
-- resilience recovery: **verified**
+- live Telegraph integration: **verified at that historical commit**
+- resilience recovery: **verified at that historical commit**
 
-The blocking workflow requires successful outcomes for audit, typecheck, build, unit tests, Phase 02 proxy tests, Phase 03 passport tests, Phase 04 watch tests, live health, YAML validation, live Telegraph integration, resilience, real-chain ground truth, deterministic evaluation, benchmark, and production schema.
+These metrics remain historical until reproduced after current main-branch changes.
+
+## Current blocking gate
+
+The main CI workflow requires successful outcomes for:
+
+- audit
+- typecheck
+- build
+- unit tests
+- Phase 02 proxy tests
+- Phase 03 passport tests
+- Phase 04 watch tests
+- production health
+- YAML validation
+- live Telegraph integration
+- resilience recovery
+- real-chain ground truth
+- deterministic evaluation
+- production benchmark
+- production response schema
+
+**Current status:** not independently observed GREEN for the newest main commit through the available connector.
 
 ## H1 status
 
-**H1 Miner is SUBMISSION-READY.**
+**Product/Miner implementation: submission-ready.**  
+**Current-commit verification: open.**
 
-The remaining work is submission/package administration and any optional presentation polish, not reopening completed engineering phases.
+The highest-value next work is:
 
-Do not claim official Telegraph ranking or fabricated demand/traffic. Keep external ranking and request volume separate from Veridex's verified technical gates.
+1. verify live Telegraph registry state for Miner `1001` / `FRAUD_DETECTION`
+2. run and observe the complete blocking CI gate on the post-hardening commit
+3. preserve fresh benchmark, real-chain, resilience and schema artifacts
+4. finalize the Track 1 evidence package
+5. keep the live Miner stable for Track 3
+
+Do not begin unrelated post-H1 feature work while these gates remain open.
 
 ## Evidence policy
 
-Repository presence alone is not runtime proof. Current claims above are based on successful CI/runtime evidence and the confirmed Base Sepolia registration transaction. Future changes to the main branch must be revalidated by the blocking CI workflow before this state is considered current again.
+Repository presence is not runtime proof. Never claim official Telegraph ranking, fabricated traffic/demand, current-commit CI GREEN, or live registry alignment without fresh evidence.
