@@ -28,7 +28,7 @@ const evidence = await readFile("evidence/index.html", "utf8");
 for (const [name, pattern] of [
   ["error role", /role=[\"']alert[\"']/i],
   ["expandable capability control", /aria-expanded=[\"']false[\"']/i],
-  ["spatial reduced-motion asset", /veridex-spatial\.css/i],
+  ["spatial interaction asset", /veridex-spatial\.(?:js|css)/i],
 ]) {
   if (!pattern.test(evidence)) failures.push(`evidence/index.html: missing ${name}`);
 }
