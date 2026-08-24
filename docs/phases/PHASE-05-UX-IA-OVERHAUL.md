@@ -6,7 +6,7 @@ Reduce cognitive load without reducing product depth. Veridex should feel like a
 
 ## User journey
 
-`understand → analyze → trust → explore depth`
+`understand → analyze → trust → inspect evidence → explore depth`
 
 The landing page owns the first three steps. Technical depth belongs behind progressive disclosure and dedicated product surfaces.
 
@@ -53,42 +53,52 @@ The `/telegraph/` page presents the repository's recorded Miner configuration an
 
 ## Phase 05C — Progressive disclosure
 
-**Status: PARTIALLY IMPLEMENTED in 05B surfaces; dedicated deep evidence work remains.**
+**Status: COMPLETE.**
 
-Already present:
+Implemented dedicated `/evidence/` Evidence Explorer:
 
-- plain-language result before raw JSON
-- per-capability evidence blocks
-- technical Passport composition/verification details
-- raw analysis JSON as the deepest layer
-- explicit inconclusive/unavailable states
+- capability-specific “Why?” explanations
+- expandable evidence drawers for Ownership, Upgradeability, Pause and Mint
+- structured evidence key/value inspection
+- detection method, confidence, conclusive state and fallback reason
+- proxy composition view separating requested/state address from effective code address
+- explicit composition status; no inferred proxy claim is created by the UI
+- provider and verification diagnostics including RPC state, verification state/source, ABI availability and overall conclusiveness
+- deep navigation back to Analyze, Passport and Watch for the same contract
+- responsive mobile layout and reduced-motion behavior
 
-Remaining:
+### Evidence integrity rules
 
-- richer capability-specific “Why?” drawers
-- interactive proxy graph backed only by established evidence
-- forensic/provider diagnostics layer
+1. The UI only renders evidence returned by `/api/analyze`.
+2. A missing field is shown as unavailable rather than fabricated.
+3. A provider failure remains distinct from a negative capability finding.
+4. Proxy state and implementation/code address remain separate.
+5. Confidence and conclusiveness are displayed as observation metadata, not as a security score.
+6. No historical change is implied by a single observation.
 
 ## Phase 05D — Motion and spatial intelligence
 
-**Status: PLANNED.**
+**Status: NEXT.**
+
+Planned:
 
 - evidence-flow animation tied to actual analysis events
 - reduced-motion path
 - lightweight SVG/2.5D representation for mobile
-- no animation that implies evidence before evidence exists
+- capability-change visual delta
+
+Motion must communicate actual state transitions and must never imply evidence before the analyzer has returned it.
 
 ## Phase 05E — Accessibility and release QA
 
-**Status: PLANNED / required before calling Phase 05 fully complete.**
+**Status: NEXT.**
 
 Required checks:
 
-- mobile widths including 320px and 360px
+- 320px and 360px mobile widths
 - no horizontal overflow
 - touch targets remain usable
-- keyboard navigation
-- visible focus
+- keyboard navigation and visible focus
 - semantic heading order
 - reduced motion
 - no color-only meaning
