@@ -78,16 +78,27 @@ Implemented dedicated `/evidence/` Evidence Explorer:
 
 ## Phase 05D — Motion and spatial intelligence
 
-**Status: NEXT.**
+**Status: COMPLETE / shipped.**
 
-Planned:
+Implemented:
 
-- evidence-flow animation tied to actual analysis events
-- reduced-motion path
-- lightweight SVG/2.5D representation for mobile
-- capability-change visual delta
+- shared evidence-flow spatial visualization in `/evidence/`
+- six-stage visual pipeline: Contract → Code → Evidence → Capability → Authority → Confidence
+- animation begins only after a real `/api/analyze` response has been rendered
+- visualization consumes returned proxy, verification, provider, capability and confidence state
+- explicit proxy/state/code relationship visualization
+- responsive 2-column → single-column mobile representation
+- reduced-motion path using `prefers-reduced-motion`
+- inconclusive/error visual states without converting them into negative findings
+- regression test covering asset integration and API-coupling boundary
 
-Motion must communicate actual state transitions and must never imply evidence before the analyzer has returned it.
+### Motion integrity rule
+
+The spatial layer is presentation-only. It cannot create or upgrade evidence. If analysis is unavailable, the visualization is not allowed to imply a successful conclusion.
+
+### Capability-change direction
+
+The Phase 04 Watch domain remains the authoritative foundation for durable change intelligence. The current browser-local Watch surface remains intentionally conservative; persistent scheduling and production alerts are not claimed as part of Phase 05D.
 
 ## Phase 05E — Accessibility and release QA
 
@@ -104,6 +115,7 @@ Required checks:
 - no color-only meaning
 - analyzer success/error/inconclusive states
 - raw JSON remains accessible without dominating the default result
+- spatial evidence visualization remains understandable without animation
 
 ## Product rule
 
