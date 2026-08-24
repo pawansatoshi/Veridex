@@ -1,17 +1,15 @@
 # Veridex — Persistent Project State
 
 **Repository:** `pawansatoshi/Veridex`  
-**Branch:** `main`  
+**Branch:** `ux-overhaul-phase-1`  
 **State reviewed:** 24 Aug 2026  
-**Current phase:** H1 OPERATIONAL / SUBMISSION HARDENING
+**Current phase:** H1 OPERATIONAL / UX HARDENING
 
 ## Current reality
 
-The repository is materially beyond the original H1 build roadmap. The deterministic EVM analysis core, proxy-aware composition, Capability Passport domain layer, Continuous Watch domain layer, evaluation harness, production Miner endpoint, Telegraph YAML and Miner registration are implemented.
+The deterministic EVM analysis core, proxy-aware composition, Capability Passport domain layer, Continuous Watch domain layer, evaluation harness, production Miner endpoint, Telegraph YAML and Miner registration remain implemented. The current branch adds a focused UX/information-architecture hardening pass without changing the analysis contract.
 
-The correct current engineering posture is **verification and operational hardening**, not another feature sprint.
-
-Historical H1 CI evidence was verified on an earlier commit. The available GitHub connector does not expose a fresh blocking Actions run for the newest main-branch commits, so the current main branch must **not** be described as current-commit CI GREEN until a new blocking run is independently observed.
+The engineering posture remains verification and operational hardening. UX work is being performed as a release-surface improvement, not as a new analysis subsystem.
 
 ## Phase 01 — EVM Analysis Core
 
@@ -87,6 +85,26 @@ Implemented:
 
 A durable scheduler and production `WatchStore` are intentionally not claimed as deployed functionality.
 
+## Phase 05 — UX / Information Architecture Overhaul
+
+**Status: 05A IMPLEMENTED / 05B–05E PLANNED.**
+
+Phase 05A replaces the overloaded landing page with a focused hierarchy:
+
+1. navigation
+2. single thesis hero + analyzer
+3. evidence-before-interpretation proof
+4. four capability questions
+5. Capability ≠ Function concept
+6. progressive on-page analysis result
+7. minimal footer
+
+The landing page no longer presents future Passport/Watch surfaces, Telegraph metrics, or a large language-selection block as if they were equally important to the first user journey. The primary analyzer copy is explicitly Ethereum mainnet because current H1 semantic analysis is Ethereum mainnet only.
+
+Dedicated `/analyze`, `/passport`, `/watch`, `/telegraph` and `/docs` surfaces remain planned for later UX phases.
+
+Phase document: `docs/phases/PHASE-05-UX-IA-OVERHAUL.md`.
+
 ## Current Telegraph registration
 
 The current repository state records:
@@ -131,7 +149,7 @@ The latest previously recorded successful H1 verification lane showed:
 - live Telegraph integration: **verified at that historical commit**
 - resilience recovery: **verified at that historical commit**
 
-These metrics remain historical until reproduced after current main-branch changes.
+These metrics remain historical until reproduced after current branch changes.
 
 ## Current blocking gate
 
@@ -153,22 +171,20 @@ The main CI workflow requires successful outcomes for:
 - production benchmark
 - production response schema
 
-**Current status:** not independently observed GREEN for the newest main commit through the available connector.
+**Current status:** not independently observed GREEN for the newest branch commit through the available connector.
 
 ## H1 status
 
 **Product/Miner implementation: submission-ready.**  
-**Current-commit verification: open.**
+**Current-branch verification: open.**
 
-The highest-value next work is:
+## Next UX milestones
 
-1. verify live Telegraph registry state for Miner `1001` / `FRAUD_DETECTION`
-2. run and observe the complete blocking CI gate on the post-hardening commit
-3. preserve fresh benchmark, real-chain, resilience and schema artifacts
-4. finalize the Track 1 evidence package
-5. keep the live Miner stable for Track 3
-
-Do not begin unrelated post-H1 feature work while these gates remain open.
+1. verify Phase 05A landing page at mobile and desktop widths
+2. split full analyzer into `/analyze` without duplicating domain logic
+3. move Passport, Watch and Telegraph explanations to dedicated surfaces
+4. add progressive evidence disclosure and real analysis-state motion
+5. complete accessibility and mobile overflow QA
 
 ## Evidence policy
 
