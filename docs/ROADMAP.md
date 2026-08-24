@@ -119,7 +119,7 @@ Production: https://veridex-ecru.vercel.app
 
 The repository now enforces an **exact one-Intent contract** for the Veridex Miner: the configured and live-advertised Intent must be `FRAUD_DETECTION`, and that Intent must be canonical in Telegraph's live registry. This closes a previous verification gap where any canonical Intent could have satisfied the integration gate.
 
-Official Telegraph material describes Miners as wrappers around APIs/models/datasets/tools and uses YAML semantics to declare supported Intents. The current official YAML reference requires `semantics.supported_intents`; Veridex follows that contract. citeturn1search6turn1search8
+Official Telegraph material describes Miners as wrappers around APIs/models/datasets/tools and the YAML standard uses `semantics.supported_intents` to declare supported Intents. Veridex follows that contract.
 
 Never claim live registry alignment until the live registry check passes.
 
