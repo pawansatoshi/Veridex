@@ -12,58 +12,66 @@ The landing page owns the first three steps. Technical depth belongs behind prog
 
 ## Phase 05A — Landing page clarity
 
-**Status: IMPLEMENTED on `ux-overhaul-phase-1`.**
+**Status: COMPLETE.**
 
-Goals:
+Implemented:
 
 - one dominant hero thesis
 - one primary action
 - concise proof model
 - focused capability layer
-- remove future Passport / Watch / Telegraph marketing blocks from the landing page
-- remove the eight-language block from the page body
-- remove unsupported multi-chain implication from the primary analyzer copy
-- preserve the existing `/analyze` backend contract
-- improve mobile information hierarchy rather than merely stacking desktop sections
-- expose raw JSON only after the human-readable result
-
-Implemented structure:
-
-1. Navigation
-2. Hero + analyzer
-3. Evidence-before-interpretation proof
-4. Four capability questions
-5. Capability ≠ Function concept
-6. On-page analysis result
-7. Minimal footer
+- future Passport / Watch / Telegraph marketing blocks removed from the landing page
+- large language block removed
+- unsupported multi-chain implication removed from primary analyzer copy
+- existing `/api/analyze` backend contract preserved
+- mobile hierarchy redesigned rather than simply stacked
+- raw JSON exposed only after the human-readable result
 
 ## Phase 05B — Dedicated product surfaces
 
-Planned:
+**Status: COMPLETE / implementation shipped to `main`.**
 
-- `/analyze` — full analyzer and live evidence journey
-- `/passport` — capability passport
-- `/watch` — continuous monitoring and change timeline
-- `/telegraph` — Miner, Intent, evaluation and machine-readable delivery
-- `/docs` — technical evidence model and API documentation
+Implemented dedicated surfaces:
 
-Do not build these until Phase 05A has been verified on mobile and desktop.
+- `/analyze/` — full analyzer and live evidence journey
+- `/passport/` — Capability Passport observation surface
+- `/watch/` — browser-local watch workspace with manual re-checks
+- `/telegraph/` — Miner, Intent, schema and operational boundary surface
+- `/docs/` — product, evidence, proxy, Passport, Watch and API documentation
+
+### Architectural constraint
+
+The surfaces do not duplicate the deterministic analysis engine. They call the existing `/api/analyze` contract and consume its normalized result, Capability Intelligence and Capability Passport representations.
+
+### Watch boundary
+
+The current `/watch/` surface intentionally uses browser-local storage and manual checks. It does **not** claim deployed background polling, durable server-side persistence or alert delivery. The existing Phase 04 domain model remains the foundation for a future production WatchStore/scheduler.
+
+### Telegraph boundary
+
+The `/telegraph/` page presents the repository's recorded Miner configuration and historical verification policy without turning historical measurements into current runtime claims.
 
 ## Phase 05C — Progressive disclosure
 
-Planned:
+**Status: PARTIALLY IMPLEMENTED in 05B surfaces; dedicated deep evidence work remains.**
 
-- plain-language first result
-- evidence explanation per capability
-- technical evidence drawer
-- proxy graph only when supported by actual evidence
-- raw JSON as deepest layer
-- no arbitrary progress percentages
-- real analysis state transitions only
+Already present:
+
+- plain-language result before raw JSON
+- per-capability evidence blocks
+- technical Passport composition/verification details
+- raw analysis JSON as the deepest layer
+- explicit inconclusive/unavailable states
+
+Remaining:
+
+- richer capability-specific “Why?” drawers
+- interactive proxy graph backed only by established evidence
+- forensic/provider diagnostics layer
 
 ## Phase 05D — Motion and spatial intelligence
 
-Planned:
+**Status: PLANNED.**
 
 - evidence-flow animation tied to actual analysis events
 - reduced-motion path
@@ -71,6 +79,8 @@ Planned:
 - no animation that implies evidence before evidence exists
 
 ## Phase 05E — Accessibility and release QA
+
+**Status: PLANNED / required before calling Phase 05 fully complete.**
 
 Required checks:
 
