@@ -1,0 +1,11 @@
+/* Veridex Phase 05E — shared accessibility/release hardening */
+:where(a,button,input,select,textarea):focus-visible{outline:2px solid var(--mint,#8de7c4);outline-offset:3px}
+:where(button,a,input,select,textarea){touch-action:manipulation}
+:where(button,.action,.actionbtn,.linkbtn,.primary,.secondary,.navlink,.capButton){min-height:44px}
+:where(input,select,textarea){max-width:100%}
+img,svg{max-width:100%}
+pre,code{overflow-wrap:anywhere}
+[aria-busy="true"]{cursor:progress}
+.sr-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+@media(max-width:360px){.wrap{width:calc(100% - 20px)!important}.hero h1,h1{font-size:38px!important}.summary,.section,.card,.resultCard{padding:14px!important}.journey{gap:6px!important}.step{padding:10px!important}.chip{max-width:100%;overflow-wrap:anywhere}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}}
