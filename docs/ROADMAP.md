@@ -10,16 +10,14 @@
 
 ---
 
-# CURRENT PHASE — H1 OPERATIONAL / UX RELEASE HARDENING
+# CURRENT PHASE — H1 OPERATIONAL / VERIFICATION & RELEASE FREEZE
 
 **Repository state reviewed:** 24 Aug 2026  
 **Track 1/2:** 17–31 Aug 2026  
 **Track 3:** 31 Aug–7 Sep 2026  
 **H1 final boundary:** 7 Sep 2026
 
-The repository is materially ahead of the original H1 build roadmap. The deterministic Miner core, proxy composition, Capability Passport, Continuous Watch domain layer, evaluation harness, production endpoint, Telegraph registration and the main product surfaces are implemented. The current engineering priority is **verification, accessibility and release hardening**, not adding another feature family.
-
-The latest repository evidence records registration **#144 / FRAUD_DETECTION** for Miner `1001`. The current main commit has not been independently observed with a fresh blocking GitHub Actions run through the available connector, so prior green CI evidence must not be relabeled as current-commit green.
+The deterministic Miner core, proxy composition, Capability Passport, Continuous Watch domain layer, evaluation harness, production endpoint, Telegraph registration and complete Phase 05 UX release surface are implemented. Phase 05A–05E is closed. The next work is verification and release evidence, not feature expansion.
 
 ## Current execution gates
 
@@ -31,23 +29,24 @@ The latest repository evidence records registration **#144 / FRAUD_DETECTION** f
 | Continuous Watch domain layer | COMPLETE / CI-GATED | Durable scheduler/store remains deployment work |
 | Ground-truth evaluator | COMPLETE | Expand real-chain corpus only when independently verified |
 | Production Miner | LIVE | Keep endpoint stable |
-| Telegraph YAML | IMPLEMENTED | Exact Intent gate now enforced |
+| Telegraph YAML | IMPLEMENTED | Exact Intent gate enforced |
 | Telegraph registration | #144 recorded | Reconcile live registry and capture fresh evidence |
+| Phase 05 UX 05A–05E | COMPLETE | No further UX feature expansion before H1 freeze |
+| Release QA static audit | IMPLEMENTED | Run on current main |
 | Current-commit CI | NOT INDEPENDENTLY VERIFIED | Run/observe complete blocking gate |
-| Phase 05 UX 05A–05D | COMPLETE | 05E release QA |
-| Track 1 package | READY TO HARDEN | Freeze claims to verified evidence |
+| Track 1 evidence package | READY TO FREEZE | Add fresh verification artifacts |
 | Track 3 application | NOT YET IN SCOPE | Begin only after Track 1/2 close |
 
 ## Highest-value next work
 
-1. Complete Phase 05E accessibility/mobile/release QA.
-2. Verify live Telegraph registry state for Miner `1001` and `FRAUD_DETECTION`.
-3. Run the complete blocking CI gate on the post-hardening commit.
-4. Preserve fresh real-chain, resilience, benchmark and schema artifacts.
-5. Finalize the Track 1 evidence package without claiming ranking or demand that has not been independently observed.
-6. Keep the Miner live and stable through the Track 3 operational window.
+1. Run `npm run verify:release-qa` on current main.
+2. Run the complete blocking verification lane on current main.
+3. Verify live Telegraph registry state for Miner `1001` / `FRAUD_DETECTION`.
+4. Preserve fresh real-chain, resilience, benchmark and production-schema artifacts.
+5. Freeze the Track 1/H1 evidence package without claiming unverified ranking, demand or performance.
+6. Keep the Miner stable through the Track 3 operational window.
 
-Do not start broad multi-chain semantic, alerting or decorative 3D work while these gates are open. The current spatial layer is already evidence-backed and presentation-only.
+**Do not start:** broad multi-chain semantic work, production alerting, decorative 3D, or major new product surfaces before these gates close.
 
 ---
 
@@ -119,43 +118,19 @@ Network: Base Sepolia
 Production: https://veridex-ecru.vercel.app
 ```
 
-The repository now enforces an **exact one-Intent contract** for the Veridex Miner: the configured and live-advertised Intent must be `FRAUD_DETECTION`, and that Intent must be canonical in Telegraph's live registry. This closes a previous verification gap where any canonical Intent could have satisfied the integration gate.
-
-Official Telegraph material describes Miners as wrappers around APIs/models/datasets/tools and the YAML standard uses `semantics.supported_intents` to declare supported Intents. Veridex follows that contract.
-
-Never claim live registry alignment until the live registry check passes.
+The repository enforces an exact one-Intent contract for the Veridex Miner: the configured/live advertised Intent must be `FRAUD_DETECTION`, and that Intent must be canonical in Telegraph's live registry. Never claim live registry alignment until the live check passes.
 
 ---
 
 # EVALUATION / PERFORMANCE
 
-The production engine and evaluation harness remain separate:
-
-```text
-production engine → normalized result
-                         ↑
-curated ground truth → evaluator → TP/TN/FP/FN/inconclusive
-```
-
-Measure, never invent:
-
-- accuracy / quality score
-- evidence coverage
-- conclusive rate
-- false positives / false negatives
-- end-to-end latency
-- RPC / verification / analysis / serialization latency
-- p50 / p95 / p99
-- timeout/error rate
-- cache and coalescing behavior
-
-Prior repository evidence recorded a perfect deterministic evaluation and successful production benchmark. Those numbers are historical evidence, not a substitute for re-running the gate after a new main-branch change.
+The production engine and evaluation harness remain separate. Prior perfect deterministic evaluation and benchmark numbers are historical evidence and must be reproduced after main-branch changes before being presented as current.
 
 ---
 
 # POST-H1 ROADMAP
 
-These items remain strategically important but must not block H1 operational readiness.
+These remain strategically important but must not block H1 readiness:
 
 ### Capability Passport persistence
 Durable identity, historical observations and long-lived evidence storage.
@@ -174,12 +149,6 @@ Approval, allowance, spender and transaction-risk intelligence with explicit cov
 
 ### Multi-Chain Semantic Intelligence
 Dedicated chain analyzers only after chain-specific evidence models, ground truth and regression suites exist.
-
-### Product Application
-Premium analyzer UX, accessibility, localization, PWA and account/product surfaces.
-
-### 3D Contract Core
-Evidence-backed visualization of the analysis lifecycle; never decorative certainty.
 
 ### Agents / SDK / MCP / Enterprise
 Machine-consumable APIs, SDKs, MCP and policy tooling.
