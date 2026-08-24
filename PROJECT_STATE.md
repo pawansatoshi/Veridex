@@ -3,146 +3,100 @@
 **Repository:** `pawansatoshi/Veridex`  
 **Branch:** `main`  
 **State reviewed:** 24 Aug 2026  
-**Current phase:** H1 OPERATIONAL / UX HARDENING — PHASE 05D COMPLETE
+**Current phase:** H1 OPERATIONAL / UX RELEASE HARDENING — PHASE 05 COMPLETE
 
 ## Current reality
 
-The deterministic EVM analysis core, proxy-aware composition, Capability Passport domain layer, Continuous Watch domain layer, evaluation harness, production Miner endpoint, Telegraph YAML and Miner registration remain implemented. The main branch now contains dedicated product surfaces plus a progressive Evidence Explorer with capability-specific evidence, proxy composition, provider diagnostics and a state-aware spatial evidence visualization.
+The deterministic EVM analysis core, proxy-aware composition, Capability Passport domain layer, Continuous Watch domain layer, evaluation harness, production Miner endpoint, Telegraph YAML/registration, dedicated product surfaces, progressive Evidence Explorer and evidence-backed spatial visualization are implemented.
 
-The engineering posture remains verification and operational hardening. UX work is a release-surface improvement, not a replacement analysis subsystem.
+Phase 05 UX implementation is now complete. The current engineering posture is verification and operational hardening, not another feature family.
 
 ## Phase 01 — EVM Analysis Core
 
 **Status: COMPLETE / historical H1 runtime evidence verified.**
 
-Verified capabilities and infrastructure include strict EVM validation, address-first detection, resilient RPC, timeout/retry/circuit-breaker behavior, application-level revert classification, verification abstraction, instruction-boundary bytecode analysis, ownership/control, upgradeability/proxy foundation, pause capability/state, mint capability/authority, evidence provenance, normalized failure semantics, and production `/health`, `/metrics`, `/analyze`.
-
 ## Phase 02 — Proxy-Aware Composition
 
 **Status: COMPLETE / historical CI gate verified.**
-
-Implemented code/state address separation, implementation resolution, beacon semantics, composed/nested proxy handling, bounded lineage, cycle/max-depth handling and proxy regression coverage. A beacon address is never treated as an implementation without supported resolution.
 
 ## Phase 03 — Capability Passport
 
 **Status: COMPLETE / historical CI gate verified.**
 
-Implemented canonical passport schema, stable passport identity, evidence fingerprint, posture/conclusive state, capability evidence preservation and regression coverage. Durable production persistence remains post-H1 infrastructure work.
-
 ## Phase 04 — Continuous Watch
 
 **Status: IMPLEMENTED / historical CI gate verified.**
-
-Implemented watch lifecycle, bounded polling intervals, adaptive backoff, per-tick observation budget, versioned Passport observations, baseline/unchanged/changed/inconclusive comparison states, evidence-backed diffs, severity classification, alert sink contract, provider-failure-as-inconclusive semantics, pluggable `WatchStore`, deterministic in-memory store and dedicated tests.
 
 A durable scheduler and production `WatchStore` are intentionally not claimed as deployed functionality.
 
 ## Phase 05 — UX / Information Architecture Overhaul
 
-**Status: 05A COMPLETE / 05B COMPLETE / 05C COMPLETE / 05D COMPLETE / 05E NEXT.**
+**Status: COMPLETE — 05A through 05E implemented.**
 
 ### 05A — Landing page clarity
 
-The landing page owns the first journey: navigation, single thesis hero + analyzer, evidence-before-interpretation proof, four capability questions, Capability ≠ Function concept, progressive on-page result and minimal footer. Future Passport/Watch/Telegraph marketing blocks were removed from the first interaction.
+Single thesis, primary analyzer, evidence-first proof model, focused capability layer and progressive result hierarchy.
 
 ### 05B — Dedicated product surfaces
 
-Implemented on `main`:
-
-- `/analyze/` — full analyzer and live evidence journey
-- `/passport/` — Capability Passport observation surface
-- `/watch/` — browser-local watch workspace with manual re-checks
-- `/telegraph/` — Miner, Intent, schema and operational boundary surface
-- `/docs/` — product, evidence, proxy, Passport, Watch and API documentation
-
-These surfaces consume the existing `/api/analyze` contract rather than duplicating the deterministic domain engine.
-
-The Watch UI deliberately states that browser-local storage/manual checks are the current release surface. It does not claim a deployed scheduler, durable server-side WatchStore or background alert delivery.
-
-The Telegraph surface presents recorded configuration and historical verification policy without turning historical measurements into current runtime claims.
+`/analyze/`, `/passport/`, `/watch/`, `/evidence/`, `/telegraph/` and `/docs/` are shipped and consume the existing analysis contract.
 
 ### 05C — Progressive evidence
 
-**Status: COMPLETE.**
-
-Implemented a dedicated `/evidence/` Evidence Explorer with:
-
-- capability-specific “Why?” explanations
-- expandable evidence drawers for Ownership, Upgradeability, Pause and Mint
-- structured evidence key/value inspection
-- detection method, confidence, conclusive state and fallback reason
-- evidence-backed proxy composition view separating requested/state address from effective code address
-- explicit composition status rather than inferred proxy claims
-- provider/verification diagnostics including RPC state, verification state/source, ABI availability and overall conclusiveness
-- direct navigation back to Analyze, Passport and Watch for the same address
-- mobile-responsive layout and reduced-motion behavior
-
-The Evidence Explorer consumes `/api/analyze` and does not invent historical state or duplicate the deterministic analysis engine. It keeps raw evidence inspectable while preserving the human-readable result as the primary layer.
+Evidence drawers, capability explanations, proxy composition, verification/provider diagnostics and uncertainty boundaries are shipped.
 
 ### 05D — Motion and spatial intelligence
 
-**Status: COMPLETE / shipped.**
-
-Implemented:
-
-- shared `/assets/veridex-spatial.css` and `/assets/veridex-spatial.js`
-- six-stage evidence flow: Contract → Code → Evidence → Capability → Authority → Confidence
-- animation starts only after a real `/api/analyze` response is rendered
-- proxy/state/code relationship visualization based on returned proxy evidence
-- actual verification/provider/capability/conclusiveness state reflected in the visual layer
-- responsive mobile 2-column → single-column spatial layout
-- `prefers-reduced-motion` path that removes pulsing/travel animation while preserving the information architecture
-- explicit inconclusive/error visual states
-- presentation-only architecture: visualization cannot create, upgrade or remove evidence
-- regression test at `tests/ui/phase05d.test.ts` covering asset integration and API-coupling boundary
-
-Capability-change history remains governed by the Phase 04 Watch domain; durable scheduling and production alerts are not claimed by this phase.
+The six-stage evidence flow, proxy/state/code relationship view, responsive layout and reduced-motion behavior are shipped. Visualization remains presentation-only and cannot create evidence.
 
 ### 05E — Accessibility and release QA
 
-**NEXT:** 320px/360px/390px/412px mobile QA, no horizontal overflow, touch-target review, keyboard navigation/focus, semantic heading order, reduced motion, no color-only meaning, analyzer success/error/inconclusive QA, raw-JSON accessibility and visual review of the spatial layer without animation.
+**Status: COMPLETE / implementation shipped.**
+
+Implemented:
+
+- shared `assets/release-a11y.css` release accessibility layer
+- visible `:focus-visible` keyboard focus treatment
+- shared 44px minimum interaction targets
+- 360px-and-below width/wrapping safeguards
+- reduced-motion hardening
+- evidence expandable-control semantics and analyzer error semantics
+- spatial-layer touch/focus hardening
+- `scripts/verify-release-qa.mjs` static release audit
+- `npm run verify:release-qa` command
+
+The static audit covers all seven HTML release surfaces for viewport metadata, horizontal-overflow protection and reduced-motion support, plus analyzer/evidence-specific accessibility contracts.
+
+The audit is not represented as real-device/browser/screen-reader proof. Those checks must be reproduced before making a fresh runtime accessibility claim.
 
 ## Current Telegraph registration
-
-The current repository state records:
 
 - Miner ID: `1001`
 - Slug: `veridex-contract-risk-miner`
 - Registration: `#144`
 - Intent: `FRAUD_DETECTION`
 - Network: Base Sepolia
-- Registration transaction: `0xe9df234aaf7c9f7501e9971f01705e52172b81bd4a2fd96932b22d5bc4b7ce6a`
-- Primary production endpoint: `https://veridex-ecru.vercel.app`
-
-Historical registrations `#122` and `#142` are superseded.
-
-## Telegraph verification hardening — 24 Aug 2026
-
-The integration gate now requires exactly one configured/live advertised Intent, `FRAUD_DETECTION`, and verifies that Intent against the canonical live registry. This is a correctness gate, not a claim that live registry alignment has been freshly re-verified after every subsequent commit.
-
-## Historical H1 verification evidence
-
-The latest previously recorded successful H1 verification lane showed deterministic Miner evaluation **PASSED**, quality **1.0**, accuracy **1.0**, evidence coverage **1.0**, conclusive **1**, false positives **0**, false negatives **0**, real-chain **3/3**, production benchmark **3/3**, schema `veridex.miner.v1`, historical live Telegraph integration verified, and resilience recovery verified.
-
-These metrics remain historical until reproduced after current main-branch changes.
+- Production endpoint: `https://veridex-ecru.vercel.app`
 
 ## Current blocking gate
 
-The main CI workflow requires successful audit, typecheck, build, unit tests, Phase 02 proxy tests, Phase 03 passport tests, Phase 04 watch tests, production health, YAML validation, live Telegraph integration, resilience recovery, real-chain ground truth, deterministic evaluation, production benchmark and production response-schema checks.
+The main verification lane requires audit, typecheck, build, unit tests, proxy/passport/watch tests, production health, YAML validation, live Telegraph integration, resilience recovery, real-chain ground truth, deterministic evaluation, production benchmark and production response-schema checks.
 
-**Current status:** not independently observed GREEN for the newest main commit through the available connector.
+**Current-main status:** not independently observed GREEN through the available connector. The latest repository commit may have a pending Vercel status, but no fresh complete blocking GitHub Actions run was observed.
 
 ## H1 status
 
 **Product/Miner implementation: submission-ready.**  
+**UX implementation: complete.**  
 **Current-main verification: open.**
 
 ## Next milestones
 
-1. complete Phase 05E mobile/accessibility/release QA
-2. reproduce the full current-main verification lane before making fresh performance or live-registry claims
-3. harden H1 demo/reviewer flows
-4. then resume post-H1 WatchStore / alerts / agent ecosystem work
+1. reproduce the complete current-main verification lane
+2. verify live Telegraph registry alignment and preserve fresh evidence
+3. freeze the Track 1/H1 evidence package
+4. keep the production Miner stable through the operational window
+5. only then resume post-H1 WatchStore, alerts, agents/SDK/MCP and broader product expansion
 
 ## Evidence policy
 
