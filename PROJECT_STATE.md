@@ -3,11 +3,11 @@
 **Repository:** `pawansatoshi/Veridex`  
 **Branch:** `main`  
 **State reviewed:** 24 Aug 2026  
-**Current phase:** H1 OPERATIONAL / UX HARDENING — PHASE 05C COMPLETE
+**Current phase:** H1 OPERATIONAL / UX HARDENING — PHASE 05D COMPLETE
 
 ## Current reality
 
-The deterministic EVM analysis core, proxy-aware composition, Capability Passport domain layer, Continuous Watch domain layer, evaluation harness, production Miner endpoint, Telegraph YAML and Miner registration remain implemented. The main branch now contains dedicated product surfaces plus a progressive Evidence Explorer that exposes capability-specific evidence, proxy composition and provider diagnostics without duplicating the domain engine.
+The deterministic EVM analysis core, proxy-aware composition, Capability Passport domain layer, Continuous Watch domain layer, evaluation harness, production Miner endpoint, Telegraph YAML and Miner registration remain implemented. The main branch now contains dedicated product surfaces plus a progressive Evidence Explorer with capability-specific evidence, proxy composition, provider diagnostics and a state-aware spatial evidence visualization.
 
 The engineering posture remains verification and operational hardening. UX work is a release-surface improvement, not a replacement analysis subsystem.
 
@@ -39,7 +39,7 @@ A durable scheduler and production `WatchStore` are intentionally not claimed as
 
 ## Phase 05 — UX / Information Architecture Overhaul
 
-**Status: 05A COMPLETE / 05B COMPLETE / 05C COMPLETE / 05D–05E PLANNED.**
+**Status: 05A COMPLETE / 05B COMPLETE / 05C COMPLETE / 05D COMPLETE / 05E NEXT.**
 
 ### 05A — Landing page clarity
 
@@ -81,11 +81,26 @@ The Evidence Explorer consumes `/api/analyze` and does not invent historical sta
 
 ### 05D — Motion and spatial intelligence
 
-Planned: evidence-flow animation tied to actual analysis events, reduced-motion path, lightweight SVG/2.5D mobile representation and capability-change visual delta.
+**Status: COMPLETE / shipped.**
+
+Implemented:
+
+- shared `/assets/veridex-spatial.css` and `/assets/veridex-spatial.js`
+- six-stage evidence flow: Contract → Code → Evidence → Capability → Authority → Confidence
+- animation starts only after a real `/api/analyze` response is rendered
+- proxy/state/code relationship visualization based on returned proxy evidence
+- actual verification/provider/capability/conclusiveness state reflected in the visual layer
+- responsive mobile 2-column → single-column spatial layout
+- `prefers-reduced-motion` path that removes pulsing/travel animation while preserving the information architecture
+- explicit inconclusive/error visual states
+- presentation-only architecture: visualization cannot create, upgrade or remove evidence
+- regression test at `tests/ui/phase05d.test.ts` covering asset integration and API-coupling boundary
+
+Capability-change history remains governed by the Phase 04 Watch domain; durable scheduling and production alerts are not claimed by this phase.
 
 ### 05E — Accessibility and release QA
 
-Planned: 320px/360px mobile QA, no horizontal overflow, touch-target review, keyboard navigation/focus, semantic heading order, reduced motion, no color-only meaning, success/error/inconclusive analysis QA and raw-JSON accessibility.
+**NEXT:** 320px/360px/390px/412px mobile QA, no horizontal overflow, touch-target review, keyboard navigation/focus, semantic heading order, reduced motion, no color-only meaning, analyzer success/error/inconclusive QA, raw-JSON accessibility and visual review of the spatial layer without animation.
 
 ## Current Telegraph registration
 
@@ -124,10 +139,10 @@ The main CI workflow requires successful audit, typecheck, build, unit tests, Ph
 
 ## Next milestones
 
-1. implement Phase 05D real analysis-state motion
-2. complete Phase 05E mobile/accessibility/release QA
-3. reproduce the full current-main verification lane before making fresh performance or live-registry claims
-4. harden production Watch persistence/scheduling post-H1
+1. complete Phase 05E mobile/accessibility/release QA
+2. reproduce the full current-main verification lane before making fresh performance or live-registry claims
+3. harden H1 demo/reviewer flows
+4. then resume post-H1 WatchStore / alerts / agent ecosystem work
 
 ## Evidence policy
 
