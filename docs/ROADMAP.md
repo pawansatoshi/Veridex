@@ -10,14 +10,14 @@
 
 ---
 
-# CURRENT PHASE — H1 OPERATIONAL / SUBMISSION HARDENING
+# CURRENT PHASE — H1 OPERATIONAL / UX RELEASE HARDENING
 
 **Repository state reviewed:** 24 Aug 2026  
 **Track 1/2:** 17–31 Aug 2026  
 **Track 3:** 31 Aug–7 Sep 2026  
 **H1 final boundary:** 7 Sep 2026
 
-The repository is materially ahead of the original H1 build roadmap. The deterministic Miner core, proxy composition, Capability Passport, Continuous Watch domain layer, evaluation harness, production endpoint, and Telegraph registration are implemented. The current engineering priority is therefore **verification and operational hardening**, not adding another feature family.
+The repository is materially ahead of the original H1 build roadmap. The deterministic Miner core, proxy composition, Capability Passport, Continuous Watch domain layer, evaluation harness, production endpoint, Telegraph registration and the main product surfaces are implemented. The current engineering priority is **verification, accessibility and release hardening**, not adding another feature family.
 
 The latest repository evidence records registration **#144 / FRAUD_DETECTION** for Miner `1001`. The current main commit has not been independently observed with a fresh blocking GitHub Actions run through the available connector, so prior green CI evidence must not be relabeled as current-commit green.
 
@@ -34,18 +34,20 @@ The latest repository evidence records registration **#144 / FRAUD_DETECTION** f
 | Telegraph YAML | IMPLEMENTED | Exact Intent gate now enforced |
 | Telegraph registration | #144 recorded | Reconcile live registry and capture fresh evidence |
 | Current-commit CI | NOT INDEPENDENTLY VERIFIED | Run/observe complete blocking gate |
+| Phase 05 UX 05A–05D | COMPLETE | 05E release QA |
 | Track 1 package | READY TO HARDEN | Freeze claims to verified evidence |
 | Track 3 application | NOT YET IN SCOPE | Begin only after Track 1/2 close |
 
 ## Highest-value next work
 
-1. Verify live Telegraph registry state for Miner `1001` and `FRAUD_DETECTION`.
-2. Run the complete blocking CI gate on the post-hardening commit.
-3. Preserve fresh real-chain, resilience, benchmark and schema artifacts.
-4. Finalize the Track 1 evidence package without claiming ranking or demand that has not been independently observed.
-5. Keep the Miner live and stable through the Track 3 operational window.
+1. Complete Phase 05E accessibility/mobile/release QA.
+2. Verify live Telegraph registry state for Miner `1001` and `FRAUD_DETECTION`.
+3. Run the complete blocking CI gate on the post-hardening commit.
+4. Preserve fresh real-chain, resilience, benchmark and schema artifacts.
+5. Finalize the Track 1 evidence package without claiming ranking or demand that has not been independently observed.
+6. Keep the Miner live and stable through the Track 3 operational window.
 
-Do not start broad UI, mobile, alerting or multi-chain semantic work while these gates are open.
+Do not start broad multi-chain semantic, alerting or decorative 3D work while these gates are open. The current spatial layer is already evidence-backed and presentation-only.
 
 ---
 
