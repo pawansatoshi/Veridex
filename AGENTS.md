@@ -15,7 +15,8 @@ Before making changes, read:
 3. `docs/ARCHITECTURE.md`
 4. `docs/ROADMAP.md`
 5. `docs/DECISIONS.md`
-6. the current phase document under `docs/phases/`
+6. `docs/EVALUATION.md`
+7. the current phase document under `docs/phases/`
 
 Then inspect the actual repository. Never rely on memory or an earlier chat as proof that code exists.
 
@@ -86,6 +87,7 @@ After each meaningful milestone, update:
 - `PROJECT_STATE.md`
 - relevant phase document
 - `docs/DECISIONS.md` if a durable architectural decision was made
+- `docs/EVALUATION.md` when verification/benchmark state changes
 - `docs/TELEGRAPH_REFERENCE.md` if protocol facts changed
 
 This ensures a new chat or agent can continue without reconstructing history.
