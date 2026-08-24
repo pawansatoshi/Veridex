@@ -1,13 +1,13 @@
 # Veridex — Persistent Project State
 
 **Repository:** `pawansatoshi/Veridex`  
-**Branch:** `ux-overhaul-phase-1`  
+**Branch:** `main`  
 **State reviewed:** 24 Aug 2026  
 **Current phase:** H1 OPERATIONAL / UX HARDENING
 
 ## Current reality
 
-The deterministic EVM analysis core, proxy-aware composition, Capability Passport domain layer, Continuous Watch domain layer, evaluation harness, production Miner endpoint, Telegraph YAML and Miner registration remain implemented. The current branch adds a focused UX/information-architecture hardening pass without changing the analysis contract.
+The deterministic EVM analysis core, proxy-aware composition, Capability Passport domain layer, Continuous Watch domain layer, evaluation harness, production Miner endpoint, Telegraph YAML and Miner registration remain implemented. The current main branch adds a focused UX/information-architecture hardening pass without changing the analysis contract.
 
 The engineering posture remains verification and operational hardening. UX work is being performed as a release-surface improvement, not as a new analysis subsystem.
 
@@ -149,7 +149,7 @@ The latest previously recorded successful H1 verification lane showed:
 - live Telegraph integration: **verified at that historical commit**
 - resilience recovery: **verified at that historical commit**
 
-These metrics remain historical until reproduced after current branch changes.
+These metrics remain historical until reproduced after current main-branch changes.
 
 ## Current blocking gate
 
@@ -171,12 +171,12 @@ The main CI workflow requires successful outcomes for:
 - production benchmark
 - production response schema
 
-**Current status:** not independently observed GREEN for the newest branch commit through the available connector.
+**Current status:** not independently observed GREEN for the newest main commit through the available connector.
 
 ## H1 status
 
 **Product/Miner implementation: submission-ready.**  
-**Current-branch verification: open.**
+**Current-main verification: open.**
 
 ## Next UX milestones
 
