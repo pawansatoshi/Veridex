@@ -3,11 +3,11 @@
 **Repository:** `pawansatoshi/Veridex`  
 **Branch:** `main`  
 **State reviewed:** 24 Aug 2026  
-**Current phase:** H1 OPERATIONAL / UX HARDENING — PHASE 05B
+**Current phase:** H1 OPERATIONAL / UX HARDENING — PHASE 05C COMPLETE
 
 ## Current reality
 
-The deterministic EVM analysis core, proxy-aware composition, Capability Passport domain layer, Continuous Watch domain layer, evaluation harness, production Miner endpoint, Telegraph YAML and Miner registration remain implemented. The current main branch now also contains dedicated product surfaces for analysis, Passport, Watch, Telegraph and documentation.
+The deterministic EVM analysis core, proxy-aware composition, Capability Passport domain layer, Continuous Watch domain layer, evaluation harness, production Miner endpoint, Telegraph YAML and Miner registration remain implemented. The main branch now contains dedicated product surfaces plus a progressive Evidence Explorer that exposes capability-specific evidence, proxy composition and provider diagnostics without duplicating the domain engine.
 
 The engineering posture remains verification and operational hardening. UX work is a release-surface improvement, not a replacement analysis subsystem.
 
@@ -39,11 +39,11 @@ A durable scheduler and production `WatchStore` are intentionally not claimed as
 
 ## Phase 05 — UX / Information Architecture Overhaul
 
-**Status: 05A COMPLETE / 05B COMPLETE / 05C PARTIAL / 05D–05E PLANNED.**
+**Status: 05A COMPLETE / 05B COMPLETE / 05C COMPLETE / 05D–05E PLANNED.**
 
 ### 05A — Landing page clarity
 
-The landing page now owns the first journey: navigation, single thesis hero + analyzer, evidence-before-interpretation proof, four capability questions, Capability ≠ Function concept, progressive on-page result and minimal footer. Future Passport/Watch/Telegraph marketing blocks were removed from the first interaction.
+The landing page owns the first journey: navigation, single thesis hero + analyzer, evidence-before-interpretation proof, four capability questions, Capability ≠ Function concept, progressive on-page result and minimal footer. Future Passport/Watch/Telegraph marketing blocks were removed from the first interaction.
 
 ### 05B — Dedicated product surfaces
 
@@ -63,9 +63,21 @@ The Telegraph surface presents recorded configuration and historical verificatio
 
 ### 05C — Progressive evidence
 
-Partially implemented: plain-language first result, per-capability evidence blocks, Passport composition/verification details, raw JSON as deepest layer, and explicit inconclusive/unavailable states.
+**Status: COMPLETE.**
 
-Remaining: richer capability-specific “Why?” explanations, evidence-backed interactive proxy graph, and forensic/provider diagnostics.
+Implemented a dedicated `/evidence/` Evidence Explorer with:
+
+- capability-specific “Why?” explanations
+- expandable evidence drawers for Ownership, Upgradeability, Pause and Mint
+- structured evidence key/value inspection
+- detection method, confidence, conclusive state and fallback reason
+- evidence-backed proxy composition view separating requested/state address from effective code address
+- explicit composition status rather than inferred proxy claims
+- provider/verification diagnostics including RPC state, verification state/source, ABI availability and overall conclusiveness
+- direct navigation back to Analyze, Passport and Watch for the same address
+- mobile-responsive layout and reduced-motion behavior
+
+The Evidence Explorer consumes `/api/analyze` and does not invent historical state or duplicate the deterministic analysis engine. It keeps raw evidence inspectable while preserving the human-readable result as the primary layer.
 
 ### 05D — Motion and spatial intelligence
 
@@ -112,11 +124,10 @@ The main CI workflow requires successful audit, typecheck, build, unit tests, Ph
 
 ## Next milestones
 
-1. complete Phase 05C evidence-explorer depth
-2. add evidence-backed proxy graph and capability “Why?” explanations
-3. implement Phase 05D real analysis-state motion
-4. complete Phase 05E mobile/accessibility/release QA
-5. reproduce the full current-main verification lane before making fresh performance or live-registry claims
+1. implement Phase 05D real analysis-state motion
+2. complete Phase 05E mobile/accessibility/release QA
+3. reproduce the full current-main verification lane before making fresh performance or live-registry claims
+4. harden production Watch persistence/scheduling post-H1
 
 ## Evidence policy
 
