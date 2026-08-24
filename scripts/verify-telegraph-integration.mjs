@@ -2,11 +2,13 @@
 
 const endpoint = process.env.TELEGRAPH_INTEGRATIONS_URL ?? "https://devnode.telegraphprotocol.com/miner-dispatcher/integrations";
 const intentsEndpoint = process.env.TELEGRAPH_INTENTS_URL ?? "https://devnode.telegraphprotocol.com/engine/v1/intents";
+const expectedIntent = process.env.VERIDEX_TELEGRAPH_INTENT ?? "FRAUD_DETECTION";
 const timeoutMs = Number.parseInt(process.env.TELEGRAPH_INTEGRATIONS_TIMEOUT_MS ?? "10000", 10);
 const retries = Number.parseInt(process.env.TELEGRAPH_INTEGRATIONS_RETRIES ?? "3", 10);
 const syncWaitMs = Number.parseInt(process.env.TELEGRAPH_INTEGRATION_SYNC_WAIT_MS ?? "30000", 10);
 const syncAttempts = Number.parseInt(process.env.TELEGRAPH_INTEGRATION_SYNC_ATTEMPTS ?? "6", 10);
 
+if (!/^[A-Z][A-Z0-9_]{2,63}$/.test(expectedIntent)) throw new Error("VERIDEX_TELEGRAPH_INTENT must be a canonical uppercase Intent identifier");
 if (!Number.isInteger(timeoutMs) || timeoutMs < 1000 || timeoutMs > 60000) throw new Error("timeout must be in [1000,60000]");
 if (!Number.isInteger(retries) || retries < 0 || retries > 5) throw new Error("retries must be in [0,5]");
 if (!Number.isInteger(syncWaitMs) || syncWaitMs < 1000 || syncWaitMs > 120000) throw new Error("syncWaitMs must be in [1000,120000]");
@@ -50,6 +52,10 @@ function normalizeCanonicalIntents(body) {
 }
 
 const canonicalIntents = normalizeCanonicalIntents(await fetchJson(intentsEndpoint));
+if (!canonicalIntents.has(expectedIntent)) {
+  throw new Error(`Required Veridex Intent is not canonical in the live Telegraph registry: ${expectedIntent}`);
+}
+
 let miner;
 let lastReason = "not found";
 
@@ -66,13 +72,14 @@ for (let attempt = 1; attempt <= syncAttempts; attempt += 1) {
     if (!/veridex-contract-risk-miner/.test(JSON.stringify(miner))) lastReason = "live registry Miner slug mismatch";
     else if (currentUrl !== "https://veridex-ecru.vercel.app") lastReason = "live registry Miner base URL mismatch";
     else if (!currentEndpoint) lastReason = "live registry Miner /analyze POST endpoint mismatch";
-    else if (advertisedIntents.length === 0) lastReason = "live registry Miner has no supported Intents";
+    else if (advertisedIntents.length !== 1 || advertisedIntents[0] !== expectedIntent) lastReason = `live registry Miner must advertise exactly ${expectedIntent}; observed: ${advertisedIntents.join(", ") || "none"}`;
     else if (invalidIntents.length > 0) lastReason = `live registry advertises non-canonical Intents: ${invalidIntents.join(", ")}`;
     else {
       console.log(JSON.stringify({
         checkedAt: new Date().toISOString(),
         endpoint,
         intentsEndpoint,
+        expectedIntent,
         retryPolicy: { timeoutMs, retries, backoffMs: [250, 500, 1000, 2000, 4000].slice(0, retries) },
         syncPolicy: { syncWaitMs, syncAttempts },
         canonicalIntentCount: canonicalIntents.size,
