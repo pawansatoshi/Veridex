@@ -2,14 +2,30 @@
 
 **Repository:** `pawansatoshi/Veridex`  
 **Branch:** `main`  
-**State reviewed:** 24 Aug 2026  
-**Current phase:** H1 OPERATIONAL / TELEGRAPH TRACK SURFACE HARDENING — PHASE 06 COMPLETE
+**State reviewed:** 29 Aug 2026  
+**Current phase:** H1 OPERATIONAL / TELEGRAPH TRACK 2 HARDENING
 
 ## Current reality
 
 The deterministic EVM analysis core, proxy-aware composition, Capability Passport domain layer, Continuous Watch domain layer, evaluation harness, production Miner endpoint, Telegraph YAML/registration, dedicated product surfaces, progressive Evidence Explorer, evidence-backed spatial visualization and Telegraph Track 1/2/3 presentation surfaces are implemented.
 
-Phase 05 UX implementation is complete. Phase 06 now separates the three H1 Telegraph tracks into focused judge-facing surfaces without changing Miner/core behavior.
+Track 1 Miner registration is live. Track 2 candidate WASM registration was attempted, but the first candidate failed Telegraph structural validation because its self-match score did not beat an unrelated cross-match. That failure is now treated as a real blocker rather than a documentation claim.
+
+## Track 2 incident and remediation
+
+**Observed failure:** Telegraph rejected registration `#1766` during submission with:
+
+`structural validation failed: self-match (0.0000) did not beat unrelated cross-match (0.0000)`
+
+This proves the previously supplied candidate artifact was not acceptable for Track 2, even though it passed the upload/hash/on-chain registration UI.
+
+**Root cause:** the previous evaluator did not provide sufficient behavioral discrimination for the platform's self-match structural gate.
+
+**Remediation:** added `telegraph/evaluation/veridex_evaluator.c` and `telegraph/evaluation/BUILD.md`. The replacement evaluator is deterministic, ground-truth anchored, exports the required ABI, returns `0` for empty inputs, returns `1` for normalized exact matches, and otherwise scores bounded token overlap/length similarity. A locally instantiated WASM build was verified to export `memory`, `alloc`, `dealloc`, `rank_answer`, and `breakdown_answer`, with self-match `1.0`, unrelated example `0.1597`, and empty input `0.0`.
+
+**Release artifact:** `veridex-evaluator-v2.wasm` was built from the new source. SHA-256: `e2c4bc6472102fc42152a7e99e7587cc20aa79b15d6086c2da1d940016954658`.
+
+**Important:** Telegraph WASM registrations are immutable. Registration `#1766` must not be submitted as a valid Track 2 candidate. A fresh registration is required for the replacement artifact.
 
 ## Phase 01 — EVM Analysis Core
 
@@ -49,7 +65,7 @@ The landing page, Analyze, Evidence, Passport, Watch, Telegraph and Docs surface
 
 ### 06C — Track 2 Evaluation
 
-`/telegraph/evaluation/` documents the ground-truth/evaluation workflow and deliberately shows unavailable current metrics as `—` until freshly measured.
+`/telegraph/evaluation/` documents the ground-truth/evaluation workflow. The scorer implementation is now also checked into `telegraph/evaluation/veridex_evaluator.c` with a reproducible build contract.
 
 ### 06D — Track 3 Application
 
@@ -80,6 +96,15 @@ The intended journey is Home → Analyze → Evidence, with Telegraph → Miner/
 - Network: Base Sepolia
 - Production endpoint: `https://veridex-ecru.vercel.app`
 
+## Track 2 registration status
+
+- Previous candidate registration: `#1766`
+- Intent: `FRAUD_DETECTION`
+- Status: **REJECTED AT SUBMISSION STRUCTURAL VALIDATION**
+- Replacement artifact: `veridex-evaluator-v2.wasm`
+- Replacement artifact SHA-256: `e2c4bc6472102fc42152a7e99e7587cc20aa79b15d6086c2da1d940016954658`
+- Fresh registration: **PENDING**
+
 ## Current blocking gate
 
 The main verification lane requires audit, typecheck, build, unit tests, proxy/passport/watch tests, production health, YAML validation, live Telegraph integration, resilience recovery, real-chain ground truth, deterministic evaluation, production benchmark and production response-schema checks.
@@ -90,18 +115,20 @@ The main verification lane requires audit, typecheck, build, unit tests, proxy/p
 
 **Product/Miner implementation: submission-ready.**  
 **UX implementation: complete.**  
-**Telegraph Track 1/2/3 presentation: complete.**  
-**Current-main verification: open.**
+**Track 1: registered/live; operational status must be freshly verified.**  
+**Track 2: replacement scorer built and locally verified; fresh on-chain registration/submission still required.**  
+**Track 3: presentation/application surface implemented; Track 3 opens after Track 1/2 close.**
 
 ## Next milestones
 
-1. reproduce the complete current-main verification lane
-2. verify live Telegraph registry alignment and preserve fresh evidence
-3. freeze the Track 1/H1 evidence package
-4. verify Track 2 evaluation output from the current commit
-5. keep the production Miner and Track 3 application stable through the operational window
-6. only then resume post-H1 WatchStore, alerts, agents/SDK/MCP and broader product expansion
+1. register the replacement Track 2 WASM artifact
+2. wait for registry indexing and verify the new registration appears under the connected wallet
+3. submit the new registration ID with the exact same replacement WASM bytes
+4. verify Track 2 submission acceptance, not merely on-chain registration
+5. freeze the Track 1/H1 evidence package
+6. keep the production Miner stable through the operational window
+7. only then resume post-H1 WatchStore, alerts, agents/SDK/MCP and broader product expansion
 
 ## Evidence policy
 
-Repository presence is not runtime proof. Never claim official Telegraph ranking, fabricated traffic/demand, current-commit CI GREEN, or live registry alignment without fresh evidence.
+Repository presence is not runtime proof. Never claim official Telegraph ranking, fabricated traffic/demand, fabricated benchmark numbers, current-commit CI GREEN, or live registry alignment without fresh evidence.
