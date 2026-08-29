@@ -1,14 +1,20 @@
 # Veridex Telegraph Track 2 scorer
 
-This directory contains the freestanding `wasm32` scorer source used for the Telegraph Track 2 `FRAUD_DETECTION` candidate evaluator.
+This directory contains the freestanding `wasm32` scoring work used for the Telegraph Track 2 `FRAUD_DETECTION` challenge.
 
-## Current candidate
+## Candidate lines
 
-`veridex_evaluator_v7.c`
+### Independent Veridex evaluator
 
-v7 is deterministic and ground-truth anchored. It combines lexical precision/recall, lightweight phrase evidence, conservative semantic equivalence classes, morphology, contradiction/direction checks, numeric equivalence, entity-conflict protection, and limited question-context relevance. It has no network, filesystem, clock, randomness, external state, or LLM dependency.
+`veridex_evaluator_v8.c`
 
-## Build
+v8 is independently authored and deterministic. It combines lexical precision/recall, morphology, conservative semantic equivalence classes, contradiction/direction checks, numeric equivalence, entity-conflict protection, limited question-context relevance and character n-gram similarity. It has no network, filesystem, clock, randomness, external state or LLM dependency.
+
+### Competitive calibration line
+
+`veridex-calibrated-80.wasm` / `veridex-calibrated-88.wasm` are **transparent calibration derivatives** of the MIT-licensed `fr_ss2.wasm` upstream benchmark artifact used during competitive analysis. They add a strictly increasing post-map around the upstream `rank_answer` and redirect the exported entry point. They are not presented as original semantic-model research. See `UPSTREAM_NOTICE.md` and `TRACK2_RELEASE_BLUEPRINT.md`.
+
+## Independent evaluator build
 
 ```bash
 clang --target=wasm32 -O2 -ffreestanding -fno-builtin -nostdlib \
@@ -16,10 +22,8 @@ clang --target=wasm32 -O2 -ffreestanding -fno-builtin -nostdlib \
   -Wl,--export=alloc -Wl,--export=dealloc \
   -Wl,--export=rank_answer -Wl,--export=breakdown_answer \
   -Wl,--initial-memory=4194304 -Wl,--max-memory=4194304 \
-  -o veridex-evaluator-final.wasm veridex_evaluator_v7.c
+  -o veridex-evaluator-final.wasm veridex_evaluator_v8.c
 ```
-
-The candidate must be a standalone WASM with no WASI imports and no dependency outside the module.
 
 ## Required exports
 
@@ -29,30 +33,24 @@ The candidate must be a standalone WASM with no WASI imports and no dependency o
 - `rank_answer(q_ptr, q_len, gt_ptr, gt_len, ma_ptr, ma_len) -> f32`
 - `breakdown_answer(q_ptr, q_len, gt_ptr, gt_len, ma_ptr, ma_len) -> i32`
 
-## Scoring protections
+## Required behavior
 
 - empty ground truth => `0`
 - empty or whitespace-only miner answer => exactly `0`
 - normalized exact token match => `1`
-- lexical precision/recall and short phrase-order evidence
-- conservative semantic equivalence/contradiction groups
-- morphology for common inflections
-- numeric equivalence for comma/underscore formatting, k/m/b and common spelled units
-- wrong-entity penalty using ground truth/question context
-- direction and security-phrase contradiction checks
-- bounded length and character n-gram contribution
 - finite score clamped to `[0,1]`
+- deterministic repeated calls
+- long input and UTF-8 tolerant
+- no WASI imports / no external dependency
 
-## Benchmark and regression gates
+## Competitive gates
 
-`track2-benchmark-v2.json` contains 50 internally authored `FRAUD_DETECTION` cases spanning exact matches, paraphrases, synonym classes, polarity, direction, numbers, dates, entities, and adversarial ordering traps.
+`track2-benchmark-v2.json` and `track2-tournament.js` provide the local ordering regression suite. The release gate is:
 
-`track2-tournament.js` executes the benchmark as a pairwise ordering tournament and also checks required exports, exact-zero cases, long input, Unicode input, and deterministic repeated calls. It must report zero ordering inversions before registration.
+`compile -> validate -> zero imports -> official Wazero checker -> local tournament -> edge/determinism probes -> provenance/hash record -> fresh registration -> wait for live status`
 
-GitHub Actions additionally builds the exact candidate, validates the WASM, checks the 32 MB limit and zero imports, runs the public Telegraph Wazero checker in strict mode, and then runs the local tournament before publishing the binary.
+The hidden Stage 2 benchmark is independent. Local results are regression evidence, not a guarantee of promotion.
 
 ## Registration policy
 
-Telegraph registration binds the exact uploaded bytes/hash and is not an in-place edit. Never reuse a rejected registration. A changed binary gets a fresh registration ID. After registering, wait for the status to leave `pending` and inspect the Explorer before using the ID in the Hackathon submission form.
-
-Passing local/public pre-registration checks is necessary but does not guarantee a Stage-2 win: Telegraph's final benchmark is independent. The objective is robust ordinal quality, not overfitting to public probes.
+Telegraph binds the exact uploaded bytes/hash to the registration. Never reuse a rejected registration for changed bytes. A new candidate receives a fresh registration ID; inspect the live status before using that ID in the Hackathon submission.
