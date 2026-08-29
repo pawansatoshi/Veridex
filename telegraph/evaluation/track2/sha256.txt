@@ -1,0 +1,1 @@
+Pending: compute SHA-256 from the exact registered WASM bytes after the binary is attached to the branch.
