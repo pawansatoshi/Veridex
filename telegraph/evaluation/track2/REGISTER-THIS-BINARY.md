@@ -1,0 +1,1 @@
+Upload `veridex-track2.wasm` to Telegraph Integrate. The Track 2 submission must use the registration ID returned for that exact binary. The GitHub path is intended to make the artifact reproducible and auditable.

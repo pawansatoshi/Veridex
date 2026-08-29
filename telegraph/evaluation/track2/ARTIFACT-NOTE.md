@@ -1,0 +1,1 @@
+`veridex-track2.wasm` is the canonical binary artifact for Telegraph Track 2. Its SHA-256 must be computed from the exact bytes uploaded to Telegraph. The binary is not a source substitute and must pass Telegraph Stage 1 before registration.

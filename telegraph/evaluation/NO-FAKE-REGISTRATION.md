@@ -1,0 +1,1 @@
+The repository intentionally does not store a fake WASM registration ID. Registration is an external protocol action and must be completed against Telegraph's current production environment.

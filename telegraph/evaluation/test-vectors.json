@@ -1,0 +1,26 @@
+[
+  {
+    "name": "all-capabilities-match",
+    "ground_truth": {"ownership":"active","upgradeability":"active","pause":"not_detected","mint":"not_detected"},
+    "answer": {"ownership":"active","upgradeability":"active","pause":"not_detected","mint":"not_detected"},
+    "expected": {"score_min":0.99,"score_max":1.0}
+  },
+  {
+    "name": "all-unknown-is-not-a-false-negative",
+    "ground_truth": {"ownership":"unknown","upgradeability":"unknown","pause":"unknown","mint":"unknown"},
+    "answer": {"ownership":"unknown","upgradeability":"unknown","pause":"unknown","mint":"unknown"},
+    "expected": {"score_min":0.99,"score_max":1.0}
+  },
+  {
+    "name": "false-positive-mint",
+    "ground_truth": {"ownership":"active","upgradeability":"active","pause":"not_detected","mint":"not_detected"},
+    "answer": {"ownership":"active","upgradeability":"active","pause":"not_detected","mint":"active"},
+    "expected": {"score_min":0.6,"score_max":0.9}
+  },
+  {
+    "name": "malformed-enum",
+    "ground_truth": {"ownership":"active","upgradeability":"active","pause":"not_detected","mint":"not_detected"},
+    "answer": {"ownership":"active","upgradeability":"maybe","pause":"not_detected","mint":"not_detected"},
+    "expected": {"score_min":0.0,"score_max":0.5}
+  }
+]
