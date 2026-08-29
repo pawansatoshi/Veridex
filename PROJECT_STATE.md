@@ -21,9 +21,9 @@ This proves the previously supplied candidate artifact was not acceptable for Tr
 
 **Root cause:** the previous evaluator did not provide sufficient behavioral discrimination for the platform's self-match structural gate.
 
-**Remediation:** added `telegraph/evaluation/veridex_evaluator.c` and `telegraph/evaluation/BUILD.md`. The replacement evaluator is deterministic, ground-truth anchored, exports the required ABI, returns `0` for empty inputs, returns `1` for normalized exact matches, and otherwise scores bounded token overlap/length similarity. A locally instantiated WASM build was verified to export `memory`, `alloc`, `dealloc`, `rank_answer`, and `breakdown_answer`, with self-match `1.0`, unrelated example `0.1597`, and empty input `0.0`.
+**Remediation:** added `telegraph/evaluation/veridex_evaluator.c` and `telegraph/evaluation/BUILD.md`. The replacement evaluator is deterministic, ground-truth anchored, exports the required ABI, returns `0` for empty inputs, returns `1` for normalized exact matches, filters common stopwords for overlap, and otherwise scores bounded token overlap/length similarity. A locally instantiated WASM build was verified to export `memory`, `alloc`, `dealloc`, `rank_answer`, and `breakdown_answer`, with self-match `1.0`, unrelated example `0.0`, paraphrase-like overlap `0.2819`, and empty input `0.0`.
 
-**Release artifact:** `veridex-evaluator-v2.wasm` was built from the new source. SHA-256: `e2c4bc6472102fc42152a7e99e7587cc20aa79b15d6086c2da1d940016954658`.
+**Release artifact:** `veridex-evaluator-v2.wasm` was built from the new source. SHA-256: `4ae038a9e5ee99036f3bef4efc5be7529e72db17ff051a9f5b10a368deb1b285`.
 
 **Important:** Telegraph WASM registrations are immutable. Registration `#1766` must not be submitted as a valid Track 2 candidate. A fresh registration is required for the replacement artifact.
 
@@ -102,7 +102,7 @@ The intended journey is Home → Analyze → Evidence, with Telegraph → Miner/
 - Intent: `FRAUD_DETECTION`
 - Status: **REJECTED AT SUBMISSION STRUCTURAL VALIDATION**
 - Replacement artifact: `veridex-evaluator-v2.wasm`
-- Replacement artifact SHA-256: `e2c4bc6472102fc42152a7e99e7587cc20aa79b15d6086c2da1d940016954658`
+- Replacement artifact SHA-256: `4ae038a9e5ee99036f3bef4efc5be7529e72db17ff051a9f5b10a368deb1b285`
 - Fresh registration: **PENDING**
 
 ## Current blocking gate
