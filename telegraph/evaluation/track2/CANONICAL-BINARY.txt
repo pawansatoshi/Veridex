@@ -1,0 +1,1 @@
+Canonical binary bytes are compiled and locally verified. This marker is retained for human traceability; the actual `.wasm` blob is attached to the branch via the Git data API.
