@@ -2,7 +2,8 @@
 
 /* Freestanding wasm32 evaluator for Telegraph Track 2. */
 static uint8_t heap[131072];
-static uint32_t heap_top = 1024;
+/* Keep allocations above the linker data/static region. */
+static uint32_t heap_top = 65536;
 static float breakdown[5];
 
 __attribute__((export_name("alloc")))
@@ -32,6 +33,20 @@ static int is_word_char(uint8_t c) {
     return (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c >= 128;
 }
 
+static int is_stopword(const uint8_t *s, int n) {
+    static const char *sw[] = {
+        "a","an","and","are","as","at","be","by","for","from",
+        "how","in","is","it","of","on","or","that","the","this",
+        "to","was","were","what","when","where","which","who","with"
+    };
+    for (unsigned i = 0; i < sizeof(sw) / sizeof(sw[0]); i++) {
+        int j = 0;
+        while (j < n && sw[i][j] && lower_ascii(s[j]) == (uint8_t)sw[i][j]) j++;
+        if (j == n && sw[i][j] == '\0') return 1;
+    }
+    return 0;
+}
+
 static int next_token(const uint8_t *s, int n, int *pos, int *start, int *len) {
     int i = *pos;
     while (i < n && !is_word_char(s[i])) i++;
@@ -52,7 +67,9 @@ static int token_equal(const uint8_t *a, int alen, const uint8_t *b, int blen) {
 
 static int count_tokens(const uint8_t *s, int n) {
     int p = 0, st = 0, len = 0, c = 0;
-    while (next_token(s, n, &p, &st, &len)) c++;
+    while (next_token(s, n, &p, &st, &len)) {
+        if (!is_stopword(s + st, len)) c++;
+    }
     return c;
 }
 
@@ -64,7 +81,7 @@ static int common_tokens(const uint8_t *a, int an, const uint8_t *b, int bn) {
         while (next_token(b, bn, &pb, &sb, &lb)) {
             if (token_equal(a + sa, la, b + sb, lb)) { found = 1; break; }
         }
-        if (found) count++;
+        if (found && !is_stopword(a + sa, la)) count++;
     }
     return count;
 }
