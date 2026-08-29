@@ -12,8 +12,6 @@ static float bd[5];
 
 typedef struct { uint32_t h; uint16_t len; uint16_t st; } Tok;
 
-typedef struct { uint32_t h; uint8_t group; uint8_t neg; uint8_t seen; uint8_t pad; } Sig;
-
 static uint8_t lo(uint8_t c){ return (c>='A'&&c<='Z')?(uint8_t)(c+32):c; }
 static int wordc(uint8_t c){ return ((c>='A'&&c<='Z')||(c>='a'&&c<='z')||(c>='0'&&c<='9')||c=='_'||c=='-'||c>=128); }
 static int spacec(uint8_t c){ return c==' '||c=='\n'||c=='\r'||c=='\t'; }
@@ -50,6 +48,7 @@ static int tokenize(const uint8_t *s,int n,Tok *out,int cap){
     }
     return c;
 }
+static int next_token(const uint8_t *s,int n,int *pos,int *st,int *len){int i=*pos;while(i<n&&!wordc(s[i]))i++;if(i>=n){*pos=i;return 0;}*st=i;while(i<n&&wordc(s[i]))i++;*len=i-*st;*pos=i;return 1;}
 
 static int exact_norm(const uint8_t *a,int an,const uint8_t *b,int bn){
     int i=0,j=0,ca=0,cb=0;
@@ -60,20 +59,14 @@ static int exact_norm(const uint8_t *a,int an,const uint8_t *b,int bn){
     for(int k=0;k<na;k++) if(ta[k].h!=tb[k].h)return 0;
     return 1;
 }
+static int has_h(Tok *t,int n,uint32_t h){for(int i=0;i<n;i++)if(t[i].h==h)return 1;return 0;}
+static int count_group(const uint8_t *s,int n,int group){int p=0,c=0;while(p<n){while(p<n&&!wordc(s[p]))p++;if(p>=n)break;int st=p;while(p<n&&wordc(s[p]))p++;if(group_word(s+st,p-st)==group)c++;}return c;}
+static int has_group(const uint8_t *s,int n,int group){return count_group(s,n,group)>0;}
+static int has_token(const uint8_t *s,int n,uint32_t h){int p=0;while(p<n){while(p<n&&!wordc(s[p]))p++;if(p>=n)break;int st=p;while(p<n&&wordc(s[p]))p++;if(hash_word(s+st,p-st)==h)return 1;}return 0;}
 
-static int has_h(Tok *t,int n,uint32_t h){ for(int i=0;i<n;i++) if(t[i].h==h)return 1; return 0; }
-static int count_group(const uint8_t *s,int n,int group){
-    int p=0,c=0; while(p<n){ while(p<n&&!wordc(s[p]))p++; if(p>=n)break; int st=p; while(p<n&&wordc(s[p]))p++; if(group_word(s+st,p-st)==group)c++; } return c;
-}
-static int has_group(const uint8_t *s,int n,int group){ return count_group(s,n,group)>0; }
-static int has_token(const uint8_t *s,int n,uint32_t h){
-    int p=0; while(p<n){ while(p<n&&!wordc(s[p]))p++; if(p>=n)break; int st=p; while(p<n&&wordc(s[p]))p++; if(hash_word(s+st,p-st)==h)return 1; } return 0;
-}
 static int contradiction(const uint8_t *gt,int gn,const uint8_t *ans,int an){
     int pg[10]={0},pa[10]={0}; int p=0,s=0,l=0;
-    while(next_token(gt,gn,&p,&s,&l)){}
-    p=0;while(next_token(ans,an,&p,&s,&l)){}
-    p=0;while(p<gn){while(p<gn&&!wordc(gt[p]))p++;if(p>=gn)break;int st=p;while(p<gn&&wordc(gt[p]))p++;int g=group_word(gt+st,p-st);if(g)pg[g-1]=1;}
+    while(p<gn){while(p<gn&&!wordc(gt[p]))p++;if(p>=gn)break;int st=p;while(p<gn&&wordc(gt[p]))p++;int g=group_word(gt+st,p-st);if(g)pg[g-1]=1;}
     p=0;while(p<an){while(p<an&&!wordc(ans[p]))p++;if(p>=an)break;int st=p;while(p<an&&wordc(ans[p]))p++;int g=group_word(ans+st,p-st);if(g)pa[g-1]=1;}
     static const int opp[][2]={{1,2},{3,4},{5,6},{7,8},{9,10}};
     for(int i=0;i<5;i++)if((pg[opp[i][0]-1]&&pa[opp[i][1]-1])||(pg[opp[i][1]-1]&&pa[opp[i][0]-1]))return 1; return 0;
@@ -81,18 +74,17 @@ static int contradiction(const uint8_t *gt,int gn,const uint8_t *ans,int an){
 static int negated(const uint8_t *gt,int gn,const uint8_t *ans,int an){
     if(contradiction(gt,gn,ans,an))return 1; int p=0; while(p<an){while(p<an&&!wordc(ans[p]))p++;if(p>=an)break;int st=p;while(p<an&&wordc(ans[p]))p++;if(is_neg(ans+st,p-st))return 1;} return 0;
 }
-static int next_token(const uint8_t *s,int n,int *pos,int *st,int *len){int i=*pos;while(i<n&&!wordc(s[i]))i++;if(i>=n){*pos=i;return 0;}*st=i;while(i<n&&wordc(s[i]))i++;*len=i-*st;*pos=i;return 1;}
 static float lexical_overlap(const uint8_t *gt,int gn,const uint8_t *ans,int an,float *prec,float *rec){
-    Tok a[256],b[256]; int na=tokenize(gt,gn,a,256),nb=tokenize(ans,an,b,256),common=0; for(int i=0;i<na;i++)if(has_h(b,nb,a[i].h))common++;
-    *rec=na?(float)common/(float)na:0.0f; *prec=nb?(float)common/(float)nb:0.0f; return (*prec+*rec)>0?2.0f*(*prec)*(*rec)/(*prec+*rec):0.0f;
+    Tok a[256],b[256];int na=tokenize(gt,gn,a,256),nb=tokenize(ans,an,b,256),common=0;for(int i=0;i<na;i++)if(has_h(b,nb,a[i].h))common++;
+    *rec=na?(float)common/(float)na:0.0f;*prec=nb?(float)common/(float)nb:0.0f;return(*prec+*rec)>0?2.0f*(*prec)*(*rec)/(*prec+*rec):0.0f;
 }
 static int number_values(const uint8_t *s,int n,int *vals,int cap){int p=0,c=0;while(p<n&&c<cap){while(p<n&&!((s[p]>='0'&&s[p]<='9')||s[p]=='.'))p++;if(p>=n)break;int v=0,got=0;while(p<n&&s[p]>='0'&&s[p]<='9'){v=v*10+(s[p]-'0');if(v>1000000000)v=1000000000;p++;got=1;}if(got)vals[c++]=v;else p++;}return c;}
 static int numeric_match(const uint8_t *gt,int gn,const uint8_t *ans,int an){int a[8],b[8];int na=number_values(gt,gn,a,8),nb=number_values(ans,an,b,8);if(na==0||nb==0||na!=nb)return 0;for(int i=0;i<na;i++)if(a[i]!=b[i])return 0;return 1;}
 static int entity_mismatch(const uint8_t *q,int qn,const uint8_t *gt,int gn,const uint8_t *ans,int an){int p=0;while(p<an){while(p<an&&!wordc(ans[p]))p++;if(p>=an)break;int st=p;while(p<an&&wordc(ans[p]))p++;int len=p-st;if(len>=2&&ans[st]>='A'&&ans[st]<='Z'){uint32_t h=hash_word(ans+st,len);if(!has_token(gt,gn,h)&&!has_token(q,qn,h))return 1;}}return 0;}
 static float score_text(const uint8_t *q,int qn,const uint8_t *gt,int gn,const uint8_t *ans,int an){
-    if(gn<=0||an<=0)return 0.0f; if(exact_norm(gt,gn,ans,an))return 1.0f;
+    if(gn<=0||an<=0)return 0.0f;if(exact_norm(gt,gn,ans,an))return 1.0f;
     float pre=0,rec=0,f1=lexical_overlap(gt,gn,ans,an,&pre,&rec);int semantic_hits=0,semantic_total=0;
-    for(int g=1;g<=10;g++)if(has_group(gt,gn,g)){semantic_total++;if(has_group(ans,an,g))semantic_hits;}
+    for(int g=1;g<=10;g++)if(has_group(gt,gn,g)){semantic_total++;if(has_group(ans,an,g))semantic_hits++;}
     float sem=semantic_total?(float)semantic_hits/(float)semantic_total:0.0f;float len=(float)(gn<an?gn:an)/(float)(gn>an?gn:an);float score=0.55f*f1+0.35f*sem+0.10f*len;
     if(semantic_total>0&&semantic_hits>0)score+=0.10f;if(numeric_match(gt,gn,ans,an))score+=0.10f;if(entity_mismatch(q,qn,gt,gn,ans,an))score*=0.20f;if(negated(gt,gn,ans,an))score*=0.10f;
     if(score>0.999f)score=0.999f;if(score<0)score=0;return score;
