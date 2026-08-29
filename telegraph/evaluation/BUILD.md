@@ -1,22 +1,28 @@
 # Veridex Telegraph Track 2 scorer
 
-This directory contains the freestanding `wasm32` scorer source used for the Telegraph Track 2 candidate evaluator.
+This directory contains the freestanding `wasm32` scorer source used for the Telegraph Track 2 FRAUD_DETECTION candidate evaluator.
+
+## Current candidate
+
+`veridex_evaluator_v6.c`
+
+The v6 design is conservative and deterministic. It ranks answers using ground-truth-anchored lexical evidence with additional signals for semantic classes, contradiction/direction, numeric equivalence and entity mismatch. It is not an LLM and has no network, filesystem, clock, randomness or external state.
 
 ## Build
 
 Requires clang with wasm32 target support:
 
 ```bash
-clang --target=wasm32 -O3 -nostdlib \
+clang --target=wasm32 -O2 -ffreestanding -fno-builtin -nostdlib \
   -Wl,--no-entry \
   -Wl,--export-memory \
   -Wl,--export=alloc \
   -Wl,--export=dealloc \
   -Wl,--export=rank_answer \
   -Wl,--export=breakdown_answer \
-  -Wl,--initial-memory=262144 \
-  -Wl,--max-memory=262144 \
-  -o veridex-evaluator.wasm veridex_evaluator.c
+  -Wl,--initial-memory=2097152 \
+  -Wl,--max-memory=2097152 \
+  -o veridex-evaluator-final.wasm veridex_evaluator_v6.c
 ```
 
 ## Required exports
@@ -29,15 +35,31 @@ clang --target=wasm32 -O3 -nostdlib \
 
 ## Scoring behavior
 
-The scorer is deliberately deterministic and ground-truth anchored:
+- empty ground truth => `0`
+- empty or whitespace-only miner answer => exactly `0`
+- normalized exact token match => `1`
+- lexical precision/recall + phrase-order evidence
+- conservative semantic equivalence classes
+- contradiction penalties for opposite polarity/direction classes
+- numeric equivalence for comma/underscore formatting and k/m/b suffixes
+- conservative wrong-entity penalty
+- bounded length contribution so verbosity cannot dominate
+- scores are finite and clamped to `[0,1]`
 
-- empty ground truth or empty miner answer => `0`
-- normalized exact answer match => `1`
-- otherwise token overlap plus bounded length similarity
-- no external calls, clocks, randomness, or mutable external state
+## Pre-registration gate
 
-The critical Track 2 structural property is that a correct self-match must score strictly above an unrelated cross-match.
+Before any new on-chain registration, CI must:
 
-## Release artifact
+1. compile with `wasm32`;
+2. validate the binary with `wasm-validate`;
+3. confirm zero imports;
+4. confirm all required exports;
+5. run the official `neromtoobad/telegraph-wasm-check` through Wazero with `--strict` and `fraud-detection-cases.json`;
+6. run additional Veridex ordering and determinism probes;
+7. enforce the 32 MB size limit.
 
-The Track 2 candidate artifact is built from this source and must be locally/runtime tested before registration. Do not reuse an older registered WASM after changing the source; Telegraph WASM registrations are immutable.
+A CI pass proves the candidate is locally/structurally ready; it does not guarantee a win against Telegraph's hidden benchmark. Stage 2 is intentionally independent.
+
+## Registration policy
+
+Telegraph registrations bind the exact uploaded bytes/hash and are immutable in-place. Never resubmit an already rejected registration. A changed scorer must receive a fresh registration. After registration, wait for indexing and inspect the live status before using the ID in the hackathon submission form.
