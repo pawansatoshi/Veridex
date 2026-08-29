@@ -1,0 +1,58 @@
+name: Build Track 2 Final WASM
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'telegraph/evaluation/veridex_evaluator_final.c'
+      - '.github/workflows/build-track2-final.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install wasm toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang lld
+      - name: Build
+        run: |
+          clang --target=wasm32 -Oz -nostdlib \
+            -Wl,--no-entry -Wl,--export-memory \
+            -Wl,--export=alloc -Wl,--export=dealloc \
+            -Wl,--export=rank_answer -Wl,--export=breakdown_answer \
+            -Wl,--initial-memory=262144 -Wl,--max-memory=262144 \
+            -o telegraph/evaluation/veridex-evaluator-final.wasm \
+            telegraph/evaluation/veridex_evaluator_final.c
+          test $(stat -c%s telegraph/evaluation/veridex-evaluator-final.wasm) -le 33554432
+      - name: Smoke test
+        run: |
+          node <<'NODE'
+          const fs=require('fs');
+          const bytes=fs.readFileSync('telegraph/evaluation/veridex-evaluator-final.wasm');
+          WebAssembly.instantiate(bytes,{}).then(({instance})=>{
+            const e=instance.exports;
+            for(const k of ['memory','alloc','dealloc','rank_answer','breakdown_answer']) if(!(k in e)) throw Error('missing '+k);
+            const enc=new TextEncoder();
+            function s(q,g,a){const qb=enc.encode(q),gb=enc.encode(g),ab=enc.encode(a);const qp=e.alloc(qb.length),gp=e.alloc(gb.length),ap=e.alloc(ab.length);const m=new Uint8Array(e.memory.buffer);m.set(qb,qp);m.set(gb,gp);m.set(ab,ap);const v=e.rank_answer(qp,qb.length,gp,gb.length,ap,ab.length);e.dealloc(ap,ab.length);e.dealloc(gp,gb.length);e.dealloc(qp,qb.length);return v;}
+            const exact=s('Is this URL safe?','scam','scam');
+            const equiv=s('Is this URL safe?','scam','fraudulent');
+            const opposite=s('Is this URL safe?','scam','safe');
+            const paraphrase=s('What happened?','The treatment reduced mortality by 30% relative to placebo.','Mortality fell 30% versus placebo under the treatment.');
+            const negated=s('What happened?','The treatment reduced mortality by 30% relative to placebo.','The treatment increased mortality by 30% relative to placebo.');
+            if(!(exact>equiv && equiv>opposite && paraphrase>negated)) throw Error(JSON.stringify({exact,equiv,opposite,paraphrase,negated}));
+            if(s('q','','x')!==0 || s('q','truth','')!==0 || s('q','truth','   ')!==0) throw Error('empty gate');
+            console.log({exact,equiv,opposite,paraphrase,negated});
+          }).catch(e=>{console.error(e);process.exit(1)});
+          NODE
+      - name: Commit generated binary
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add telegraph/evaluation/veridex-evaluator-final.wasm
+          if git diff --cached --quiet; then echo unchanged; else git commit -m 'build(track2): publish final wasm candidate'; git push; fi
