@@ -1,0 +1,50 @@
+{
+  "intent": "FRAUD_DETECTION",
+  "cases": [
+    {
+      "question": "Is this URL safe to visit?",
+      "ground_truth": "scam",
+      "answers": [
+        {"label":"exact label","text":"scam","tier":"high"},
+        {"label":"semantic equivalent","text":"fraudulent","tier":"high"},
+        {"label":"explained equivalent","text":"This looks like a fraudulent phishing attempt.","tier":"high"},
+        {"label":"opposite","text":"safe","tier":"low"},
+        {"label":"uncertain","text":"It might be okay; I cannot tell.","tier":"low"}
+      ]
+    },
+    {
+      "question": "Classify this payment link.",
+      "ground_truth": "malicious",
+      "answers": [
+        {"label":"exact","text":"malicious","tier":"high"},
+        {"label":"equivalent","text":"dangerous and unsafe","tier":"high"},
+        {"label":"opposite","text":"legitimate and safe","tier":"low"}
+      ]
+    },
+    {
+      "question": "Is the merchant legitimate?",
+      "ground_truth": "legitimate",
+      "answers": [
+        {"label":"exact","text":"legitimate","tier":"high"},
+        {"label":"equivalent","text":"genuine","tier":"high"},
+        {"label":"opposite","text":"fraudulent","tier":"low"}
+      ]
+    },
+    {
+      "question": "What happened to the reported incident count?",
+      "ground_truth": "The incident count decreased by 30%.",
+      "answers": [
+        {"label":"correct paraphrase","text":"The number of incidents fell by 30%.","tier":"high"},
+        {"label":"negated finding","text":"The incident count increased by 30%.","tier":"low"}
+      ]
+    },
+    {
+      "question": "Which company was reported?",
+      "ground_truth": "Apple reported the fraudulent transaction.",
+      "answers": [
+        {"label":"correct entity","text":"Apple reported the fraudulent transaction.","tier":"high"},
+        {"label":"wrong entity","text":"Microsoft reported the fraudulent transaction.","tier":"low"}
+      ]
+    }
+  ]
+}
