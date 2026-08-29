@@ -4,8 +4,9 @@ on:
   push:
     branches: [main]
     paths:
-      - 'telegraph/evaluation/veridex_evaluator_v6.c'
-      - 'telegraph/evaluation/fraud-detection-cases.json'
+      - 'telegraph/evaluation/veridex_evaluator_v7.c'
+      - 'telegraph/evaluation/track2-benchmark-v2.json'
+      - 'telegraph/evaluation/track2-tournament.js'
       - '.github/workflows/track2-final-verify.yml'
   workflow_dispatch:
 
@@ -17,100 +18,36 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - name: Install build tools
         run: |
           sudo apt-get update
           sudo apt-get install -y clang lld wabt golang-go
-
-      - name: Compile
+      - name: Compile v7
         run: |
           clang --target=wasm32 -O2 -ffreestanding -fno-builtin -nostdlib \
-            -Wl,--no-entry \
-            -Wl,--export-memory \
-            -Wl,--export=alloc \
-            -Wl,--export=dealloc \
-            -Wl,--export=rank_answer \
-            -Wl,--export=breakdown_answer \
-            -Wl,--initial-memory=2097152 \
-            -Wl,--max-memory=2097152 \
+            -Wl,--no-entry -Wl,--export-memory \
+            -Wl,--export=alloc -Wl,--export=dealloc \
+            -Wl,--export=rank_answer -Wl,--export=breakdown_answer \
+            -Wl,--initial-memory=4194304 -Wl,--max-memory=4194304 \
             -o telegraph/evaluation/veridex-evaluator-final.wasm \
-            telegraph/evaluation/veridex_evaluator_v6.c
+            telegraph/evaluation/veridex_evaluator_v7.c
           wasm-validate telegraph/evaluation/veridex-evaluator-final.wasm
           test "$(stat -c%s telegraph/evaluation/veridex-evaluator-final.wasm)" -le 33554432
           test "$(wasm-objdump -x telegraph/evaluation/veridex-evaluator-final.wasm | grep -c 'import' || true)" -eq 0
-
-      - name: Run official Telegraph pre-registration checker
+      - name: Run official Telegraph checker
         run: |
           git clone --depth=1 https://github.com/neromtoobad/telegraph-wasm-check /tmp/telegraph-wasm-check
           cd /tmp/telegraph-wasm-check
           go run . "$GITHUB_WORKSPACE/telegraph/evaluation/veridex-evaluator-final.wasm" \
-            --cases "$GITHUB_WORKSPACE/telegraph/evaluation/fraud-detection-cases.json" \
-            --strict --json
-
-      - name: Verify additional v6 ordering and determinism probes
+            --cases "$GITHUB_WORKSPACE/telegraph/evaluation/track2-benchmark-v2.json" --strict --json
+      - name: Run Veridex tournament and edge gates
         run: |
-          mkdir -p /tmp/v6check
-          cd /tmp/v6check
-          cat > go.mod <<'EOF'
-          module v6check
-          go 1.22
-          require github.com/tetratelabs/wazero v1.9.0
-          EOF
-          cat > main.go <<'EOF'
-          package main
-          import (
-            "context"
-            "fmt"
-            "math"
-            "os"
-            "github.com/tetratelabs/wazero"
-            "github.com/tetratelabs/wazero/api"
-          )
-          func score(e api.Module, q, gt, ans string) float32 {
-            m:=e.Memory(); a:=e.ExportedFunction("alloc"); r:=e.ExportedFunction("rank_answer")
-            put:=func(s string)(uint32,int){p,err:=a.Call(context.Background(),uint64(len(s)));if err!=nil{panic(err)};pp:=uint32(p[0]);if len(s)>0&&!m.Write(pp,[]byte(s)){panic("memory write")};return pp,len(s)}
-            qp,ql:=put(q);gp,gl:=put(gt);ap,al:=put(ans)
-            v,err:=r.Call(context.Background(),uint64(qp),uint64(ql),uint64(gp),uint64(gl),uint64(ap),uint64(al));if err!=nil{panic(err)}
-            return math.Float32frombits(uint32(v[0]))
-          }
-          func main(){
-            b,err:=os.ReadFile(os.Args[1]);if err!=nil{panic(err)}
-            ctx:=context.Background()
-            rt:=wazero.NewRuntime(ctx);defer rt.Close(ctx)
-            for i:=0;i<2;i++{
-              mod,err:=rt.Instantiate(ctx,b);if err!=nil{panic(err)}
-              probes:=[][3]string{
-                {"Is the sentiment of this earnings call bullish or bearish?","bullish","The overall sentiment of the call is bullish."},
-                {"Is the sentiment of this earnings call bullish or bearish?","bullish","positive"},
-                {"Is the sentiment of this earnings call bullish or bearish?","bullish","bearish"},
-                {"Is this URL safe to visit?","scam","fraudulent"},
-                {"Is this URL safe to visit?","scam","safe"},
-                {"Summarise the paper's finding.","The treatment reduced mortality by 30% relative to placebo.","Mortality fell 30% versus placebo under the treatment."},
-                {"Summarise the paper's finding.","The treatment reduced mortality by 30% relative to placebo.","The treatment increased mortality by 30% relative to placebo."},
-                {"what was q3 revenue for apple","Apple reported Q3 revenue of $3.42 billion.","Q3 revenue came in at 3,420 million dollars."},
-                {"what was q3 revenue for apple","Apple reported Q3 revenue of $3.42 billion.","Microsoft reported Q3 revenue of $3.42 billion."},
-              }
-              for _,p:=range probes{v:=score(mod,p[0],p[1],p[2]);if v<0||v>1||math.IsNaN(float64(v)){panic("invalid score")};fmt.Printf("%.6f %q\n",v,p[2])}
-              if score(mod,"q","answer","   ")!=0{panic("whitespace must be zero")}
-              a:=score(mod,"q","answer","same answer");b2:=score(mod,"q","answer","same answer");if a!=b2{panic("non-deterministic")}
-              if err:=mod.Close(ctx);err!=nil{panic(err)}
-            }
-          }
-          EOF
-          go run . "$GITHUB_WORKSPACE/telegraph/evaluation/veridex-evaluator-final.wasm"
-
-      - name: Upload verified WASM artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: veridex-evaluator-final-wasm
-          path: telegraph/evaluation/veridex-evaluator-final.wasm
-          if-no-files-found: error
-          retention-days: 7
-
+          node telegraph/evaluation/track2-tournament.js \
+            telegraph/evaluation/veridex-evaluator-final.wasm \
+            telegraph/evaluation/track2-benchmark-v2.json
       - name: Publish verified binary
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add telegraph/evaluation/veridex-evaluator-final.wasm
-          if git diff --cached --quiet; then echo 'unchanged'; else git commit -m 'build(track2): publish v6 verified wasm'; git push; fi
+          if git diff --cached --quiet; then echo unchanged; else git commit -m 'build(track2): publish v7 verified wasm'; git push; fi
