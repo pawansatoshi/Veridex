@@ -108,6 +108,14 @@ jobs:
           go mod tidy
           go run . "$GITHUB_WORKSPACE/telegraph/evaluation/veridex-evaluator-final.wasm"
 
+      - name: Upload verified WASM artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: veridex-evaluator-final-wasm
+          path: telegraph/evaluation/veridex-evaluator-final.wasm
+          if-no-files-found: error
+          retention-days: 7
+
       - name: Publish verified binary
         run: |
           git config user.name 'github-actions[bot]'
