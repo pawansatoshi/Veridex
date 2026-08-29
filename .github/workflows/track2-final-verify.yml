@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'telegraph/evaluation/veridex_evaluator_final_v2.c'
+      - 'telegraph/evaluation/veridex_evaluator_v4.c'
       - '.github/workflows/track2-final-verify.yml'
   workflow_dispatch:
 
@@ -31,14 +31,14 @@ jobs:
             -Wl,--export=dealloc \
             -Wl,--export=rank_answer \
             -Wl,--export=breakdown_answer \
-            -Wl,--initial-memory=262144 \
-            -Wl,--max-memory=262144 \
-            -o telegraph/evaluation/veridex-evaluator-final-v2.wasm \
-            telegraph/evaluation/veridex_evaluator_final_v2.c
-          wasm-validate telegraph/evaluation/veridex-evaluator-final-v2.wasm
-          test "$(stat -c%s telegraph/evaluation/veridex-evaluator-final-v2.wasm)" -le 33554432
+            -Wl,--initial-memory=1048576 \
+            -Wl,--max-memory=1048576 \
+            -o telegraph/evaluation/veridex-evaluator-final.wasm \
+            telegraph/evaluation/veridex_evaluator_v4.c
+          wasm-validate telegraph/evaluation/veridex-evaluator-final.wasm
+          test "$(stat -c%s telegraph/evaluation/veridex-evaluator-final.wasm)" -le 33554432
 
-      - name: Validate with wazero runtime
+      - name: Validate with wazero runtime and behavioural ordering
         run: |
           mkdir -p /tmp/wazero-check
           cd /tmp/wazero-check
@@ -52,47 +52,65 @@ jobs:
           import (
             "context"
             "fmt"
+            "math"
             "os"
             "github.com/tetratelabs/wazero"
             "github.com/tetratelabs/wazero/api"
           )
           func call(e api.Module, q, gt, ans string) float32 {
             m := e.Memory()
+            if m == nil { panic("missing exported memory") }
             alloc := e.ExportedFunction("alloc")
             dealloc := e.ExportedFunction("dealloc")
             rank := e.ExportedFunction("rank_answer")
-            put := func(s string) uint32 { r,_ := alloc.Call(context.Background(), uint64(len(s))); p:=uint32(r[0]); if !m.Write(p, []byte(s)){panic("memory write")}; return p }
+            if alloc == nil || dealloc == nil || rank == nil { panic("missing required export") }
+            put := func(s string) uint32 {
+              r,err := alloc.Call(context.Background(), uint64(len(s)))
+              if err != nil { panic(err) }
+              p:=uint32(r[0])
+              if !m.Write(p, []byte(s)){panic("memory write")}
+              return p
+            }
             qp, gp, ap := put(q), put(gt), put(ans)
-            r,err := rank.Call(context.Background(), uint64(qp),uint64(len(q)),uint64(gp),uint64(len(gt)),uint64(ap),uint64(len(ans))); if err!=nil{panic(err)}
-            _,_=dealloc.Call(context.Background(),uint64(ap),uint64(len(ans))); _,_=dealloc.Call(context.Background(),uint64(gp),uint64(len(gt))); _,_=dealloc.Call(context.Background(),uint64(qp),uint64(len(q)))
-            return float32(math.Float32frombits(uint32(r[0])))
+            r,err := rank.Call(context.Background(), uint64(qp),uint64(len(q)),uint64(gp),uint64(len(gt)),uint64(ap),uint64(len(ans)))
+            if err!=nil{panic(err)}
+            _,_=dealloc.Call(context.Background(),uint64(ap),uint64(len(ans)))
+            _,_=dealloc.Call(context.Background(),uint64(gp),uint64(len(gt)))
+            _,_=dealloc.Call(context.Background(),uint64(qp),uint64(len(q)))
+            return math.Float32frombits(uint32(r[0]))
           }
           func main(){
             b,err:=os.ReadFile(os.Args[1]); if err!=nil{panic(err)}
             ctx:=context.Background(); rt:=wazero.NewRuntime(ctx); defer rt.Close(ctx)
-            c:=wazero.NewCompileConfig(); mod,err:=rt.InstantiateWithConfig(ctx,b,c); if err!=nil{panic(err)}
-            for _,n:=range []string{"memory","alloc","dealloc","rank_answer","breakdown_answer"}{if mod.ExportedFunction(n)==nil && n!="memory"{panic("missing "+n)}}
+            mod,err:=rt.Instantiate(ctx,b); if err!=nil{panic(err)}
+            for _,n:=range []string{"alloc","dealloc","rank_answer","breakdown_answer"}{if mod.ExportedFunction(n)==nil{panic("missing "+n)}}
+            if mod.Memory()==nil{panic("missing memory export")}
             tests:=[][3]string{
               {"Is this URL safe?","scam","scam"},
               {"Is this URL safe?","scam","fraudulent"},
               {"Is this URL safe?","scam","safe"},
+              {"Classify sentiment","positive","bullish"},
+              {"Classify sentiment","positive","bearish"},
+              {"What happened?","The treatment reduced mortality by 30% relative to placebo.","The treatment reduced mortality by 30% relative to placebo."},
               {"What happened?","The treatment reduced mortality by 30% relative to placebo.","Mortality fell 30% versus placebo under the treatment."},
               {"What happened?","The treatment reduced mortality by 30% relative to placebo.","The treatment increased mortality by 30% relative to placebo."},
               {"q","","anything"},
             }
-            scores:=[]float32{}; for _,t:=range tests{fmt.Println(t, call(mod,t[0],t[1],t[2])); scores=append(scores,call(mod,t[0],t[1],t[2]))}
-            if !(scores[0]>scores[1] && scores[1]>scores[2]){panic("fraud ordering failed")}
-            if !(scores[3]>scores[4]){panic("paraphrase/negation ordering failed")}
-            if scores[5]!=0{panic("empty ground truth gate failed")}
+            scores:=make([]float32,len(tests))
+            for i,t:=range tests { scores[i]=call(mod,t[0],t[1],t[2]); fmt.Printf("%d %.6f %q\n",i,scores[i],t[2]) }
+            if !(scores[0] > scores[1] && scores[1] > scores[2]) { panic("fraud ordering failed") }
+            if !(scores[3] > scores[4]) { panic("sentiment polarity ordering failed") }
+            if !(scores[5] > scores[6]) { panic("exact/paraphrase ordering failed") }
+            if !(scores[6] > scores[7]) { panic("paraphrase/contradiction ordering failed") }
+            if scores[8] != 0 { panic("empty ground truth gate failed") }
           }
           EOF
-          sed -i 's/"fmt"/"fmt"\n            "math"/' main.go
           go mod tidy
-          go run . "$GITHUB_WORKSPACE/telegraph/evaluation/veridex-evaluator-final-v2.wasm"
+          go run . "$GITHUB_WORKSPACE/telegraph/evaluation/veridex-evaluator-final.wasm"
 
-      - name: Publish binary
+      - name: Publish verified binary
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add telegraph/evaluation/veridex-evaluator-final-v2.wasm
-          if git diff --cached --quiet; then echo 'unchanged'; else git commit -m 'build(track2): publish verified v2 wasm'; git push; fi
+          git add telegraph/evaluation/veridex-evaluator-final.wasm
+          if git diff --cached --quiet; then echo 'unchanged'; else git commit -m 'build(track2): publish verified final wasm'; git push; fi
