@@ -140,7 +140,7 @@ Before spending another registration:
 - embedded NUL safe
 - no WASI/network/filesystem dependency
 - WASM under Telegraph size limit
-- official/public Wazero checker passes where available
+- public Wazero compatibility checker passes where available
 - internal benchmark has zero high-vs-low inversions
 
 **No green gate → no registration.**
@@ -151,7 +151,7 @@ Telegraph registration binds the exact binary/hash. A changed binary requires a 
 
 Correct sequence:
 
-**build → local gate → official checker → hash → register → wait for status → inspect result → only then submit Hackathon form using the exact accepted registration/artifact.**
+**build → local gate → public checker → hash → register → wait for status → inspect result → only then submit Hackathon form using the exact accepted registration/artifact.**
 
 Do not submit the Hackathon Track 2 form merely because a registration is `pending`.
 
@@ -159,14 +159,19 @@ Do not submit the Hackathon Track 2 form merely because a registration is `pendi
 
 Important files under `telegraph/evaluation/` include:
 
-- `BUILD.md` — build contract, required exports, scoring protections, benchmark and registration policy.
+- `BUILD.md` — build contract and release gate.
 - `TRACK2_RELEASE_BLUEPRINT.md` — release/competition strategy.
+- `TRACK2_CANDIDATE_MATRIX.md` — promotion decision matrix.
+- `TRACK2_VALIDATION_REPORT.md` — exact validation evidence contract.
 - `track2-benchmark-v2.json` — 50-case benchmark.
-- `track2-tournament.js` — pairwise tournament and runtime checks.
+- `track2-tournament.js` — pairwise tournament, metrics and inversion diagnostics.
+- `track2-preflight.js` — structural/edge/determinism gates.
+- `track2-mutation-suite.mjs` — adversarial mutation checks.
 - `veridex_evaluator_v7.c` — previous ground-truth anchored scorer.
 - `veridex_evaluator_v6.c` — earlier scorer retained for history/reference.
-- `calibration/build_step_calibration.py` — reproducible calibration builder.
-- `UPSTREAM_NOTICE.md` — provenance/licensing notice for any permitted upstream-derived material.
+- `veridex_evaluator_v9.c` — retained source candidate; not promoted because of breakdown/16-bit-offset weaknesses.
+- `neural/build_candidate.py` — current V10 neural-hybrid reproducible build.
+- `neural/UPSTREAM_BASELINE_LICENSE.md` — MIT provenance notice.
 
 When a newer candidate is created, update this document with its exact source path, binary path/hash, validation result, registration ID/status and decision.
 
@@ -174,25 +179,35 @@ When a newer candidate is created, update this document with its exact source pa
 
 Track 2 has had several rejected registrations and has not yet been proven #1. The latest known failures (#1818 and #1821) were 14/15 ordering failures against the incumbent.
 
-A larger semantic/calibrated candidate path was prepared for investigation, but **do not describe it as officially winning until Telegraph accepts/evaluates it**.
+A new V10 hardening branch/PR is now the active engineering candidate. It is based on the pinned MIT-licensed Telegraph MiniLM/BM25 baseline plus an independently authored Veridex factual-integrity wrapper.
 
-The current repo contains the v7-oriented documentation/benchmark infrastructure; the next agent must inspect the actual latest commit/files before assuming a v8/v9 binary exists or is production-ready.
+V10 changes include:
+
+- one authoritative scoring path shared by `rank_answer` and `breakdown_answer`;
+- breakdown slot 4 equals the final rank score;
+- explicit numeric and binary question-context guards;
+- polarity/direction and numeric mismatch protection;
+- safe monotone calibration;
+- preflight pointer/range validation;
+- a >65,535-byte hardening test;
+- expanded tournament metrics and inversion components;
+- corrected entity mutation tests;
+- CI artifact evidence without automatic source writes;
+- pinned public Wazero compatibility checker commit.
+
+The exact V10 WASM has **not yet been independently validated by CI at the time this branch was created**. Do not mark it accepted, registered, competitive, or #1 until fresh evidence exists.
 
 ## 13. NEXT WORK — PRIORITY ORDER
 
-1. Inspect current repo state and latest commit before modifying anything.
-2. Verify provenance/licensing of any semantic upstream base.
-3. Complete the independent Veridex evaluator architecture rather than blindly copying competitor binaries.
-4. Make question-context scoring actually affect the score where safe.
-5. Expand diagnostics so every inversion is explainable.
-6. Validate benchmark quality against incumbent behavior.
-7. Run public/Wazero checker plus internal tournament.
-8. Produce one final reproducible WASM and record SHA-256.
-9. Register only after all gates are green.
-10. Wait for accepted/active status.
-11. Compare live result to incumbent.
-12. Submit Track 2 only with the exact accepted candidate.
-13. Preserve the same Veridex evidence-first thesis across Track 1 and Track 3.
+1. Finish V10 CI and inspect the exact build/preflight/tournament/mutation/checker results.
+2. Fix any failing gates using evidence from the exact failure.
+3. Freeze the exact green binary and SHA-256.
+4. Compare against the incumbent only using real/evidenced behavior; do not infer hidden performance.
+5. Register only after all gates are green.
+6. Wait for accepted/active status.
+7. Compare live result to incumbent.
+8. Submit Track 2 only with the exact accepted candidate.
+9. Preserve the same Veridex evidence-first thesis across Track 1 and Track 3.
 
 ## 14. DO NOT DO
 
@@ -206,8 +221,8 @@ The current repo contains the v7-oriented documentation/benchmark infrastructure
 
 ## 15. HANDOFF RULE
 
-A new agent should read this file first, then `telegraph/evaluation/BUILD.md`, `TRACK2_RELEASE_BLUEPRINT.md`, the current scorer source, benchmark, tournament, CI workflow and latest commit history.
+A new agent should read this file first, then `telegraph/evaluation/BUILD.md`, `TRACK2_RELEASE_BLUEPRINT.md`, `TRACK2_CANDIDATE_MATRIX.md`, `TRACK2_VALIDATION_REPORT.md`, the current scorer build source, benchmark, tournament, mutation suite, CI workflow and latest commit history.
 
 Before telling the user “done,” verify the actual files and, where relevant, the live Telegraph registration status. Distinguish clearly between:
 
-**implemented locally / validated locally / accepted by Telegraph / competitive on hidden benchmark / officially submitted.**
+**implemented locally / validated locally / CI validated / public checker passed / registered / accepted by Telegraph / competitive on hidden evaluation / officially submitted.**
