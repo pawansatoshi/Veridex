@@ -4,50 +4,87 @@ on:
   push:
     branches: [main]
     paths:
-      - 'telegraph/evaluation/veridex_evaluator_v7.c'
-      - 'telegraph/evaluation/track2-benchmark-v2.json'
-      - 'telegraph/evaluation/track2-tournament.js'
+      - 'telegraph/evaluation/**'
       - '.github/workflows/track2-final-verify.yml'
   workflow_dispatch:
 
 permissions:
   contents: write
 
+concurrency:
+  group: track2-final
+  cancel-in-progress: false
+
 jobs:
   build-verify-publish:
     runs-on: ubuntu-latest
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
-      - name: Install build tools
+        with:
+          fetch-depth: 0
+
+      - name: Install system tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y clang lld wabt golang-go
-      - name: Compile v7
+          sudo apt-get install -y wabt golang-go python3
+
+      - name: Install Rust target
         run: |
-          clang --target=wasm32 -O2 -ffreestanding -fno-builtin -nostdlib \
-            -Wl,--no-entry -Wl,--export-memory \
-            -Wl,--export=alloc -Wl,--export=dealloc \
-            -Wl,--export=rank_answer -Wl,--export=breakdown_answer \
-            -Wl,--initial-memory=4194304 -Wl,--max-memory=4194304 \
-            -o telegraph/evaluation/veridex-evaluator-final.wasm \
-            telegraph/evaluation/veridex_evaluator_v7.c
-          wasm-validate telegraph/evaluation/veridex-evaluator-final.wasm
-          test "$(stat -c%s telegraph/evaluation/veridex-evaluator-final.wasm)" -le 33554432
-          test "$(wasm-objdump -x telegraph/evaluation/veridex-evaluator-final.wasm | grep -c 'import' || true)" -eq 0
-      - name: Run official Telegraph checker
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+          rustup target add wasm32-unknown-unknown
+
+      - name: Build Veridex neural-hybrid candidate
+        run: |
+          python3 telegraph/evaluation/neural/build_candidate.py \
+            --out telegraph/evaluation/veridex-track2-final.wasm
+
+      - name: Structural validation
+        run: |
+          wasm-validate telegraph/evaluation/veridex-track2-final.wasm
+          SIZE=$(stat -c%s telegraph/evaluation/veridex-track2-final.wasm)
+          test "$SIZE" -le 33554432
+          IMPORTS=$(wasm-objdump -x telegraph/evaluation/veridex-track2-final.wasm | grep -c '^ *import' || true)
+          test "$IMPORTS" -eq 0
+          echo "WASM size: $SIZE bytes"
+          echo "WASM imports: $IMPORTS"
+
+      - name: Run preflight edge and determinism gates
+        run: |
+          node telegraph/evaluation/track2-preflight.js \
+            telegraph/evaluation/veridex-track2-final.wasm \
+            telegraph/evaluation/track2-benchmark-v2.json
+
+      - name: Run ordering tournament
+        run: |
+          node telegraph/evaluation/track2-tournament.js \
+            telegraph/evaluation/veridex-track2-final.wasm \
+            telegraph/evaluation/track2-benchmark-v2.json
+
+      - name: Run official Telegraph Wazero checker
         run: |
           git clone --depth=1 https://github.com/neromtoobad/telegraph-wasm-check /tmp/telegraph-wasm-check
           cd /tmp/telegraph-wasm-check
-          go run . "$GITHUB_WORKSPACE/telegraph/evaluation/veridex-evaluator-final.wasm" \
-            --cases "$GITHUB_WORKSPACE/telegraph/evaluation/track2-benchmark-v2.json" --strict --json
-      - name: Run Veridex tournament and edge gates
+          go run . \
+            "$GITHUB_WORKSPACE/telegraph/evaluation/veridex-track2-final.wasm" \
+            --cases "$GITHUB_WORKSPACE/telegraph/evaluation/track2-benchmark-v2.json" \
+            --strict --json
+
+      - name: Record immutable hash
         run: |
-          node telegraph/evaluation/track2-tournament.js \
-            telegraph/evaluation/veridex-evaluator-final.wasm \
-            telegraph/evaluation/track2-benchmark-v2.json
-      - name: Publish verified binary
+          sha256sum telegraph/evaluation/veridex-track2-final.wasm | tee telegraph/evaluation/VERIDEX_TRACK2_FINAL_SHA256.txt
+          echo "source baseline commit: dfa0cf7fda72789267811ba2190f61a8eaacedf6" >> telegraph/evaluation/VERIDEX_TRACK2_FINAL_SHA256.txt
+          echo "build: neural-hybrid Veridex wrapper + real MiniLM baseline" >> telegraph/evaluation/VERIDEX_TRACK2_FINAL_SHA256.txt
+
+      - name: Publish only after every gate passes
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add telegraph/evaluation/veridex-evaluator-final.wasm
-          if git diff --cached --quiet; then echo unchanged; else git commit -m 'build(track2): publish v7 verified wasm'; git push; fi
+          git add telegraph/evaluation/veridex-track2-final.wasm telegraph/evaluation/VERIDEX_TRACK2_FINAL_SHA256.txt
+          if git diff --cached --quiet; then
+            echo 'No generated artifact changes.'
+          else
+            git commit -m 'build(track2): publish verified neural hybrid wasm'
+            git push
+          fi
