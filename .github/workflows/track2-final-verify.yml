@@ -83,54 +83,41 @@ jobs:
       - name: Run primary preflight edge and determinism gates
         run: |
           set -euo pipefail
-          node telegraph/evaluation/track2-preflight.js \
-            telegraph/evaluation/veridex-track2-final.wasm \
-            telegraph/evaluation/track2-benchmark-v2.json \
-            | tee telegraph/evaluation/ci-evidence/preflight.json
+          node telegraph/evaluation/track2-preflight.js telegraph/evaluation/veridex-track2-final.wasm telegraph/evaluation/track2-benchmark-v2.json | tee telegraph/evaluation/ci-evidence/preflight.json
 
       - name: Run primary ordering tournament
         run: |
           set -euo pipefail
-          node telegraph/evaluation/track2-tournament.js \
-            telegraph/evaluation/veridex-track2-final.wasm \
-            telegraph/evaluation/track2-benchmark-v2.json \
-            | tee telegraph/evaluation/ci-evidence/tournament.json
+          node telegraph/evaluation/track2-tournament.js telegraph/evaluation/veridex-track2-final.wasm telegraph/evaluation/track2-benchmark-v2.json | tee telegraph/evaluation/ci-evidence/tournament.json
 
       - name: Run supplemental contract-security preflight
         run: |
           set -euo pipefail
-          node telegraph/evaluation/track2-preflight.js \
-            telegraph/evaluation/veridex-track2-final.wasm \
-            telegraph/evaluation/track2-benchmark-contract-v1.json \
-            | tee telegraph/evaluation/ci-evidence/contract-preflight.json
+          node telegraph/evaluation/track2-preflight.js telegraph/evaluation/veridex-track2-final.wasm telegraph/evaluation/track2-benchmark-contract-v1.json | tee telegraph/evaluation/ci-evidence/contract-preflight.json
 
       - name: Run supplemental contract-security tournament
         run: |
           set -euo pipefail
-          node telegraph/evaluation/track2-tournament.js \
-            telegraph/evaluation/veridex-track2-final.wasm \
-            telegraph/evaluation/track2-benchmark-contract-v1.json \
-            | tee telegraph/evaluation/ci-evidence/contract-tournament.json
+          node telegraph/evaluation/track2-tournament.js telegraph/evaluation/veridex-track2-final.wasm telegraph/evaluation/track2-benchmark-contract-v1.json | tee telegraph/evaluation/ci-evidence/contract-tournament.json
 
-      - name: Run adversarial mutation suite
-        run: |
-          set -euo pipefail
-          node telegraph/evaluation/track2-mutation-suite.mjs \
-            telegraph/evaluation/veridex-track2-final.wasm \
-            telegraph/evaluation/track2-benchmark-v2.json \
-            | tee telegraph/evaluation/ci-evidence/mutation-suite.json
-
-      - name: Run public Wazero compatibility checker
+      - name: Run public blind-spot hard.json gate
         run: |
           set -euo pipefail
           git clone https://github.com/neromtoobad/telegraph-wasm-check /tmp/telegraph-wasm-check
           git -C /tmp/telegraph-wasm-check checkout --detach f537c7c085e9d3366c5615fe1ad1f98a0abeff7c
           cd /tmp/telegraph-wasm-check
-          go run . \
-            "$GITHUB_WORKSPACE/telegraph/evaluation/veridex-track2-final.wasm" \
-            --cases "$GITHUB_WORKSPACE/telegraph/evaluation/track2-benchmark-v2.json" \
-            --strict --json \
-            | tee "$GITHUB_WORKSPACE/telegraph/evaluation/ci-evidence/wazero-checker.json"
+          go run . "$GITHUB_WORKSPACE/telegraph/evaluation/veridex-track2-final.wasm" --cases examples/hard.json --strict --json | tee "$GITHUB_WORKSPACE/telegraph/evaluation/ci-evidence/public-hard-json.json"
+
+      - name: Run adversarial mutation suite
+        run: |
+          set -euo pipefail
+          node telegraph/evaluation/track2-mutation-suite.mjs telegraph/evaluation/veridex-track2-final.wasm telegraph/evaluation/track2-benchmark-v2.json | tee telegraph/evaluation/ci-evidence/mutation-suite.json
+
+      - name: Run public Wazero compatibility checker
+        run: |
+          set -euo pipefail
+          cd /tmp/telegraph-wasm-check
+          go run . "$GITHUB_WORKSPACE/telegraph/evaluation/veridex-track2-final.wasm" --cases "$GITHUB_WORKSPACE/telegraph/evaluation/track2-benchmark-v2.json" --strict --json | tee "$GITHUB_WORKSPACE/telegraph/evaluation/ci-evidence/wazero-checker.json"
 
       - name: Record immutable hash
         run: |
