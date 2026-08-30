@@ -11,85 +11,85 @@ This report is evidence-driven. No hidden-benchmark result is inferred from loca
 - Source: `telegraph/evaluation/neural/build_candidate.py`
 - Pinned upstream baseline: `telegraphprotocol/telegraph-wasm-baseline`
 - Upstream commit: `dfa0cf7fda72789267811ba2190f61a8eaacedf6`
-- Candidate family: Veridex neural-hybrid V10 hardening
-- Current source commit: `a63c82beff9595ae2bcaa7a4c7faab7fc0fce7ee`
+- Candidate family: Veridex neural-hybrid V10.1 hardening
+- Current branch head: `b1e5631cc3740a7f964a55973a0aa18af2426a98`
 - Exact WASM: generated per CI run; not frozen until all gates pass
 - SHA-256: `PENDING_GREEN_CI`
 
-## First V10 CI evidence — run 33294105111
+## Iteration history
 
-The first V10 hardening run proved the build and structural layer, but correctly blocked release at preflight.
+### First V10 run — 33294105111
 
-- WASM size: **24,189,533 bytes**
+Build/structural validation passed, but preflight found 3 ordering inversions. The failures were:
+
+1. payment link: semantic equivalent lost to `legitimate and safe`;
+2. Apple Q3 revenue: cross-unit paraphrase lost to wrong-entity answer;
+3. trusted owner: synonym lost to dangerous opposite.
+
+That run also exposed an incorrect JavaScript fresh-instance assumption. The harness was corrected.
+
+### V10.1 rerun — 33294197111
+
+The same exact candidate build passed the preflight gate:
+
+- WASM: **24,192,001 bytes**
 - imports: **0**
-- `wasm-validate`: passed
-- build: passed
-- preflight: **failed**
-- observed ordering inversions: **3** before the later fresh-instance harness error
+- cases: **49** in the current `track2-benchmark-v2.json`
+- high-vs-low pairs: **55**
+- inversions: **0**
+- mean margin: **0.4689717406216501**
+- worst margin: **0.00018387287855148315**
+- self-match: **1**
+- score stddev: **0.342690178381962**
 
-Observed inversions:
+The workflow then stopped in the tournament because the tournament harness still contained the same `WebAssembly.instantiate` return-shape bug. That harness is now fixed in the current branch.
 
-1. `Classify this payment link.` — high `equivalent` scored `0.191746`; low `opposite` scored `0.243748`.
-2. `what was q3 revenue for apple` — high `cross-unit paraphrase` scored `0.554418`; low `wrong entity` scored `0.625143`.
-3. `Is the contract owner trusted?` — high `synonym` scored `0.328603`; low `opposite` scored `0.343414`.
+### Benchmark-count discrepancy
 
-The same run also exposed a harness bug: `WebAssembly.instantiate(module, {})` returns an `Instance` directly, while the preflight incorrectly dereferenced `.instance`. This was fixed. The tournament received the same fresh-instance correction.
-
-The inversion failures drove targeted V10.1 changes:
-
-- broader contradiction pairs (`malicious↔legitimate`, `dangerous↔safe`, `unsafe↔safe`, etc.);
-- conservative named-entity conflict protection using question + ground-truth context;
-- fresh-instance preflight/tournament correction;
-- corrected mutation-suite entity swapping;
-- breakdown/rank consistency remains mandatory.
-
-These changes are not claimed to have passed until the new CI run proves them.
-
-## Hard gates
-
-| Gate | Required result | Current status |
-|---|---|---|
-| WASM validation | pass | FIRST RUN PASS |
-| Required exports | memory, alloc, dealloc, rank_answer, breakdown_answer | FIRST RUN PASS |
-| Imports | exactly 0 | FIRST RUN PASS |
-| Size | <= 32 MiB | FIRST RUN PASS: 24,189,533 B |
-| Empty answer | exactly 0 | FIRST RUN PASSED BEFORE INVERSION FAILURE |
-| Whitespace answer | exactly 0 | FIRST RUN PASSED BEFORE INVERSION FAILURE |
-| Empty ground truth | exactly 0 | FIRST RUN PASSED BEFORE INVERSION FAILURE |
-| Exact normalized answer | exactly 1 | FIRST RUN PASSED |
-| Breakdown final | equals rank_answer | FIRST RUN PASSED |
-| >65,535-byte input | safe | RUN REACHED AFTER INVERSION LOOP; fresh harness then failed |
-| Unicode/CJK/emoji/accented input | safe | RUN REACHED AFTER INVERSION LOOP |
-| Embedded NUL | safe | RUN REACHED AFTER INVERSION LOOP |
-| Same-instance determinism | exact repeat | PASSED |
-| Fresh-instance determinism | exact repeat | HARNESS BUG FOUND, FIXED |
-| Benchmark inversions | 0 | **FAILED: 3** |
-| Mutation suite | pass | NOT REACHED |
-| Public Wazero compatibility checker | pass | NOT REACHED |
+The current file named `track2-benchmark-v2.json` contains **49 cases**, not the 50 cases described by older project context. This is now treated as a source-of-truth discrepancy rather than silently claiming 50. A separate six-case `track2-benchmark-contract-v1.json` supplemental suite was added to cover contract-security authority, evidence, overclaim and entity-conflict reasoning while preserving the `FRAUD_DETECTION` intent.
 
 ## Current rerun
 
-A new Track 2 final workflow run is queued for the corrected source commit. It is the authoritative next gate. Until that run finishes, the candidate remains **UNVERIFIED**.
+The current branch has a fresh Track 2 workflow queued (`run 33294293728`) after the tournament harness correction and supplemental contract-security suite. Until that run completes, V10.1 remains **UNVERIFIED**.
+
+## Hard gates
+
+| Gate | Required result | Evidence/status |
+|---|---|---|
+| WASM validation | pass | V10.1 pass |
+| Required exports | memory, alloc, dealloc, rank_answer, breakdown_answer | V10.1 pass |
+| Imports | exactly 0 | V10.1 pass |
+| Size | <= 32 MiB | V10.1 pass: 24,192,001 B |
+| Empty answer | exactly 0 | V10.1 preflight pass |
+| Whitespace answer | exactly 0 | V10.1 preflight pass |
+| Empty ground truth | exactly 0 | V10.1 preflight pass |
+| Exact normalized answer | exactly 1 | V10.1 preflight pass |
+| Breakdown final | equals rank_answer | V10.1 preflight pass |
+| >65,535-byte input | safe | V10.1 preflight reached and passed |
+| Unicode/CJK/emoji/accented input | safe | V10.1 preflight reached and passed |
+| Embedded NUL | safe | V10.1 preflight reached and passed |
+| Same-instance determinism | exact repeat | V10.1 preflight pass |
+| Fresh-instance determinism | exact repeat | V10.1 preflight pass after harness fix |
+| Primary benchmark inversions | 0 | V10.1 preflight: 0 |
+| Primary tournament | pass | **PENDING CURRENT RERUN** |
+| Supplemental contract-security suite | 0 inversions | **PENDING CURRENT RERUN** |
+| Mutation suite | pass | **PENDING CURRENT RERUN** |
+| Public Wazero compatibility checker | pass | **PENDING CURRENT RERUN** |
+| SHA-256 | recorded | **PENDING GREEN CI** |
 
 ## Competitive metrics
 
-The first run must not be treated as a release benchmark because the preflight failed. The final metrics will be recorded only from a green run:
+Do not treat the preflight summary as the final tournament report. The current tournament must produce:
 
-- cases: `PENDING_GREEN_CI`
-- high-vs-low pairs: `PENDING_GREEN_CI`
-- wins: `PENDING_GREEN_CI`
-- losses: `PENDING_GREEN_CI`
-- ties: `PENDING_GREEN_CI`
-- inversions: `PENDING_GREEN_CI`
-- mean margin: `PENDING_GREEN_CI`
-- median margin: `PENDING_GREEN_CI`
-- worst margin: `PENDING_GREEN_CI`
-- best margin: `PENDING_GREEN_CI`
-- self-match: `PENDING_GREEN_CI`
-- score standard deviation: `PENDING_GREEN_CI`
-- invalid scores: `PENDING_GREEN_CI`
-- deterministic repeatability: `PENDING_GREEN_CI`
-- runtime: `PENDING_GREEN_CI`
+- wins / losses / ties
+- mean / median / worst / best margin
+- self-match
+- score stddev
+- deterministic repeatability
+- runtime
+- inversion diagnostics with component scores
+
+All remain pending until the current run completes.
 
 ## Historical regression gates
 
