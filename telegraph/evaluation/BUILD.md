@@ -17,6 +17,7 @@ Veridex adds a deterministic factual-integrity wrapper:
 - exact normalized answer => `1.0`;
 - empty/whitespace answer or empty ground truth => `0.0`;
 - polarity/direction contradiction penalty;
+- named-entity conflict protection using question + ground-truth context;
 - numeric mismatch penalty;
 - numeric-question answer-shape guard;
 - binary answer-shape/polarity guard where the ground truth is unambiguous;
@@ -70,7 +71,7 @@ Where available, also run the pinned public Wazero compatibility checker in stri
 
 ## Competitive gate
 
-The local suite is necessary but not sufficient. Telegraph's Stage 2 benchmark is independent/partly hidden. A candidate must be registered on-chain and evaluated by Telegraph before any claim of competitive placement is made.
+The local suite is necessary but not sufficient. Telegraph's canonical evaluation can include independent/held-out data. A candidate must be registered on-chain and evaluated by Telegraph before any claim of competitive placement is made. The current hackathon's Script Author track is judged on automated evaluator performance, ranking accuracy and resistance to gaming. citeturn2search2
 
 The release pipeline is:
 
