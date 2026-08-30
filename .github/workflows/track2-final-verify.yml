@@ -65,6 +65,8 @@ jobs:
         run: mkdir -p telegraph/evaluation/ci-evidence
 
       - name: Build Veridex neural-hybrid candidate
+        env:
+          RUSTFLAGS: -Aunsafe-op-in-unsafe-fn
         run: |
           python3 telegraph/evaluation/neural/build_candidate.py \
             --out telegraph/evaluation/veridex-track2-final.wasm
