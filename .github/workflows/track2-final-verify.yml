@@ -68,7 +68,7 @@ jobs:
         env:
           RUSTFLAGS: -Aunsafe-op-in-unsafe-fn
         run: |
-          python3 telegraph/evaluation/neural/build_candidate.py \
+          python3 telegraph/evaluation/neural/build_candidate_compat.py \
             --out telegraph/evaluation/veridex-track2-final.wasm
 
       - name: Structural validation
