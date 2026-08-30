@@ -1,0 +1,60 @@
+{
+  "intent": "FRAUD_DETECTION",
+  "suite": "contract-security-supplement",
+  "cases": [
+    {
+      "id": "contract-01",
+      "question": "Does this contract allow arbitrary users to withdraw funds?",
+      "ground_truth": "No. Withdrawals are restricted to the authorized owner.",
+      "answers": [
+        {"label":"correct-core","text":"No, only the authorized owner can withdraw.","tier":"high"},
+        {"label":"wrong-authority","text":"Yes, any user can withdraw the funds.","tier":"low"}
+      ]
+    },
+    {
+      "id": "contract-02",
+      "question": "Who can upgrade the contract implementation?",
+      "ground_truth": "The contract owner can upgrade the implementation.",
+      "answers": [
+        {"label":"correct-authority","text":"The owner has the authority to upgrade the implementation.","tier":"high"},
+        {"label":"wrong-authority","text":"Any wallet can upgrade the implementation.","tier":"low"}
+      ]
+    },
+    {
+      "id": "contract-03",
+      "question": "What evidence supports the claim that the token contract is verified?",
+      "ground_truth": "The explorer shows verified source code matching the deployed bytecode.",
+      "answers": [
+        {"label":"evidence-paraphrase","text":"The explorer's verified source matches the deployed bytecode.","tier":"high"},
+        {"label":"unsupported-claim","text":"It is verified because the project website says it is safe.","tier":"low"}
+      ]
+    },
+    {
+      "id": "contract-04",
+      "question": "Is the contract pause control restricted to an authorized role?",
+      "ground_truth": "Yes, the pause control is restricted to an authorized role.",
+      "answers": [
+        {"label":"correct","text":"Yes. An authorized role controls the pause function.","tier":"high"},
+        {"label":"opposite","text":"No. Anyone can pause the contract.","tier":"low"}
+      ]
+    },
+    {
+      "id": "contract-05",
+      "question": "Does the evidence prove that every possible runtime behavior is safe?",
+      "ground_truth": "No. Static and RPC evidence cannot prove every possible runtime behavior.",
+      "answers": [
+        {"label":"conservative","text":"No. The evidence has limits and cannot prove every possible runtime behavior.","tier":"high"},
+        {"label":"overclaim","text":"Yes. The available evidence proves the contract is completely safe at runtime.","tier":"low"}
+      ]
+    },
+    {
+      "id": "contract-06",
+      "question": "Which contract is identified by the evidence as malicious?",
+      "ground_truth": "Contract Alpha is identified as malicious.",
+      "answers": [
+        {"label":"correct-entity","text":"Contract Alpha is the malicious contract.","tier":"high"},
+        {"label":"wrong-entity","text":"Contract Beta is the malicious contract.","tier":"low"}
+      ]
+    }
+  ]
+}
