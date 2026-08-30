@@ -105,8 +105,8 @@ jobs:
       - name: Run public Wazero compatibility checker
         run: |
           set -euo pipefail
-          git clone --depth=1 --branch main https://github.com/neromtoobad/telegraph-wasm-check /tmp/telegraph-wasm-check
-          git -C /tmp/telegraph-wasm-check checkout f537c7c085e9d3366c5615fe1ad1f98a0abeff7c
+          git clone https://github.com/neromtoobad/telegraph-wasm-check /tmp/telegraph-wasm-check
+          git -C /tmp/telegraph-wasm-check checkout --detach f537c7c085e9d3366c5615fe1ad1f98a0abeff7c
           cd /tmp/telegraph-wasm-check
           go run . \
             "$GITHUB_WORKSPACE/telegraph/evaluation/veridex-track2-final.wasm" \
