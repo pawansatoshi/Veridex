@@ -150,11 +150,24 @@ fn vr_question_is_binary(question: &[u8]) -> bool {
     vr_has_any(question, &[b"is", b"are", b"was", b"were", b"did", b"does", b"can", b"could"])
 }
 
-fn vr_binary_polarity(text: &[u8]) -> Option<bool> {
-    if vr_has_any(text, &[b"yes", b"true", b"confirmed", b"approved", b"authorized", b"authorised", b"allowed"]) {
+fn vr_first_binary_polarity(text: &[u8]) -> Option<bool> {
+    let mut i = 0usize;
+    while i < text.len() {
+        while i < text.len() && !text[i].is_ascii_alphanumeric() { i += 1; }
+        let s = i;
+        while i < text.len() && text[i].is_ascii_alphanumeric() { i += 1; }
+        if s >= i { continue; }
+        if vr_word_eq(text, s, i, b"yes") || vr_word_eq(text, s, i, b"true") {
+            return Some(true);
+        }
+        if vr_word_eq(text, s, i, b"no") || vr_word_eq(text, s, i, b"false") {
+            return Some(false);
+        }
+    }
+    if vr_has_any(text, &[b"confirmed", b"approved", b"authorized", b"authorised", b"allowed"]) {
         return Some(true);
     }
-    if vr_has_any(text, &[b"no", b"false", b"denied", b"rejected", b"unauthorized", b"unauthorised", b"blocked"]) {
+    if vr_has_any(text, &[b"denied", b"rejected", b"unauthorized", b"unauthorised", b"blocked"]) {
         return Some(false);
     }
     None
@@ -168,11 +181,11 @@ fn vr_question_guard(question: &[u8], ground_truth: &[u8], answer: &[u8]) -> f32
     }
 
     // Only apply binary answer-shape protection when the ground truth itself
-    // carries an unambiguous polarity. This avoids penalising ordinary
-    // descriptive answers to yes/no-shaped questions.
+    // carries an unambiguous polarity. Explicit yes/no markers take precedence
+    // over later semantic words, so "No, it was approved" remains negative.
     if vr_question_is_binary(question) {
-        if let Some(gt_polarity) = vr_binary_polarity(ground_truth) {
-            match vr_binary_polarity(answer) {
+        if let Some(gt_polarity) = vr_first_binary_polarity(ground_truth) {
+            match vr_first_binary_polarity(answer) {
                 Some(answer_polarity) if answer_polarity != gt_polarity => guard *= 0.06,
                 None => guard *= 0.88,
                 _ => {}
@@ -208,8 +221,6 @@ unsafe fn veridex_score(
         return (0.0, 0.0, 0.0, 0.0);
     }
 
-    // Exact normalized equality is the strongest possible answer. The
-    // baseline's semantic tokenizer remains responsible for Unicode meaning.
     let mut gnorm = alloc::string::String::new();
     let mut anorm = alloc::string::String::new();
     for b in ground_truth.as_bytes() {
@@ -263,8 +274,7 @@ pub unsafe extern "C" fn breakdown_answer(
         veridex_score(q_ptr, q_len, gt_ptr, gt_len, ma_ptr, ma_len);
 
     // Layout: [base_semantic, factual_guard, question_guard, calibrated,
-    // final]. Every value is bounded and slot 4 is exactly rank_answer's
-    // authoritative final result. For empty inputs all five values are zero.
+    // final]. Slot 4 is exactly rank_answer's authoritative final result.
     VERIDEX_BREAKDOWN[0] = base;
     VERIDEX_BREAKDOWN[1] = factual_guard;
     VERIDEX_BREAKDOWN[2] = question_guard;
