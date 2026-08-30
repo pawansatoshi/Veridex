@@ -1,80 +1,22 @@
-name: Build Track 2 WASM
+name: Legacy Track 2 V3 builder (manual only)
+
+# Retained for historical reproducibility. The active Track 2 release lane is
+# `.github/workflows/track2-final-verify.yml` and the neural V10 candidate.
+# This workflow must never auto-publish an obsolete V3 binary.
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'telegraph/evaluation/veridex_evaluator_v3.c'
-      - '.github/workflows/build-track2-wasm.yml'
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  build:
+  legacy-build-reference:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Install wasm toolchain
+      - name: Explain retirement
         run: |
-          sudo apt-get update
-          sudo apt-get install -y clang lld
-
-      - name: Build
-        run: |
-          clang --target=wasm32 -Oz -nostdlib \
-            -Wl,--no-entry \
-            -Wl,--export-memory \
-            -Wl,--export=alloc \
-            -Wl,--export=dealloc \
-            -Wl,--export=rank_answer \
-            -Wl,--export=breakdown_answer \
-            -Wl,--initial-memory=262144 \
-            -Wl,--max-memory=262144 \
-            -o telegraph/evaluation/veridex-evaluator-v3.wasm \
-            telegraph/evaluation/veridex_evaluator_v3.c
-          ls -lh telegraph/evaluation/veridex-evaluator-v3.wasm
-
-      - name: Smoke test exports and ranking
-        run: |
-          node <<'NODE'
-          const fs = require('fs');
-          const bytes = fs.readFileSync('telegraph/evaluation/veridex-evaluator-v3.wasm');
-          WebAssembly.instantiate(bytes, {}).then(({instance}) => {
-            const e = instance.exports;
-            for (const k of ['memory','alloc','dealloc','rank_answer','breakdown_answer']) {
-              if (!(k in e)) throw new Error(`missing export: ${k}`);
-            }
-            const enc = new TextEncoder();
-            function score(q, gt, ans) {
-              const qb=enc.encode(q), gb=enc.encode(gt), ab=enc.encode(ans);
-              const qp=e.alloc(qb.length), gp=e.alloc(gb.length), ap=e.alloc(ab.length);
-              const mem=new Uint8Array(e.memory.buffer);
-              mem.set(qb,qp); mem.set(gb,gp); mem.set(ab,ap);
-              const v=e.rank_answer(qp,qb.length,gp,gb.length,ap,ab.length);
-              e.dealloc(ap,ab.length); e.dealloc(gp,gb.length); e.dealloc(qp,qb.length);
-              return v;
-            }
-            const self=score('Is this URL safe?', 'scam', 'scam');
-            const synonym=score('Is this URL safe?', 'scam', 'fraudulent');
-            const opposite=score('Is this URL safe?', 'scam', 'safe');
-            const cross=score('q','hello world','unrelated answer');
-            if (!(self > synonym && synonym > opposite && self > cross)) throw new Error(`ranking smoke test failed: ${self}, ${synonym}, ${opposite}, ${cross}`);
-            if (score('q','', 'anything') !== 0 || score('q','truth','') !== 0 || score('q','truth','   ') !== 0) throw new Error('empty/whitespace gate failed');
-            console.log({self,synonym,opposite,cross});
-          }).catch(e => { console.error(e); process.exit(1); });
-          NODE
-
-      - name: Commit generated WASM
-        run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add telegraph/evaluation/veridex-evaluator-v3.wasm
-          if git diff --cached --quiet; then
-            echo 'WASM unchanged'
-          else
-            git commit -m 'build(track2): publish v3 wasm artifact'
-            git push
-          fi
+          echo "This is a historical builder only."
+          echo "Use track2-final-verify.yml for the active release candidate."
+          echo "No binary is committed or registered by this workflow."
