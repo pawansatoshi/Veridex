@@ -2,7 +2,7 @@ name: Track 2 final WASM verify
 
 on:
   push:
-    branches: [main]
+    branches: [main, track2-v10-hardening]
     paths:
       - 'telegraph/evaluation/neural/**'
       - 'telegraph/evaluation/track2-benchmark-v2.json'
@@ -12,15 +12,31 @@ on:
       - 'telegraph/evaluation/BUILD.md'
       - 'telegraph/evaluation/TRACK2_BLUEPRINT.md'
       - 'telegraph/evaluation/TRACK2_RELEASE_BLUEPRINT.md'
+      - 'telegraph/evaluation/TRACK2_CANDIDATE_MATRIX.md'
+      - 'telegraph/evaluation/TRACK2_VALIDATION_REPORT.md'
+      - 'telegraph/evaluation/UPSTREAM_NOTICE.md'
+      - '.github/workflows/track2-final-verify.yml'
+  pull_request:
+    paths:
+      - 'telegraph/evaluation/neural/**'
+      - 'telegraph/evaluation/track2-benchmark-v2.json'
+      - 'telegraph/evaluation/track2-preflight.js'
+      - 'telegraph/evaluation/track2-tournament.js'
+      - 'telegraph/evaluation/track2-mutation-suite.mjs'
+      - 'telegraph/evaluation/BUILD.md'
+      - 'telegraph/evaluation/TRACK2_BLUEPRINT.md'
+      - 'telegraph/evaluation/TRACK2_RELEASE_BLUEPRINT.md'
+      - 'telegraph/evaluation/TRACK2_CANDIDATE_MATRIX.md'
+      - 'telegraph/evaluation/TRACK2_VALIDATION_REPORT.md'
       - 'telegraph/evaluation/UPSTREAM_NOTICE.md'
       - '.github/workflows/track2-final-verify.yml'
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
-  group: track2-final
+  group: track2-final-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -43,6 +59,9 @@ jobs:
           rustup default stable
           rustup target add wasm32-unknown-unknown
 
+      - name: Prepare evidence directory
+        run: mkdir -p telegraph/evaluation/ci-evidence
+
       - name: Build Veridex neural-hybrid candidate
         run: |
           python3 telegraph/evaluation/neural/build_candidate.py \
@@ -50,55 +69,67 @@ jobs:
 
       - name: Structural validation
         run: |
+          set -euo pipefail
           wasm-validate telegraph/evaluation/veridex-track2-final.wasm
           SIZE=$(stat -c%s telegraph/evaluation/veridex-track2-final.wasm)
           test "$SIZE" -le 33554432
           IMPORTS=$(wasm-objdump -x telegraph/evaluation/veridex-track2-final.wasm | grep -c '^ *import' || true)
           test "$IMPORTS" -eq 0
-          echo "WASM size: $SIZE bytes"
-          echo "WASM imports: $IMPORTS"
+          wasm-objdump -x telegraph/evaluation/veridex-track2-final.wasm > telegraph/evaluation/ci-evidence/wasm-objdump.txt
+          printf 'size=%s\\nimports=%s\\n' "$SIZE" "$IMPORTS" | tee telegraph/evaluation/ci-evidence/structural.txt
 
       - name: Run preflight edge and determinism gates
         run: |
+          set -euo pipefail
           node telegraph/evaluation/track2-preflight.js \
             telegraph/evaluation/veridex-track2-final.wasm \
-            telegraph/evaluation/track2-benchmark-v2.json
+            telegraph/evaluation/track2-benchmark-v2.json \
+            | tee telegraph/evaluation/ci-evidence/preflight.json
 
       - name: Run ordering tournament
         run: |
+          set -euo pipefail
           node telegraph/evaluation/track2-tournament.js \
             telegraph/evaluation/veridex-track2-final.wasm \
-            telegraph/evaluation/track2-benchmark-v2.json
+            telegraph/evaluation/track2-benchmark-v2.json \
+            | tee telegraph/evaluation/ci-evidence/tournament.json
 
       - name: Run adversarial mutation suite
         run: |
+          set -euo pipefail
           node telegraph/evaluation/track2-mutation-suite.mjs \
             telegraph/evaluation/veridex-track2-final.wasm \
-            telegraph/evaluation/track2-benchmark-v2.json
+            telegraph/evaluation/track2-benchmark-v2.json \
+            | tee telegraph/evaluation/ci-evidence/mutation-suite.json
 
-      - name: Run official Telegraph Wazero checker
+      - name: Run public Wazero compatibility checker
         run: |
-          git clone --depth=1 https://github.com/neromtoobad/telegraph-wasm-check /tmp/telegraph-wasm-check
+          set -euo pipefail
+          git clone --depth=1 --branch main https://github.com/neromtoobad/telegraph-wasm-check /tmp/telegraph-wasm-check
+          git -C /tmp/telegraph-wasm-check checkout f537c7c085e9d3366c5615fe1ad1f98a0abeff7c
           cd /tmp/telegraph-wasm-check
           go run . \
             "$GITHUB_WORKSPACE/telegraph/evaluation/veridex-track2-final.wasm" \
             --cases "$GITHUB_WORKSPACE/telegraph/evaluation/track2-benchmark-v2.json" \
-            --strict --json
+            --strict --json \
+            | tee "$GITHUB_WORKSPACE/telegraph/evaluation/ci-evidence/wazero-checker.json"
 
       - name: Record immutable hash
         run: |
+          set -euo pipefail
           sha256sum telegraph/evaluation/veridex-track2-final.wasm | tee telegraph/evaluation/VERIDEX_TRACK2_FINAL_SHA256.txt
           echo "source baseline commit: dfa0cf7fda72789267811ba2190f61a8eaacedf6" >> telegraph/evaluation/VERIDEX_TRACK2_FINAL_SHA256.txt
           echo "build: neural-hybrid Veridex wrapper + real MiniLM baseline" >> telegraph/evaluation/VERIDEX_TRACK2_FINAL_SHA256.txt
+          echo "checker commit: f537c7c085e9d3366c5615fe1ad1f98a0abeff7c" >> telegraph/evaluation/VERIDEX_TRACK2_FINAL_SHA256.txt
+          echo "source commit: $GITHUB_SHA" >> telegraph/evaluation/VERIDEX_TRACK2_FINAL_SHA256.txt
 
-      - name: Publish only after every gate passes
-        run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add telegraph/evaluation/veridex-track2-final.wasm telegraph/evaluation/VERIDEX_TRACK2_FINAL_SHA256.txt
-          if git diff --cached --quiet; then
-            echo 'No generated artifact changes.'
-          else
-            git commit -m 'build(track2): publish verified neural hybrid wasm'
-            git push
-          fi
+      - name: Upload exact verified artifact and evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: veridex-track2-v10-${{ github.sha }}
+          if-no-files-found: error
+          retention-days: 30
+          path: |
+            telegraph/evaluation/veridex-track2-final.wasm
+            telegraph/evaluation/VERIDEX_TRACK2_FINAL_SHA256.txt
+            telegraph/evaluation/ci-evidence/
