@@ -1,38 +1,41 @@
 # Final Track 2 candidates — FRAUD_DETECTION
 
-## Primary: transparent calibration derivative
+## Primary engineering candidate: Veridex neural hybrid
 
-`veridex-calibrated-80.wasm`
+`veridex-track2-final.wasm`
 
-- Base: upstream `fr_ss2.wasm` supplied for competitive analysis
-- Calibration: threshold `0.80`
-- Size: 23,987,831 bytes
-- SHA-256: `2edda8fc8fc4e2c67b80937e4828d4e52c70fcaaeee90a6aebe3286fc213fc92`
-- Imports: 0
-- Exports: `memory`, `alloc`, `dealloc`, `rank_answer`, `TELEGRAPH_INTENT`
+Build source:
 
-## Alternate: threshold 0.86
+`telegraph/evaluation/neural/build_candidate.py`
 
-`veridex-calibrated-86.wasm`
+Pinned upstream baseline:
 
-- Calibration: threshold `0.86`
-- Size: 23,987,831 bytes
-- SHA-256: `3ad192093eb43f37c38083728a430b63e27414fc9f86b8b12d2be23c35a0eb38`
-- Imports: 0
+`telegraphprotocol/telegraph-wasm-baseline@dfa0cf7fda72789267811ba2190f61a8eaacedf6`
 
-## Alternate: threshold 0.88
+Design:
 
-`veridex-calibrated-88.wasm`
+- real INT8 MiniLM-L6-v2 semantic scorer;
+- BM25 lexical signal;
+- question/ground-truth relevance;
+- Veridex exact normalized match;
+- deterministic contradiction/polarity guard;
+- numeric mismatch guard;
+- numeric-question answer-shape guard;
+- monotone score transform;
+- freestanding wasm32 with no WASI/network/filesystem dependency.
 
-- Calibration: threshold `0.88`
-- Size: 23,987,831 bytes
-- SHA-256: `6d29f5d07570a2784c24d425ffed5bc650982d820965cdd36fc70996f40d23b2`
-- Imports: 0
+The binary is generated automatically by `.github/workflows/track2-final-verify.yml` only after structural, edge, tournament and public Wazero checks pass. The workflow then records SHA-256 and publishes the exact verified bytes to this path.
 
-## Provenance note
+## Fallback: independent compact evaluator
 
-The calibrated candidates are derivative artifacts of the MIT-licensed `zkasuran/telegraph-salience-scorer` module used as the competitive upstream base. This is disclosed intentionally. The calibration layer is our transformation; the embedded semantic scorer is upstream work.
+`veridex_evaluator_v9.c`
+
+This is the independently authored small-footprint scorer retained for regression, auditability and fallback use. It is not currently the preferred competitive candidate because the observed incumbent family has substantially richer semantic representation.
+
+## Legacy calibration experiments
+
+`veridex-calibrated-80.wasm`, `veridex-calibrated-86.wasm`, and `veridex-calibrated-88.wasm` remain historical competitive experiments derived from an upstream MIT-licensed benchmark artifact. They are **not** the primary release path until provenance, rule compliance and live performance have been separately confirmed.
 
 ## Selection policy
 
-Do not call any candidate a winner until Telegraph's live registration reports the result. The recommended first experiment is threshold `0.80`; if it rejects on the margin gate while otherwise preserving the incumbent's ordering, use the measured result to choose the next threshold rather than changing multiple variables at once.
+Never call a candidate a winner until Telegraph's live registration reports an accepted/active result and the resulting Stage 2 placement is observed. Local benchmark success is necessary but cannot prove the hidden benchmark result.
