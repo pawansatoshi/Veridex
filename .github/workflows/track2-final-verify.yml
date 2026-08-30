@@ -6,6 +6,7 @@ on:
     paths:
       - 'telegraph/evaluation/neural/**'
       - 'telegraph/evaluation/track2-benchmark-v2.json'
+      - 'telegraph/evaluation/track2-benchmark-contract-v1.json'
       - 'telegraph/evaluation/track2-preflight.js'
       - 'telegraph/evaluation/track2-tournament.js'
       - 'telegraph/evaluation/track2-mutation-suite.mjs'
@@ -20,6 +21,7 @@ on:
     paths:
       - 'telegraph/evaluation/neural/**'
       - 'telegraph/evaluation/track2-benchmark-v2.json'
+      - 'telegraph/evaluation/track2-benchmark-contract-v1.json'
       - 'telegraph/evaluation/track2-preflight.js'
       - 'telegraph/evaluation/track2-tournament.js'
       - 'telegraph/evaluation/track2-mutation-suite.mjs'
@@ -78,7 +80,7 @@ jobs:
           wasm-objdump -x telegraph/evaluation/veridex-track2-final.wasm > telegraph/evaluation/ci-evidence/wasm-objdump.txt
           printf 'size=%s\\nimports=%s\\n' "$SIZE" "$IMPORTS" | tee telegraph/evaluation/ci-evidence/structural.txt
 
-      - name: Run preflight edge and determinism gates
+      - name: Run primary preflight edge and determinism gates
         run: |
           set -euo pipefail
           node telegraph/evaluation/track2-preflight.js \
@@ -86,13 +88,29 @@ jobs:
             telegraph/evaluation/track2-benchmark-v2.json \
             | tee telegraph/evaluation/ci-evidence/preflight.json
 
-      - name: Run ordering tournament
+      - name: Run primary ordering tournament
         run: |
           set -euo pipefail
           node telegraph/evaluation/track2-tournament.js \
             telegraph/evaluation/veridex-track2-final.wasm \
             telegraph/evaluation/track2-benchmark-v2.json \
             | tee telegraph/evaluation/ci-evidence/tournament.json
+
+      - name: Run supplemental contract-security preflight
+        run: |
+          set -euo pipefail
+          node telegraph/evaluation/track2-preflight.js \
+            telegraph/evaluation/veridex-track2-final.wasm \
+            telegraph/evaluation/track2-benchmark-contract-v1.json \
+            | tee telegraph/evaluation/ci-evidence/contract-preflight.json
+
+      - name: Run supplemental contract-security tournament
+        run: |
+          set -euo pipefail
+          node telegraph/evaluation/track2-tournament.js \
+            telegraph/evaluation/veridex-track2-final.wasm \
+            telegraph/evaluation/track2-benchmark-contract-v1.json \
+            | tee telegraph/evaluation/ci-evidence/contract-tournament.json
 
       - name: Run adversarial mutation suite
         run: |
