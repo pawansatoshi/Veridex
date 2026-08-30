@@ -3,9 +3,7 @@ import fs from 'node:fs';
 const wasmPath = process.argv[2];
 const casesPath = process.argv[3] || 'telegraph/evaluation/track2-benchmark-v2.json';
 
-if (!wasmPath) {
-  throw new Error('usage: node track2-preflight.js candidate.wasm [benchmark.json]');
-}
+if (!wasmPath) throw new Error('usage: node track2-preflight.js candidate.wasm [benchmark.json]');
 
 const bytes = fs.readFileSync(wasmPath);
 const data = JSON.parse(fs.readFileSync(casesPath, 'utf8'));
@@ -13,6 +11,15 @@ const data = JSON.parse(fs.readFileSync(casesPath, 'utf8'));
 function requiredExports(exports) {
   for (const name of ['memory', 'alloc', 'dealloc', 'rank_answer', 'breakdown_answer']) {
     if (!(name in exports)) throw new Error(`missing export ${name}`);
+  }
+}
+
+function checkedRange(mem, ptr, len, label) {
+  if (!Number.isInteger(ptr) || ptr < 0 || !Number.isInteger(len) || len < 0) {
+    throw new Error(`${label}: invalid pointer/length ${ptr}/${len}`);
+  }
+  if (ptr > mem.length || len > mem.length - ptr) {
+    throw new Error(`${label}: range outside linear memory (${ptr}+${len} > ${mem.length})`);
   }
 }
 
@@ -24,42 +31,48 @@ function makeScorer(instance) {
   return function score(q, gt, answer, withBreakdown = false) {
     const parts = [enc.encode(q), enc.encode(gt), enc.encode(answer)];
     const ptrs = parts.map((b) => (b.length ? e.alloc(b.length) : 0));
-    for (let i = 0; i < parts.length; i++) {
-      if (parts[i].length) {
+    try {
+      for (let i = 0; i < parts.length; i++) {
+        if (!parts[i].length) continue;
         if (!ptrs[i]) throw new Error(`alloc returned null for input ${i}`);
         const mem = new Uint8Array(e.memory.buffer);
-        if (ptrs[i] + parts[i].length > mem.length) throw new Error('allocated input exceeds memory');
+        checkedRange(mem, ptrs[i], parts[i].length, `input ${i}`);
         mem.set(parts[i], ptrs[i]);
       }
-    }
 
-    const r = e.rank_answer(
-      ptrs[0], parts[0].length,
-      ptrs[1], parts[1].length,
-      ptrs[2], parts[2].length,
-    );
-
-    let breakdown = null;
-    if (withBreakdown) {
-      const bp = e.breakdown_answer(
+      const r = e.rank_answer(
         ptrs[0], parts[0].length,
         ptrs[1], parts[1].length,
         ptrs[2], parts[2].length,
       );
-      if (!bp) throw new Error('breakdown_answer returned null pointer');
-      const view = new DataView(e.memory.buffer, bp, 5 * 4);
-      breakdown = Array.from({ length: 5 }, (_, i) => view.getFloat32(i * 4, true));
-      if (breakdown.some((x) => !Number.isFinite(x) || x < 0 || x > 1)) {
-        throw new Error(`invalid breakdown ${JSON.stringify(breakdown)}`);
+      if (!Number.isFinite(r) || r < 0 || r > 1) throw new Error(`invalid score ${r}`);
+
+      let breakdown = null;
+      if (withBreakdown) {
+        const bp = e.breakdown_answer(
+          ptrs[0], parts[0].length,
+          ptrs[1], parts[1].length,
+          ptrs[2], parts[2].length,
+        );
+        const mem = new Uint8Array(e.memory.buffer);
+        checkedRange(mem, bp, 5 * 4, 'breakdown');
+        const view = new DataView(e.memory.buffer, bp, 5 * 4);
+        breakdown = Array.from({ length: 5 }, (_, i) => view.getFloat32(i * 4, true));
+        if (breakdown.some((x) => !Number.isFinite(x) || x < 0 || x > 1)) {
+          throw new Error(`invalid breakdown ${JSON.stringify(breakdown)}`);
+        }
+        const finalComponent = breakdown[4];
+        if (Math.abs(finalComponent - r) > 1e-6) {
+          throw new Error(`breakdown final ${finalComponent} disagrees with rank ${r}`);
+        }
+      }
+
+      return { score: r, breakdown };
+    } finally {
+      for (let i = 2; i >= 0; i--) {
+        if (parts[i].length && ptrs[i]) e.dealloc(ptrs[i], parts[i].length);
       }
     }
-
-    for (let i = 2; i >= 0; i--) {
-      if (parts[i].length) e.dealloc(ptrs[i], parts[i].length);
-    }
-
-    if (!Number.isFinite(r) || r < 0 || r > 1) throw new Error(`invalid score ${r}`);
-    return { score: r, breakdown };
   };
 }
 
@@ -82,6 +95,7 @@ function makeScorer(instance) {
 
   const exact = score('q', 'Apple is legitimate.', 'Apple is legitimate.', true);
   if (exact.score !== 1) throw new Error(`exact normalized match != 1 (${exact.score})`);
+  if (!exact.breakdown || exact.breakdown[4] !== 1) throw new Error('exact breakdown final != 1');
 
   let pairs = 0;
   let inversions = 0;
@@ -123,7 +137,9 @@ function makeScorer(instance) {
     }
   }
 
-  score('long', 'valid '.repeat(16000), 'valid '.repeat(15000));
+  // Exercise lengths above uint16 to catch compact C token-offset truncation bugs.
+  const veryLong = 'valid '.repeat(12000); // 72 KB UTF-8 ASCII payload.
+  score('long', veryLong, veryLong);
   score('unicode', '正确答案 ✅ café 安全', '正确答案 ✅ café 安全');
   score('nul', 'answer', 'answer\0junk');
 
