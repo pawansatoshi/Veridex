@@ -10,13 +10,18 @@ Build Veridex into a winning Telegraph Miner and durable verifiable on-chain int
 
 Before making changes, read:
 
-1. `PROJECT_STATE.md`
-2. `CLAUDE.md`
-3. `docs/ARCHITECTURE.md`
-4. `docs/ROADMAP.md`
-5. `docs/DECISIONS.md`
-6. `docs/EVALUATION.md`
-7. the current phase document under `docs/phases/`
+1. `VERIDEX_HACKATHON_MASTER_CONTEXT_V2.md` — current hackathon/three-track context
+2. `PROJECT_STATE.md`
+3. `CLAUDE.md`
+4. `docs/ARCHITECTURE.md`
+5. `docs/ROADMAP.md`
+6. `docs/DECISIONS.md`
+7. `docs/EVALUATION.md`
+8. `telegraph/evaluation/BUILD.md`
+9. `telegraph/evaluation/TRACK2_BLUEPRINT.md`
+10. `telegraph/evaluation/TRACK2_RELEASE_BLUEPRINT.md`
+11. `telegraph/evaluation/neural/README.md`
+12. `.github/workflows/track2-final-verify.yml`
 
 Then inspect the actual repository. Never rely on memory or an earlier chat as proof that code exists.
 
@@ -49,6 +54,16 @@ Never invent contract addresses, ABI fragments, selectors, storage slots, intent
 - do not change accepted decisions silently
 - do not alter confidence numbers without an explicit evaluation reason
 - never hardcode unverified real-world contract addresses
+- never claim Track 2 is #1 without live Telegraph evidence
+- never hide upstream provenance or license obligations
+
+## Track 2 Release Contract
+
+For Track 2, the mandatory path is:
+
+`inspect → build → wasm-validate → zero-import/size gate → preflight → tournament → adversarial mutation suite → official Wazero checker → hash/provenance → fresh registration → live evaluation → exact submission`
+
+A `pending` registration is not acceptance. A changed binary requires a fresh registration. A local benchmark pass is not proof of hidden Stage-2 promotion.
 
 ## Autonomous Workflow
 
@@ -89,5 +104,6 @@ After each meaningful milestone, update:
 - `docs/DECISIONS.md` if a durable architectural decision was made
 - `docs/EVALUATION.md` when verification/benchmark state changes
 - `docs/TELEGRAPH_REFERENCE.md` if protocol facts changed
+- `VERIDEX_HACKATHON_MASTER_CONTEXT_V2.md` when hackathon architecture/status changes.
 
 This ensures a new chat or agent can continue without reconstructing history.
