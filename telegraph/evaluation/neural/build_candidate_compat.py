@@ -55,6 +55,75 @@ patched=patched.replace(OLD_GUARD,NEW_GUARD,1)
 patched=patched.replace(OLD_ENTITY_LINE,NEW_ENTITY_LINE,1)
 patched=patched.replace(OLD_SCORE,NEW_SCORE,1)
 patched=patched.replace(OLD_BASE,NEW_BASE,1)
+
+# The real MiniLM baseline re-embeds question and ground truth on every
+# rank_answer call. Stage-2 evaluates multiple candidate answers per fixture,
+# so that repeats the dominant transformer work unnecessarily. Cache a bounded
+# deterministic set of normalized (question, ground-truth) vectors per module
+# instance and use the baseline's rank_answer_cached path. A ring replacement
+# policy avoids unbounded state and remains deterministic.
+CACHE_HELPERS = r'''
+const VR_CACHE_SLOTS: usize = 16;
+const VR_EMBED_DIM: usize = 384;
+static mut VR_Q_CACHE: [[f32; VR_EMBED_DIM]; VR_CACHE_SLOTS] = [[0.0; VR_EMBED_DIM]; VR_CACHE_SLOTS];
+static mut VR_GT_CACHE: [[f32; VR_EMBED_DIM]; VR_CACHE_SLOTS] = [[0.0; VR_EMBED_DIM]; VR_CACHE_SLOTS];
+static mut VR_Q_HASH: [u64; VR_CACHE_SLOTS] = [0; VR_CACHE_SLOTS];
+static mut VR_GT_HASH: [u64; VR_CACHE_SLOTS] = [0; VR_CACHE_SLOTS];
+static mut VR_Q_LEN: [usize; VR_CACHE_SLOTS] = [0; VR_CACHE_SLOTS];
+static mut VR_GT_LEN: [usize; VR_CACHE_SLOTS] = [0; VR_CACHE_SLOTS];
+static mut VR_CACHE_VALID: [bool; VR_CACHE_SLOTS] = [false; VR_CACHE_SLOTS];
+static mut VR_CACHE_NEXT: usize = 0;
+
+#[inline]
+fn vr_hash(bytes:&[u8])->u64{
+    let mut h=0xcbf29ce484222325u64;
+    for &b in bytes{h^=b as u64;h=h.wrapping_mul(0x100000001b3u64);}
+    h
+}
+
+unsafe fn vr_cached_base(q:&[u8],gt:&[u8],ans:&[u8])->f32{
+    let qh=vr_hash(q);let gh=vr_hash(gt);
+    let mut slot=0usize;let mut hit=false;
+    let valid_ptr=core::ptr::addr_of!(VR_CACHE_VALID) as *const bool;
+    let qh_ptr=core::ptr::addr_of!(VR_Q_HASH) as *const u64;
+    let gh_ptr=core::ptr::addr_of!(VR_GT_HASH) as *const u64;
+    let ql_ptr=core::ptr::addr_of!(VR_Q_LEN) as *const usize;
+    let gl_ptr=core::ptr::addr_of!(VR_GT_LEN) as *const usize;
+    for i in 0..VR_CACHE_SLOTS{
+        if *valid_ptr.add(i)&&*qh_ptr.add(i)==qh&&*gh_ptr.add(i)==gh&&*ql_ptr.add(i)==q.len()&&*gl_ptr.add(i)==gt.len(){slot=i;hit=true;break;}
+    }
+    if !hit{
+        let next_ptr=core::ptr::addr_of_mut!(VR_CACHE_NEXT);
+        slot=(*next_ptr)%VR_CACHE_SLOTS;
+        *next_ptr=(*next_ptr).wrapping_add(1);
+        let q_embed=embed(q.as_ptr() as i32,q.len() as i32) as *const f32;
+        let gt_embed=embed(gt.as_ptr() as i32,gt.len() as i32) as *const f32;
+        let qdst=(core::ptr::addr_of_mut!(VR_Q_CACHE) as *mut f32).add(slot*VR_EMBED_DIM);
+        let gdst=(core::ptr::addr_of_mut!(VR_GT_CACHE) as *mut f32).add(slot*VR_EMBED_DIM);
+        core::ptr::copy_nonoverlapping(q_embed,qdst,VR_EMBED_DIM);
+        core::ptr::copy_nonoverlapping(gt_embed,gdst,VR_EMBED_DIM);
+        let qhp=core::ptr::addr_of_mut!(VR_Q_HASH) as *mut u64;
+        let ghp=core::ptr::addr_of_mut!(VR_GT_HASH) as *mut u64;
+        let qlp=core::ptr::addr_of_mut!(VR_Q_LEN) as *mut usize;
+        let glp=core::ptr::addr_of_mut!(VR_GT_LEN) as *mut usize;
+        let vp=core::ptr::addr_of_mut!(VR_CACHE_VALID) as *mut bool;
+        *qhp.add(slot)=qh;*ghp.add(slot)=gh;*qlp.add(slot)=q.len();*glp.add(slot)=gt.len();*vp.add(slot)=true;
+    }
+    let qvec=(core::ptr::addr_of!(VR_Q_CACHE) as *const f32).add(slot*VR_EMBED_DIM) as i32;
+    let gtvec=(core::ptr::addr_of!(VR_GT_CACHE) as *const f32).add(slot*VR_EMBED_DIM) as i32;
+    rank_answer_cached(qvec,gtvec,gt.as_ptr() as i32,gt.len() as i32,ans.as_ptr() as i32,ans.len() as i32)
+}
+'''
+
+CACHE_OLD = NEW_BASE
+CACHE_NEW = """let mut base=vr_cached_base(&q_base,&gt_base,&a_base);if !base.is_finite(){return(0.0,0.0,0.0,0.0);}"""
+if CACHE_OLD not in patched:
+    raise SystemExit("expected normalized baseline call not found; cache patch would be unsafe")
+patched=patched.replace(CACHE_OLD,CACHE_NEW,1)
+if "fn vr_cached_base" in patched:
+    raise SystemExit("cache helper unexpectedly already present")
+patched=patched.replace("\nunsafe fn veridex_score", "\n"+CACHE_HELPERS+"\nunsafe fn veridex_score",1)
+
 build_candidate.WRAPPER=patched
 
 if __name__ == "__main__":
