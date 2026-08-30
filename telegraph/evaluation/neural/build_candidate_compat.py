@@ -35,10 +35,12 @@ unsafe fn vr_cached_base(q:&[u8],gt:&[u8],ans:&[u8])->f32{let qh=vr_hash(q);let 
 '''
 CACHE_NEW = """let q_base=vr_normalize_baseline_surface(q.as_bytes());let gt_base=vr_normalize_baseline_surface(gt.as_bytes());let a_base=vr_normalize_baseline_surface(a.as_bytes());
     let mut base=vr_cached_base(&q_base,&gt_base,&a_base);if !base.is_finite(){return(0.0,0.0,0.0,0.0);}"""
+OLD_SHARPEN = "fn vr_safe_pow(score:f32)->f32{if score<=0.0{return 0.0;}if score>=1.0{return 1.0;}let y=libm::powf(score,1.18);if y.is_finite(){y.clamp(0.0,1.0)}else{0.0}}"
+NEW_SHARPEN = "fn vr_safe_pow(score:f32)->f32{if !score.is_finite(){return 0.0;}if score<=0.0{return 0.0;}if score>=1.0{return 1.0;}let t=score.clamp(0.0,1.0);let lift=t*t*(3.0-2.0*t)*(1.0-t);let y=t+lift;if y.is_finite(){y.clamp(0.0,1.0)}else{0.0}}"
 
-for needle,name in ((OLD_RANGE,"scratch-range expression"),(OLD_GUARD,"question-guard expression"),(OLD_ENTITY_LINE,"entity-conflict line"),(OLD_SCORE,"score function prologue"),(OLD_BASE,"baseline scoring call")):
+for needle,name in ((OLD_RANGE,"scratch-range expression"),(OLD_GUARD,"question-guard expression"),(OLD_ENTITY_LINE,"entity-conflict line"),(OLD_SCORE,"score function prologue"),(OLD_BASE,"baseline scoring call"),(OLD_SHARPEN,"score sharpening function")):
     if needle not in build_candidate.WRAPPER: raise SystemExit(f"expected {name} not found; baseline wrapper changed")
-patched=build_candidate.WRAPPER.replace(OLD_RANGE,NEW_RANGE,1).replace(OLD_GUARD,NEW_GUARD,1).replace(OLD_ENTITY_LINE,NEW_ENTITY_LINE,1).replace(OLD_SCORE,NEW_SCORE,1).replace(OLD_BASE,CACHE_NEW,1)
+patched=build_candidate.WRAPPER.replace(OLD_RANGE,NEW_RANGE,1).replace(OLD_GUARD,NEW_GUARD,1).replace(OLD_ENTITY_LINE,NEW_ENTITY_LINE,1).replace(OLD_SCORE,NEW_SCORE,1).replace(OLD_BASE,CACHE_NEW,1).replace(OLD_SHARPEN,NEW_SHARPEN,1)
 patched=patched.replace("\nunsafe fn veridex_score", "\n"+CACHE_HELPERS+"\nunsafe fn veridex_score",1)
 build_candidate.WRAPPER=patched
 
