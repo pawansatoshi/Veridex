@@ -1,4 +1,4 @@
-const fs = require('fs');
+import fs from 'node:fs';
 
 const wasmPath = process.argv[2];
 const casesPath = process.argv[3] || 'telegraph/evaluation/track2-benchmark-v2.json';
