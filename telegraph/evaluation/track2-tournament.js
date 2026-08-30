@@ -9,7 +9,7 @@ const wasm = fs.readFileSync(wasmPath);
 const data = JSON.parse(fs.readFileSync(casesPath, 'utf8'));
 const module = await WebAssembly.compile(wasm);
 if (WebAssembly.Module.imports(module).length) throw new Error('WASM imports present');
-const { instance } = await WebAssembly.instantiate(module, {});
+const instance = await WebAssembly.instantiate(module, {});
 const e = instance.exports;
 const required = ['memory', 'alloc', 'dealloc', 'rank_answer', 'breakdown_answer'];
 for (const n of required) if (!(n in e)) throw new Error(`missing export ${n}`);
