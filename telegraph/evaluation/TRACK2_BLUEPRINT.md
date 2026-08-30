@@ -1,119 +1,142 @@
-# Veridex Track 2 — Winning Blueprint
+# Veridex Track 2 — Final Execution Blueprint
 
-## Objective
+## Mission
 
-Build the strongest defensible `FRAUD_DETECTION` scoring module for Telegraph Track 2 without overfitting to published probes.
+Build a production-grade `FRAUD_DETECTION` scoring module that is coherent with Veridex's evidence-first contract-intelligence product and competitive in Telegraph's Stage 2 promotion benchmark.
 
-The target is not merely Stage 1 validity. The candidate must also compete on Stage 2 ordinal ordering and separation against the current champion.
+No honest implementation can guarantee #1 before Telegraph runs the hidden benchmark. The engineering target is therefore **best defensible probability of promotion**, with no known structural or behavioral regressions.
 
-## Competitive finding
+## Architecture
 
-Three supplied leaderboard binaries were audited directly. Each is ~23.99 MB, has a 30 MiB minimum memory, ~31 KB of code, and the same ~23.96 MB data section. Their data payloads are byte-for-byte identical across all three files, while their code varies only slightly. Their export surface is `memory`, `alloc`, `dealloc`, `rank_answer`, and `TELEGRAPH_INTENT`.
+### Semantic foundation
 
-The most defensible interpretation is that the leaders use a shared embedded semantic/feature representation plus variant scoring/calibration logic. The exact model/table identity is not proven from the binaries alone.
+Use the pinned MIT-licensed Telegraph WASM baseline as an open-source semantic foundation. Its documented real-weights mode runs an INT8 MiniLM-L6-v2 encoder and combines semantic cosine similarity, BM25 lexical evidence, question relevance, ground-truth correctness and length quality.
 
-This explains the size difference: Veridex's earlier candidates were lightweight rule/lexical scorers, whereas the leaders spend substantial binary budget on static representational capacity. Size itself is not a scoring metric; representational capacity is the likely reason it can improve semantic discrimination.
+### Veridex integrity layer
 
-See `TRACK2_TOP3_AUDIT.md` for the measurements and caveats.
+Wrap the semantic base with deterministic, domain-aware corrections:
 
-## Historical rejection regression set
+1. Exact normalized equality => `1.0`.
+2. Empty/whitespace answer or empty ground truth => `0.0`.
+3. Strong contradiction penalty for polarity/direction/security flips.
+4. Numeric mismatch penalty for altered values/percentages/units.
+5. Numeric-question answer-shape protection.
+6. Conservative monotonic score transform for separation.
 
-- #1766 — self-match failed against unrelated cross-match.
-- #1772 — lost to champion on separation.
-- #1792 — malformed WASM code section.
-- #1809 — whitespace answer scored 0.0097 instead of exactly 0.
-- #1818 — 14/15 benchmark ordering wins versus champion 15/15.
-- #1821 — 14/15 benchmark ordering wins versus champion 15/15.
+The semantic model remains responsible for broad paraphrase meaning; Veridex guards protect high-impact factual inversions.
 
-These IDs are historical evidence only and must not be resubmitted.
+## Why this changes the old strategy
 
-## v7 architecture
+The old KB-scale scorer repeatedly reached 14/15 and then lost one hidden ordering decision. The observed leader family is roughly 24 MB because its representation has much more semantic capacity. The official baseline confirms that a real MiniLM model is an intended/working design for this scoring environment.
 
-`veridex_evaluator_v7.c` is the current candidate implementation.
+Do not increase binary size for appearance. Increase representational capacity only when it improves rank quality.
 
-It is deterministic and freestanding `wasm32` with no network, filesystem, clock, randomness, external model, or hidden state.
+## Candidate lines
 
-Scoring layers:
+### A. Independent compact scorer
 
-1. normalized exact-token equality;
-2. lexical precision/recall;
-3. morphology-aware token matching;
-4. conservative semantic-equivalence groups;
-5. adjacent phrase evidence and character n-gram similarity;
-6. numeric extraction/equivalence, including separators and common units;
-7. entity-conflict protection using ground truth and question context;
-8. explicit polarity/direction/security contradiction checks;
-9. limited question relevance;
-10. bounded score in `[0,1]` with deterministic behavior.
+`veridex_evaluator_v9.c`
 
-Ground truth remains the primary anchor. The question is used only as a weak context signal so the evaluator does not overfit to wording in the query.
+Keeps an independently authored fallback path for auditability and regression comparison.
 
-## Regression benchmark
+### B. Neural hybrid — release candidate
 
-`track2-benchmark-v2.json` contains 50 internally authored `FRAUD_DETECTION` cases covering exact matches, paraphrases, synonym groups, polarity, direction, numbers, dates, entities, authorization, and adversarial surface-overlap traps.
+`neural/build_candidate.py`
 
-`track2-tournament.js` runs every high-tier answer against every low-tier answer and fails on any inversion. It also tests exact-zero behavior, long inputs, Unicode and deterministic repeat calls.
+Builds a fresh Veridex wrapper around the pinned upstream baseline in a temporary CI workspace and produces `veridex-track2-final.wasm` only after validation.
 
-The current local v7 binary produces **0 ordering inversions across 56 high-vs-low pairwise comparisons** in this internal corpus. This is a regression result only; it does not reveal Telegraph's hidden benchmark.
+This candidate is preferred for the next on-chain experiment because it combines high semantic capacity with Veridex factual guards.
 
-## CI release gate
+## Local benchmark strategy
 
-`.github/workflows/track2-final-verify.yml` now builds v7 and gates publication on:
+`track2-benchmark-v2.json` contains 50 seed cases. `track2-preflight.js` and `track2-tournament.js` must run before any registration.
 
-- freestanding wasm32 build;
-- WASM validation;
-- <=32 MB binary;
-- zero imports;
-- official `telegraph-wasm-check` in strict mode;
-- 50-case Veridex tournament;
-- empty/whitespace/degenerate cases;
-- long input;
-- Unicode input;
-- deterministic repeated calls.
+Quality dimensions:
 
-The workflow only publishes the candidate binary after those checks pass.
+- exact matches
+- semantic paraphrases
+- partial answers
+- unrelated answers
+- wrong entity
+- wrong value/unit
+- wrong date
+- polarity/negation
+- direction inversion
+- answer-shape errors
+- Unicode/long input
+- deterministic repetition
 
-## Why previous candidates could not beat the leaders
+The benchmark is a regression corpus, not a reconstruction of Telegraph's hidden fixtures.
 
-The 14/15 result shows that structural correctness was achieved but one Stage 2 ordering decision remained wrong. The earlier scorer's limited lexical/semantic representation could not robustly distinguish all hidden answer pairs. The supplied leaders' much larger common data segment is strong evidence that they have substantially richer precomputed representation than our original tiny rule engine.
+## Pre-registration gates
 
-The response is not to make the file large for its own sake. The response is to add more useful representational capacity while preserving sandbox compatibility and deterministic ordinal scoring.
+Every candidate must pass:
 
-## Final path to on-chain competition
-
-`v7 source -> CI green -> published v7 WASM -> fresh Telegraph registration -> pending -> active/rejected -> inspect Stage 2 metrics -> only if active submit Track 2`
-
-A rejected registration is never reused. A changed binary always receives a fresh registration because the registration is bound to the exact uploaded bytes/hash.
-
-## Winning posture
-
-We should optimize for:
-
-- fewer ranking inversions;
-- stronger good-vs-bad margins;
-- robust semantic equivalence;
-- strong contradiction handling;
-- numeric/entity integrity;
+- valid WASM;
+- required exports;
+- zero imports / no WASI;
+- empty answer and whitespace answer exactly `0`;
+- empty ground truth `0`;
+- exact normalized match `1`;
+- finite `[0,1]` scores;
+- deterministic repeated calls;
+- long-input safety;
+- UTF-8/CJK/emoji/accent tolerance;
+- no high-vs-low local ordering inversions;
 - meaningful score variance;
-- no regressions on historical failures.
+- <=32 MiB binary;
+- public Wazero checker in strict mode where available;
+- exact SHA-256 and provenance record.
 
-Do not optimize for a particular public score or probe. Telegraph's own guidance warns that passing public probes is not the same as winning the hidden benchmark.
+## Live experiment policy
 
-## Current completion state
+One variable at a time.
 
-Completed in repository:
+1. Build final candidate.
+2. Run all local gates.
+3. Record hash.
+4. Pin to IPFS.
+5. Register fresh on-chain.
+6. Wait for `pending` → `active` or `rejected`.
+7. Record the actual rejection/promotion metrics.
+8. Use that result to select the next experiment.
+9. Never resubmit stale/rejected registrations.
 
-- competitive top-3 binary audit;
-- v7 semantic ordinal scorer;
-- 50-case ordinal benchmark;
-- automated tournament runner;
-- CI structural and behavioral release gates;
-- updated build documentation and competitive audit.
+## Winning objective
 
-Still external/undetermined:
+Optimize the quantities that Telegraph uses for promotion:
 
-- the exact hidden Stage 2 benchmark;
-- a fresh on-chain registration of the final candidate;
-- whether the final candidate becomes active/champion on Telegraph.
+- candidate wins against good/bad benchmark pairs;
+- mean good-vs-bad separation margin;
+- self-match quality;
+- score variance/usable spread;
+- rank consistency.
 
-No honest implementation can guarantee first place until the protocol evaluates the final binary.
+Do not optimize a pretty headline score if it sacrifices ordering.
+
+## Provenance
+
+The neural hybrid explicitly preserves provenance for the upstream MIT baseline. The repository must never imply that the upstream MiniLM weights or semantic implementation were authored by Veridex. The Veridex contribution is the integration/guard/calibration layer and the overall application architecture.
+
+## Three-track coherence
+
+Track 1 produces evidence-backed contract intelligence.
+
+Track 2 evaluates whether answers preserve that intelligence accurately.
+
+Track 3 turns the resulting intelligence into product/agent workflows.
+
+The three tracks share Veridex's evidence-first product thesis even though each track has its own protocol interface and code path.
+
+## Completion definition
+
+Track 2 is only considered **finished** when:
+
+- the final binary is reproduced from pinned sources;
+- automated gates are green;
+- Telegraph accepts the fresh registration;
+- live Stage 2 evaluation is recorded;
+- the exact accepted binary/hash is stored in the submission record;
+- Track 2 form is submitted using that accepted registration.
+
+Until then, repository status may be “implementation complete / live validation pending,” not “won.”
