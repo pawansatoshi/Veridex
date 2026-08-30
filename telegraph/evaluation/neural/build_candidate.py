@@ -22,6 +22,52 @@ BASELINE_COMMIT = "dfa0cf7fda72789267811ba2190f61a8eaacedf6"
 
 WRAPPER = r'''
 
+// Telegraph hosts may invoke alloc/dealloc around every request, but the public
+// Wazero checker also exercises modules under a no-dealloc workload. Keep the
+// exported input ABI bounded in that environment instead of relying on a host
+// reclamation policy. Each scoring call needs at most three simultaneously-live
+// input buffers; 16 slots gives ample headroom for sequential host usage while
+// keeping the binary comfortably below the 32 MiB platform limit.
+const VR_SCRATCH_SLOT: usize = 131072;
+const VR_SCRATCH_SLOTS: usize = 16;
+static mut VR_SCRATCH: [u8; VR_SCRATCH_SLOT * VR_SCRATCH_SLOTS] =
+    [0u8; VR_SCRATCH_SLOT * VR_SCRATCH_SLOTS];
+static mut VR_SCRATCH_CURSOR: usize = 0;
+
+#[inline]
+fn vr_scratch_range() -> (usize, usize) {
+    let start = core::ptr::addr_of!(VR_SCRATCH) as usize;
+    (start, start + VR_SCRATCH.len())
+}
+
+#[inline]
+fn vr_is_scratch_ptr(ptr: i32, size: i32) -> bool {
+    if ptr < 0 || size < 0 { return false; }
+    let (start, end) = vr_scratch_range();
+    let p = ptr as usize;
+    let n = size as usize;
+    p >= start && p <= end && n <= end.saturating_sub(p)
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn alloc(size: i32) -> i32 {
+    if size <= 0 { return 0; }
+    let n = size as usize;
+    if n <= VR_SCRATCH_SLOT {
+        let slot = VR_SCRATCH_CURSOR % VR_SCRATCH_SLOTS;
+        VR_SCRATCH_CURSOR = VR_SCRATCH_CURSOR.wrapping_add(1);
+        let base = core::ptr::addr_of_mut!(VR_SCRATCH) as *mut u8;
+        return base.add(slot * VR_SCRATCH_SLOT) as i32;
+    }
+    baseline_alloc(size)
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn dealloc(ptr: i32, size: i32) {
+    if vr_is_scratch_ptr(ptr, size) { return; }
+    baseline_dealloc(ptr, size);
+}
+
 #[inline]
 fn vr_lower(b: u8) -> u8 { if b'A' <= b && b <= b'Z' { b + 32 } else { b } }
 #[inline]
@@ -113,8 +159,12 @@ def main() -> None:
         lib=upstream/"src"/"lib.rs";text=lib.read_text(encoding="utf-8")
         if "pub unsafe extern \"C\" fn rank_answer(" not in text: raise SystemExit("unexpected baseline lib.rs: rank_answer signature missing")
         if "pub unsafe extern \"C\" fn breakdown_answer(" not in text: raise SystemExit("unexpected baseline lib.rs: breakdown_answer signature missing")
+        if "pub unsafe extern \"C\" fn alloc(" not in text: raise SystemExit("unexpected baseline lib.rs: alloc signature missing")
+        if "pub unsafe extern \"C\" fn dealloc(" not in text: raise SystemExit("unexpected baseline lib.rs: dealloc signature missing")
         text=text.replace("pub unsafe extern \"C\" fn rank_answer(","pub unsafe extern \"C\" fn rank_answer_base(",1)
         text=text.replace("pub unsafe extern \"C\" fn breakdown_answer(","pub unsafe extern \"C\" fn breakdown_answer_base(",1)
+        text=text.replace("pub unsafe extern \"C\" fn alloc(","pub unsafe extern \"C\" fn baseline_alloc(",1)
+        text=text.replace("pub unsafe extern \"C\" fn dealloc(","pub unsafe extern \"C\" fn baseline_dealloc(",1)
         lib.write_text(text+WRAPPER,encoding="utf-8")
         run(["rustup","target","add","wasm32-unknown-unknown"],upstream)
         run(["cargo","build","--release","--target","wasm32-unknown-unknown","--features","real_weights"],upstream)
