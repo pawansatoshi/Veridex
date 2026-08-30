@@ -8,6 +8,7 @@ on:
       - 'telegraph/evaluation/track2-benchmark-v2.json'
       - 'telegraph/evaluation/track2-preflight.js'
       - 'telegraph/evaluation/track2-tournament.js'
+      - 'telegraph/evaluation/track2-mutation-suite.mjs'
       - 'telegraph/evaluation/BUILD.md'
       - 'telegraph/evaluation/TRACK2_BLUEPRINT.md'
       - 'telegraph/evaluation/TRACK2_RELEASE_BLUEPRINT.md'
@@ -66,6 +67,12 @@ jobs:
       - name: Run ordering tournament
         run: |
           node telegraph/evaluation/track2-tournament.js \
+            telegraph/evaluation/veridex-track2-final.wasm \
+            telegraph/evaluation/track2-benchmark-v2.json
+
+      - name: Run adversarial mutation suite
+        run: |
+          node telegraph/evaluation/track2-mutation-suite.mjs \
             telegraph/evaluation/veridex-track2-final.wasm \
             telegraph/evaluation/track2-benchmark-v2.json
 
