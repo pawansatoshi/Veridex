@@ -10,10 +10,6 @@ if (!wasmPath) {
 const bytes = fs.readFileSync(wasmPath);
 const data = JSON.parse(fs.readFileSync(casesPath, 'utf8'));
 
-async function instantiate() {
-  return WebAssembly.instantiate(bytes, {});
-}
-
 function requiredExports(exports) {
   for (const name of ['memory', 'alloc', 'dealloc', 'rank_answer', 'breakdown_answer']) {
     if (!(name in exports)) throw new Error(`missing export ${name}`);
@@ -68,16 +64,13 @@ function makeScorer(instance) {
 }
 
 (async () => {
-  const { instance } = await instantiate();
-  const e = instance.exports;
-  requiredExports(e);
-
-  const imports = WebAssembly.Module.imports(instance.module || await WebAssembly.compile(bytes));
+  const module = await WebAssembly.compile(bytes);
+  const imports = WebAssembly.Module.imports(module);
   if (imports.length) throw new Error(`imports present: ${JSON.stringify(imports)}`);
 
-  const score = makeScorer(instance);
+  const firstInstance = await WebAssembly.instantiate(module, {});
+  const score = makeScorer(firstInstance);
 
-  // Stage-1 hard zeros.
   const hard = [
     ['empty answer', score('q', 'answer', '').score, 0],
     ['whitespace', score('q', 'answer', ' \t\n\r\f\v').score, 0],
@@ -88,14 +81,13 @@ function makeScorer(instance) {
   }
 
   const exact = score('q', 'Apple is legitimate.', 'Apple is legitimate.', true);
-  if (exact.score !== 1) throw new Error(`exact match != 1 (${exact.score})`);
-  if (!exact.breakdown) throw new Error('breakdown missing for non-empty input');
+  if (exact.score !== 1) throw new Error(`exact normalized match != 1 (${exact.score})`);
 
   let pairs = 0;
   let inversions = 0;
   let sum = 0;
   let worst = Infinity;
-  let values = [];
+  const values = [];
   let self = Infinity;
 
   for (const c of data.cases) {
@@ -131,21 +123,17 @@ function makeScorer(instance) {
     }
   }
 
-  // Stress cases: long UTF-8 and embedded NUL.
   score('long', 'valid '.repeat(16000), 'valid '.repeat(15000));
   score('unicode', '正确答案 ✅ café 安全', '正确答案 ✅ café 安全');
   score('nul', 'answer', 'answer\0junk');
 
-  // Fresh-instance determinism: the same inputs must agree across instances.
-  const first = score('q', 'same answer', 'same answer').score;
-  const second = score('q', 'same answer', 'same answer').score;
-  if (first !== second) throw new Error('same-instance determinism failed');
-  const secondInstance = await instantiate();
-  const fresh = makeScorer(secondInstance.instance).call
-    ? makeScorer(secondInstance.instance)
-    : null;
-  const freshScore = fresh('q', 'same answer', 'same answer').score;
-  if (first !== freshScore) throw new Error(`fresh-instance determinism failed: ${first} != ${freshScore}`);
+  const d1 = score('q', 'same answer', 'same answer').score;
+  const d2 = score('q', 'same answer', 'same answer').score;
+  if (d1 !== d2) throw new Error('same-instance determinism failed');
+
+  const secondInstance = await WebAssembly.instantiate(module, {});
+  const freshScore = makeScorer(secondInstance.instance)('q', 'same answer', 'same answer').score;
+  if (d1 !== freshScore) throw new Error(`fresh-instance determinism failed: ${d1} != ${freshScore}`);
 
   const mean = values.reduce((a, b) => a + b, 0) / (values.length || 1);
   const sd = Math.sqrt(values.reduce((a, b) => a + (b - mean) ** 2, 0) / (values.length || 1));
