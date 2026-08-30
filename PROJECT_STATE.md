@@ -1,93 +1,68 @@
 # Veridex — Persistent Project State
 
 **Repository:** `pawansatoshi/Veridex`  
-**Branch:** `main`  
-**State reviewed:** 29 Aug 2026  
+**Branch under active hardening:** `track2-v10-hardening`  
+**State reviewed:** 30 Aug 2026  
 **Current phase:** H1 OPERATIONAL / TELEGRAPH TRACK 2 HARDENING
 
 ## Current reality
 
 The deterministic EVM analysis core, proxy-aware composition, Capability Passport domain layer, Continuous Watch domain layer, evaluation harness, production Miner endpoint, Telegraph YAML/registration, dedicated product surfaces, progressive Evidence Explorer, evidence-backed spatial visualization and Telegraph Track 1/2/3 presentation surfaces are implemented.
 
-Track 1 Miner registration is live. Track 2 candidate WASM registration was attempted, but the first candidate failed Telegraph structural validation because its self-match score did not beat an unrelated cross-match. That failure is now treated as a real blocker rather than a documentation claim.
+Track 1 Miner registration is live as documented below. Track 2 remains the competitive bottleneck and is not yet accepted or proven #1.
 
-## Track 2 incident and remediation
+## Historical Track 2 failures
 
-**Observed failure:** Telegraph rejected registration `#1766` during submission with:
+Historical registration/evaluation evidence remains immutable reference material:
 
-`structural validation failed: self-match (0.0000) did not beat unrelated cross-match (0.0000)`
+- `#1809`: structural failure involving non-zero whitespace-only scoring.
+- `#1818`: behavioral ordering loss, approximately 14/15 against incumbent.
+- `#1821`: behavioral ordering loss, approximately 14/15 against incumbent.
 
-This proves the previously supplied candidate artifact was not acceptable for Track 2, even though it passed the upload/hash/on-chain registration UI.
+An older repository state also records registration `#1766` rejected at structural validation because self-match did not beat an unrelated cross-match. Do not reuse or represent that candidate as accepted.
 
-**Root cause:** the previous evaluator did not provide sufficient behavioral discrimination for the platform's self-match structural gate.
+## Track 2 V10.1 hardening
 
-**Remediation:** added `telegraph/evaluation/veridex_evaluator.c` and `telegraph/evaluation/BUILD.md`. The replacement evaluator is deterministic, ground-truth anchored, exports the required ABI, returns `0` for empty inputs, returns `1` for normalized exact matches, filters common stopwords for overlap, and otherwise scores bounded token overlap/length similarity. A locally instantiated WASM build was verified to export `memory`, `alloc`, `dealloc`, `rank_answer`, and `breakdown_answer`, with self-match `1.0`, unrelated example `0.0`, paraphrase-like overlap `0.2819`, and empty input `0.0`.
+The active candidate is built by `telegraph/evaluation/neural/build_candidate.py` from pinned MIT-licensed Telegraph baseline commit:
 
-**Release artifact:** `veridex-evaluator-v2.wasm` was built from the new source. SHA-256: `4ae038a9e5ee99036f3bef4efc5be7529e72db17ff051a9f5b10a368deb1b285`.
+`dfa0cf7fda72789267811ba2190f61a8eaacedf6`
 
-**Important:** Telegraph WASM registrations are immutable. Registration `#1766` must not be submitted as a valid Track 2 candidate. A fresh registration is required for the replacement artifact.
+Veridex's wrapper adds:
 
-## Phase 01 — EVM Analysis Core
+- exact/normalized matching;
+- exact empty/whitespace hard zero behavior;
+- contradiction/polarity/direction guards;
+- named-entity conflict protection using question + ground truth;
+- numeric mismatch protection;
+- numeric question-context answer-shape protection;
+- unambiguous binary polarity protection;
+- bounded monotonic calibration;
+- one authoritative scoring path shared by `rank_answer` and `breakdown_answer`.
 
-**Status: COMPLETE / historical H1 runtime evidence verified.**
+The five-f32 breakdown contract is:
 
-## Phase 02 — Proxy-Aware Composition
+`[base_semantic, factual_guard, question_guard, calibrated, final]`
 
-**Status: COMPLETE / historical CI gate verified.**
+where slot 4 equals the authoritative final rank score.
 
-## Phase 03 — Capability Passport
+### V10.1 evidence already observed
 
-**Status: COMPLETE / historical CI gate verified.**
+CI run `33294197111` built a **24,192,001-byte** WASM with **0 imports**, passed WASM validation, and passed the hard edge/determinism preflight with **0 primary-benchmark inversions** across 49 current cases / 55 high-vs-low pairs.
 
-## Phase 04 — Continuous Watch
+Observed preflight metrics:
 
-**Status: IMPLEMENTED / historical CI gate verified.**
+- mean margin: `0.4689717406216501`
+- worst margin: `0.00018387287855148315`
+- self-match: `1`
+- score standard deviation: `0.342690178381962`
 
-A durable scheduler and production `WatchStore` are intentionally not claimed as deployed functionality.
+The same run exposed a JavaScript tournament harness bug (`WebAssembly.instantiate(Module, {})` returns an Instance directly). That bug has been fixed. A fresh Track 2 run is required to validate the corrected tournament, supplemental contract-security suite, public blind-spot suite, mutation suite and Wazero checker.
 
-## Phase 05 — UX / Information Architecture Overhaul
+### Benchmark discrepancy
 
-**Status: COMPLETE — 05A through 05E implemented.**
+The file `telegraph/evaluation/track2-benchmark-v2.json` currently contains **49 cases**, despite older project context referring to 50. The source file is authoritative. A six-case supplemental `track2-benchmark-contract-v1.json` now covers contract-security authority, evidence, overclaim, and entity-conflict reasoning under the same `FRAUD_DETECTION` intent.
 
-The landing page, Analyze, Evidence, Passport, Watch, Telegraph and Docs surfaces are separated and the evidence explorer/spatial layer is presentation-only.
-
-## Phase 06 — Telegraph Track Surfaces
-
-**Status: COMPLETE — 06A through 06H implemented at the presentation/documentation layer.**
-
-### 06A — Telegraph hub
-
-`/telegraph/` is now a focused hub for the three H1 tracks with clear routing and a separate product-layer explanation for Passport and Watch.
-
-### 06B — Track 1 Miner
-
-`/telegraph/miner/` documents Miner `1001`, registration `#144`, `FRAUD_DETECTION`, the deterministic pipeline, evidence hierarchy, failure semantics and machine-readable contract.
-
-### 06C — Track 2 Evaluation
-
-`/telegraph/evaluation/` documents the ground-truth/evaluation workflow. The scorer implementation is now also checked into `telegraph/evaluation/veridex_evaluator.c` with a reproducible build contract.
-
-### 06D — Track 3 Application
-
-`/telegraph/application/` documents the real application-to-Miner flow and routes users to the live analyzer/evidence surfaces.
-
-### 06E — Passport integration
-
-Passport remains a first-class product surface and is explicitly not mislabeled as a Telegraph track.
-
-### 06F — Watch integration
-
-Watch remains a longitudinal product surface with current manual/browser-local boundaries preserved.
-
-### 06G — Navigation/mobile consistency
-
-Track pages use compact navigation, responsive layouts and reduced-motion support.
-
-### 06H — Judge journey
-
-The intended journey is Home → Analyze → Evidence, with Telegraph → Miner/Evaluation/Application and Passport/Watch as deeper product surfaces.
-
-## Current Telegraph registration
+## Track 1
 
 - Miner ID: `1001`
 - Slug: `veridex-contract-risk-miner`
@@ -96,39 +71,66 @@ The intended journey is Home → Analyze → Evidence, with Telegraph → Miner/
 - Network: Base Sepolia
 - Production endpoint: `https://veridex-ecru.vercel.app`
 
-## Track 2 registration status
+Track 1 remains preserved. Its evidence-first architecture, proxy-aware composition, authority analysis, verification evidence and failure semantics are not being replaced by Track 2 work.
 
-- Previous candidate registration: `#1766`
-- Intent: `FRAUD_DETECTION`
-- Status: **REJECTED AT SUBMISSION STRUCTURAL VALIDATION**
-- Replacement artifact: `veridex-evaluator-v2.wasm`
-- Replacement artifact SHA-256: `4ae038a9e5ee99036f3bef4efc5be7529e72db17ff051a9f5b10a368deb1b285`
-- Fresh registration: **PENDING**
+## Track 3
+
+Track 3 application surfaces remain implemented under `/telegraph/application/` and related product routes. The product thesis remains:
+
+`contract → capability intelligence → evidence → authority → risk/confidence → history/monitoring → actionable insight`
+
+Durable WatchStore/scheduler work remains intentionally distinct from the already implemented presentation/browser-local watch surface.
+
+## Current Track 2 registration status
+
+- Previous registrations: preserve historical records; do not reuse rejected bytes.
+- Current V10.1 candidate: **NOT REGISTERED**.
+- Current exact SHA-256: **PENDING GREEN CI**.
+- Telegraph acceptance: **NOT PROVEN**.
+- Live competitive placement: **NOT PROVEN**.
+- #1 claim: **NOT MADE**.
+
+## CI/CD status
+
+The active release lane is `.github/workflows/track2-final-verify.yml`.
+
+Two obsolete Track 2 auto-publishing workflows were converted to manual-only historical reference workflows with read-only permissions:
+
+- `.github/workflows/build-track2-final.yml`
+- `.github/workflows/build-track2-wasm.yml`
+
+The active workflow now:
+
+`build → structural → preflight → primary tournament → contract-security suite → public hard.json blind-spot gate → mutation suite → public Wazero checker → SHA-256 → artifact upload`
+
+No automatic registration or source write-back is performed.
 
 ## Current blocking gate
 
-The main verification lane requires audit, typecheck, build, unit tests, proxy/passport/watch tests, production health, YAML validation, live Telegraph integration, resilience recovery, real-chain ground truth, deterministic evaluation, production benchmark and production response-schema checks.
+The next green release requires the current Track 2 workflow to pass all of the following on the exact source commit:
 
-**Current-main status:** not independently observed GREEN through the available connector. Do not convert repository presence into runtime proof.
+- structural validation
+- required exports
+- zero imports
+- empty/whitespace/empty-ground-truth hard zeros
+- exact match
+- long input >65,535 bytes
+- Unicode/CJK/emoji/accented input
+- embedded NUL
+- repeated and fresh-instance determinism
+- primary tournament with zero inversions
+- supplemental contract-security tournament with zero inversions
+- public `hard.json` blind-spot gate
+- mutation suite
+- public Wazero compatibility checker
+- exact SHA-256 artifact record
 
-## H1 status
-
-**Product/Miner implementation: submission-ready.**  
-**UX implementation: complete.**  
-**Track 1: registered/live; operational status must be freshly verified.**  
-**Track 2: replacement scorer built and locally verified; fresh on-chain registration/submission still required.**  
-**Track 3: presentation/application surface implemented; Track 3 opens after Track 1/2 close.**
-
-## Next milestones
-
-1. register the replacement Track 2 WASM artifact
-2. wait for registry indexing and verify the new registration appears under the connected wallet
-3. submit the new registration ID with the exact same replacement WASM bytes
-4. verify Track 2 submission acceptance, not merely on-chain registration
-5. freeze the Track 1/H1 evidence package
-6. keep the production Miner stable through the operational window
-7. only then resume post-H1 WatchStore, alerts, agents/SDK/MCP and broader product expansion
+**No green gate → no registration.**
 
 ## Evidence policy
 
-Repository presence is not runtime proof. Never claim official Telegraph ranking, fabricated traffic/demand, fabricated benchmark numbers, current-commit CI GREEN, or live registry alignment without fresh evidence.
+Repository presence is not runtime proof. Never claim official Telegraph ranking, fabricated traffic/demand, fabricated benchmark numbers, current-commit CI GREEN, live registry alignment, or #1 placement without fresh evidence.
+
+Status labels must remain distinct:
+
+**IMPLEMENTED LOCALLY → VALIDATED LOCALLY → CI VALIDATED → PUBLIC CHECKER PASSED → REGISTERED → ACCEPTED BY TELEGRAPH → COMPETITIVE ON LIVE EVALUATION → OFFICIALLY SUBMITTED.**
