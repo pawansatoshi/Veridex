@@ -44,7 +44,10 @@ concurrency:
 jobs:
   build-verify-publish:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    # The public hard.json + full Wazero checks are intentionally expensive. The
+    # previous 35-minute cap cancelled a run after all substantive local/mutation
+    # gates had already passed, before immutable evidence could be recorded.
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
         with:
@@ -102,13 +105,19 @@ jobs:
           set -euo pipefail
           node telegraph/evaluation/track2-tournament.js telegraph/evaluation/veridex-track2-final.wasm telegraph/evaluation/track2-benchmark-contract-v1.json | tee telegraph/evaluation/ci-evidence/contract-tournament.json
 
-      - name: Run public blind-spot hard.json gate
+      - name: Prepare pinned public Wazero checker
         run: |
           set -euo pipefail
           git clone https://github.com/neromtoobad/telegraph-wasm-check /tmp/telegraph-wasm-check
           git -C /tmp/telegraph-wasm-check checkout --detach f537c7c085e9d3366c5615fe1ad1f98a0abeff7c
           cd /tmp/telegraph-wasm-check
-          go run . "$GITHUB_WORKSPACE/telegraph/evaluation/veridex-track2-final.wasm" --cases examples/hard.json --strict --json | tee "$GITHUB_WORKSPACE/telegraph/evaluation/ci-evidence/public-hard-json.json"
+          go build -trimpath -o /tmp/telegraph-wasm-check-bin .
+          /tmp/telegraph-wasm-check-bin --version
+
+      - name: Run public blind-spot hard.json gate
+        run: |
+          set -euo pipefail
+          /tmp/telegraph-wasm-check-bin "$GITHUB_WORKSPACE/telegraph/evaluation/veridex-track2-final.wasm" --cases /tmp/telegraph-wasm-check/examples/hard.json --strict --json | tee "$GITHUB_WORKSPACE/telegraph/evaluation/ci-evidence/public-hard-json.json"
 
       - name: Run adversarial mutation suite
         run: |
@@ -118,8 +127,7 @@ jobs:
       - name: Run public Wazero compatibility checker
         run: |
           set -euo pipefail
-          cd /tmp/telegraph-wasm-check
-          go run . "$GITHUB_WORKSPACE/telegraph/evaluation/veridex-track2-final.wasm" --cases "$GITHUB_WORKSPACE/telegraph/evaluation/track2-benchmark-v2.json" --strict --json | tee "$GITHUB_WORKSPACE/telegraph/evaluation/ci-evidence/wazero-checker.json"
+          /tmp/telegraph-wasm-check-bin "$GITHUB_WORKSPACE/telegraph/evaluation/veridex-track2-final.wasm" --cases "$GITHUB_WORKSPACE/telegraph/evaluation/track2-benchmark-v2.json" --strict --json | tee "$GITHUB_WORKSPACE/telegraph/evaluation/ci-evidence/wazero-checker.json"
 
       - name: Record immutable hash
         run: |
