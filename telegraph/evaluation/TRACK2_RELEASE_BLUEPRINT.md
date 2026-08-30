@@ -1,50 +1,121 @@
-# Veridex Track 2 release blueprint
+# Veridex Track 2 — Release Blueprint
 
 ## Objective
 
-Produce a `FRAUD_DETECTION` scoring module that is structurally valid, deterministic, and competitive on Telegraph's Stage 2 promotion gate while remaining aligned with Veridex's evidence-first architecture.
+Produce the strongest defensible `FRAUD_DETECTION` scoring module for Telegraph Track 2 while keeping the implementation coherent with Veridex's evidence-first architecture.
 
-## Strategy
+The target is not simply a passing binary. Release quality means:
 
-There are two complementary candidates:
+- Stage-1 structural/runtime gates pass;
+- deterministic, bounded and standalone behavior;
+- strong semantic and lexical ranking;
+- explicit factual-integrity guards for numbers, entities and polarity;
+- no known local ordering regressions;
+- provenance and licensing are explicit;
+- the exact released bytes are reproducible and hash-recorded;
+- live Telegraph evaluation confirms the result before claiming a competitive win.
 
-1. `veridex_evaluator_v8.c` — independently authored, compact Veridex scorer using lexical, morphology, semantic-class, contradiction, numeric, entity and limited question-context signals.
-2. `fr_ss2`-derived calibrated candidates — a transparent, MIT-licensed upstream calibration derivative used as the high-probability competitive candidate. The derivative applies a strictly increasing two-band score map, preserving the upstream ordering while increasing good/bad separation. See `UPSTREAM_NOTICE.md`.
+## Architecture
 
-The second path is not described as original semantic-model research.
+### Primary: Neural Hybrid
 
-## Release gates
+`telegraph/evaluation/neural/build_candidate.py` builds the current release candidate from the pinned official MIT-licensed Telegraph WASM baseline.
 
-Before registering any candidate:
+The baseline documents:
 
-- valid `wasm32` module;
-- exports `memory`, `alloc`, `dealloc`, `rank_answer`, `breakdown_answer`;
-- zero imports / no WASI dependency;
-- empty ground truth => 0;
-- empty or whitespace-only answer => exactly 0;
-- finite score in [0,1];
-- deterministic repeated execution;
-- long input and UTF-8 smoke tests;
-- benchmark/tournament report retained;
-- exact SHA-256 and Keccak-256 recorded;
-- upstream provenance recorded when a derivative candidate is used.
+- real INT8 MiniLM-L6-v2 semantic embeddings;
+- BM25 lexical scoring;
+- question/ground-truth relevance;
+- ground-truth correctness;
+- length-quality scoring;
+- freestanding `wasm32-unknown-unknown` execution.
 
-## Competitive measurement
+Veridex adds a deterministic wrapper for:
 
-Telegraph's hidden Stage 2 fixtures are not recoverable from the public interface. Therefore the repository treats live rejection/promotion results as measurements, not as noise.
+1. empty/whitespace and empty-ground-truth hard-zero behavior;
+2. normalized exact-match shortcut;
+3. polarity/direction contradiction protection;
+4. numeric mismatch protection;
+5. numeric-question answer-shape protection;
+6. a strictly monotone score transform intended to improve useful separation without deliberately changing semantic order.
 
-For calibration candidates, thresholds should be tested from the middle outward. A rejected registration is retained as evidence because its reported margin/win metrics narrow the viable threshold interval.
+### Fallback: Independent compact scorer
 
-## Three-track coherence
+`veridex_evaluator_v9.c` is retained as an independently authored compact evaluator for regression, audit and fallback. It is not the preferred competitive release line while the neural hybrid is available.
 
-Track 1: Veridex evidence-first Miner.
+## Official reference implementations
 
-Track 2: evaluator that rewards accurate, evidence-backed contract intelligence.
+The development process uses the official repositories as protocol references:
 
-Track 3: application layer consuming Veridex intelligence through a usable product/agent workflow.
+- `telegraphprotocol/telegraph-examples` — live feature/registration/verification examples.
+- `telegraphprotocol/telegraph-wasm-baseline` — official open-source WASM scoring reference and real MiniLM build path.
 
-The Track 2 scorer should therefore remain grounded in the same factual themes as Veridex: capabilities, ownership/authority, upgradeability, pause/mint/blacklist signals, numeric facts and evidence quality.
+The pinned baseline source commit is:
 
-## Registration discipline
+`dfa0cf7fda72789267811ba2190f61a8eaacedf6`
 
-Never reuse or edit a rejected registration. Every changed WASM hash requires a fresh registration. Wait for the live status before placing the registration ID in the Hackathon submission form.
+## Competitive lesson
+
+Observed top leaderboard binaries were roughly 24 MB and contained a very large static representation. The official baseline confirms why that size class is plausible: semantic-model weights and tokenizer data dominate the artifact while scoring code can remain comparatively small.
+
+Size itself is not a score metric. The useful capability is semantic representation capacity.
+
+## Benchmarks
+
+`track2-benchmark-v2.json` is an internally authored regression corpus covering:
+
+- exact answers;
+- paraphrases;
+- synonym/equivalence cases;
+- partial answers;
+- unrelated answers;
+- wrong entities;
+- wrong numeric values/units;
+- wrong dates;
+- polarity and direction flips;
+- answer-shape errors;
+- Unicode and long input.
+
+`track2-preflight.js` performs runtime/edge checks and `track2-tournament.js` enforces pairwise high-vs-low ordering.
+
+The internal benchmark is not a substitute for Telegraph's hidden Stage-2 fixtures. A benchmark should not be treated as an optimization target unless the incumbent/reference behaves sensibly on it.
+
+## Failure-driven regression set
+
+Historical registration failures remain regression evidence:
+
+- #1766 — self-match/cross-match failure;
+- #1772 — insufficient separation;
+- #1792 — malformed WASM module;
+- #1809 — whitespace answer not exactly zero;
+- #1818 — 14/15 ordering vs 15/15 incumbent;
+- #1821 — 14/15 ordering vs 15/15 incumbent.
+
+These IDs are never reused for changed bytes.
+
+## Release pipeline
+
+`source → reproducible build → wasm validation → import/size gate → preflight → tournament → official Wazero checker → hash/provenance → IPFS → fresh Telegraph registration → wait → inspect live result → exact Track-2 submission`
+
+**No green local gate → no registration.**
+
+## Provenance
+
+The neural hybrid uses an MIT-licensed official baseline. The full MIT notice is retained in `neural/UPSTREAM_BASELINE_LICENSE.md`.
+
+The Veridex wrapper and product integration are the original contribution. Never describe the upstream semantic model/weights as Veridex-authored research.
+
+Legacy calibration experiments derived from another upstream artifact are retained only for historical research and are not the default release candidate.
+
+## Completion definition
+
+Track 2 is complete only when:
+
+1. the final binary is reproducibly built;
+2. all local/CI gates are green;
+3. the exact SHA-256 is recorded;
+4. the fresh Telegraph registration is accepted/active;
+5. the Stage-2 live result is recorded;
+6. the exact accepted artifact/registration is submitted to the Hackathon form.
+
+Until step 5, the correct status is **validation pending**, not “won.”
