@@ -1,23 +1,29 @@
-# Track 2 upstream notice
+# Track 2 upstream provenance notice
 
-## Veridex FRAUD_DETECTION calibration candidate
+## Primary neural-hybrid candidate
 
-The competitive FRAUD_DETECTION calibration candidate is derived from the MIT-licensed `fr_ss2.wasm` artifact supplied for technical benchmarking against the live Track 2 leaderboard.
+The current primary Track 2 build uses the public, MIT-licensed repository:
 
-The transformation is original to this repository: it adds a fresh freestanding `rank_answer` wrapper with a strictly increasing two-band calibration map and redirects the `rank_answer` export to that wrapper. The upstream executable/data are not represented as original Veridex scoring research.
+`https://github.com/telegraphprotocol/telegraph-wasm-baseline`
 
-The upstream repository is `zkasuran/telegraph-salience-scorer` and its published README states that the modules are MIT licensed. The exact upstream byte identity, source URL, and registration provenance must be retained in the release record for reproducibility.
+Pinned commit:
 
-This notice is intentional. We do not present an upstream-derived calibration artifact as independently authored semantic-model research.
+`dfa0cf7fda72789267811ba2190f61a8eaacedf6`
 
-## Veridex relationship
+That repository documents real INT8 MiniLM-L6-v2 scoring, BM25 lexical scoring, question/ground-truth relevance and length quality. The Veridex contribution is the reproducible wrapper/integration layer that adds deterministic factual-integrity guards and the Track-2 release pipeline.
 
-The candidate is used for the `FRAUD_DETECTION` evaluation layer of Veridex Track 2. Track 1 remains Veridex's evidence-first Miner, and Track 3 consumes Veridex intelligence at the application layer.
+The full upstream MIT notice is retained at:
 
-## Release discipline
+`telegraph/evaluation/neural/UPSTREAM_BASELINE_LICENSE.md`
 
-- Keep the upstream attribution and MIT license with any redistributed source or artifact where required.
-- Record the exact upstream bytes/hash used to construct each candidate.
-- Record the calibration threshold used for every fresh on-chain registration.
-- Never mutate an already registered binary in place.
-- Do not claim that the calibration derivative is original semantic-model research.
+## Legacy calibration experiments
+
+`veridex-calibrated-80.wasm`, `veridex-calibrated-86.wasm`, and `veridex-calibrated-88.wasm` were historical calibration derivatives of a separate MIT-licensed benchmark artifact used during competitive research. They are not the primary release path.
+
+## Policy
+
+- Never present upstream model weights or source as original Veridex research.
+- Keep required copyright/license notices with redistributed substantial portions.
+- Pin and record exact source commits/hashes for reproducibility.
+- Do not conceal competitor or upstream provenance.
+- Do not register an artifact until its provenance/licensing and final Hackathon-rule compatibility have been reviewed.
