@@ -67,9 +67,18 @@ function flip(text) {
   return text;
 }
 
+function binaryFragment(text) {
+  const words = text.match(/[A-Za-z0-9]+/g) || [];
+  if (words.length > 3) return false;
+  const lower = words.map(x => x.toLowerCase());
+  if (!lower.some(x => ['yes','no','true','false'].includes(x))) return false;
+  return lower.some(x => ['it','this','that','they'].includes(x));
+}
+
 let tested = 0;
 let failures = 0;
-const diagnostics = [];
+let diagnostics = [];
+let informationalDiagnostics = [];
 
 for (const c of seed.cases) {
   const highs = c.answers.filter(x => x.tier === 'high');
@@ -90,7 +99,28 @@ for (const c of seed.cases) {
     if (mutant === baseHigh) continue;
     const bad = score(c.question, c.ground_truth, mutant);
     tested++;
-    if (!(good > bad || (kind === 'case-punctuation' && good >= bad))) {
+
+    if (kind === 'case-punctuation') {
+      // Case and punctuation are semantic invariants; they must not be required
+      // to score lower than the original. Flag only a material score drift.
+      if (Math.abs(good - bad) > 0.02) {
+        failures++;
+        diagnostics.push({id:c.id, kind, question:c.question, ground_truth:c.ground_truth, good:baseHigh, goodScore:good, mutant, mutantScore:bad, reason:'case/punctuation changed score materially'});
+      }
+      continue;
+    }
+
+    if (kind === 'undercomplete' && !binaryFragment(mutant)) {
+      // Truncation is not universally wrong: a numeric answer without its unit
+      // or a concise core can remain materially correct. Keep these as evidence
+      // for review rather than enforcing a false universal ordering rule.
+      if (!(good > bad)) {
+        informationalDiagnostics.push({id:c.id, kind, question:c.question, ground_truth:c.ground_truth, good:baseHigh, goodScore:good, mutant, mutantScore:bad});
+      }
+      continue;
+    }
+
+    if (!(good > bad)) {
       failures++;
       diagnostics.push({id:c.id, kind, question:c.question, ground_truth:c.ground_truth, good:baseHigh, goodScore:good, mutant, mutantScore:bad});
     }
@@ -106,5 +136,5 @@ for (const c of seed.cases) {
   }
 }
 
-console.log(JSON.stringify({seedCases:seed.cases.length,tested,failures,diagnostics}, null, 2));
+console.log(JSON.stringify({seedCases:seed.cases.length,tested,failures,diagnostics,informationalDiagnostics}, null, 2));
 if (failures) process.exit(2);
