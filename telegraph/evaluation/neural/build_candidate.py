@@ -13,7 +13,6 @@ from __future__ import annotations
 
 import argparse
 import pathlib
-import re
 import shutil
 import subprocess
 import tempfile
@@ -27,10 +26,9 @@ WRAPPER = r'''
 // Veridex factual-integrity wrapper
 // ─────────────────────────────────────────────────────────────────────────────
 // The upstream semantic scorer supplies the primary semantic signal. Veridex
-// adds low-cost deterministic guards for the failure modes most dangerous in
-// fraud/security answers: polarity inversion, numeric mismatch, and obvious
-// answer-shape violations. A gentle monotone power transform improves score
-// separation without changing order between unguarded pairs.
+// adds deterministic guards for polarity, numeric integrity, answer shape and
+// question context. rank_answer and breakdown_answer share one authoritative
+// scoring path so the diagnostic API cannot drift from the decision API.
 
 #[inline]
 fn vr_lower(b: u8) -> u8 {
@@ -47,7 +45,8 @@ fn vr_word_eq(text: &[u8], start: usize, end: usize, needle: &[u8]) -> bool {
     let mut j = 0usize;
     while i < end && j < needle.len() {
         if vr_lower(text[i]) != needle[j] { return false; }
-        i += 1; j += 1;
+        i += 1;
+        j += 1;
     }
     i == end && j == needle.len()
 }
@@ -78,6 +77,9 @@ fn vr_opposite(gt: &[u8], ans: &[u8]) -> bool {
         (b"authorized", b"unauthorized"), (b"confirmed", b"denied"),
         (b"allowed", b"blocked"), (b"allowed", b"forbidden"),
         (b"yes", b"no"), (b"true", b"false"),
+        (b"declined", b"increased"), (b"reduced", b"increased"),
+        (b"decreased", b"increased"), (b"lower", b"higher"),
+        (b"down", b"up"), (b"loss", b"gain"),
     ];
     for (a, b) in PAIRS {
         if (vr_has_word(gt, a) && vr_has_word(ans, b))
@@ -106,7 +108,8 @@ fn vr_first_number(text: &[u8]) -> Option<(f64, bool)> {
         } else if c == b',' || c == b'_' {
             i += 1;
         } else if c == b'.' && !dot {
-            dot = true; i += 1;
+            dot = true;
+            i += 1;
         } else { break; }
     }
     if !any { return None; }
@@ -140,31 +143,73 @@ fn vr_question_requires_number(question: &[u8]) -> bool {
         || vr_has_word(question, b"amount")
         || vr_has_word(question, b"value")
         || vr_has_word(question, b"percentage")
+        || vr_has_word(question, b"percent")
+}
+
+fn vr_question_is_binary(question: &[u8]) -> bool {
+    vr_has_any(question, &[b"is", b"are", b"was", b"were", b"did", b"does", b"can", b"could"])
+}
+
+fn vr_binary_polarity(text: &[u8]) -> Option<bool> {
+    if vr_has_any(text, &[b"yes", b"true", b"confirmed", b"approved", b"authorized", b"authorised", b"allowed"]) {
+        return Some(true);
+    }
+    if vr_has_any(text, &[b"no", b"false", b"denied", b"rejected", b"unauthorized", b"unauthorised", b"blocked"]) {
+        return Some(false);
+    }
+    None
+}
+
+fn vr_question_guard(question: &[u8], ground_truth: &[u8], answer: &[u8]) -> f32 {
+    let mut guard = 1.0f32;
+
+    if vr_question_requires_number(question) && vr_first_number(answer).is_none() {
+        guard *= 0.82;
+    }
+
+    // Only apply binary answer-shape protection when the ground truth itself
+    // carries an unambiguous polarity. This avoids penalising ordinary
+    // descriptive answers to yes/no-shaped questions.
+    if vr_question_is_binary(question) {
+        if let Some(gt_polarity) = vr_binary_polarity(ground_truth) {
+            match vr_binary_polarity(answer) {
+                Some(answer_polarity) if answer_polarity != gt_polarity => guard *= 0.06,
+                None => guard *= 0.88,
+                _ => {}
+            }
+        }
+    }
+
+    guard
 }
 
 fn vr_safe_pow(score: f32) -> f32 {
     if score <= 0.0 { return 0.0; }
     if score >= 1.0 { return 1.0; }
-    // Gentle monotone stretch using libm already required by the baseline.
     let y = libm::powf(score, 1.18);
-    if y < 0.0 { 0.0 } else if y > 1.0 { 1.0 } else { y }
+    if y.is_finite() {
+        if y < 0.0 { 0.0 } else if y > 1.0 { 1.0 } else { y }
+    } else {
+        0.0
+    }
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn rank_answer(
+// Returns (final score, base semantic score, factual guard, question guard).
+unsafe fn veridex_score(
     q_ptr: i32, q_len: i32,
     gt_ptr: i32, gt_len: i32,
     ma_ptr: i32, ma_len: i32,
-) -> f32 {
+) -> (f32, f32, f32, f32) {
     let question = read_str(q_ptr, q_len);
     let ground_truth = read_str(gt_ptr, gt_len);
     let miner_answer = read_str(ma_ptr, ma_len);
 
     if ground_truth.trim().is_empty() || miner_answer.trim().is_empty() {
-        return 0.0;
+        return (0.0, 0.0, 0.0, 0.0);
     }
 
-    // Exact normalized equality is the strongest possible answer.
+    // Exact normalized equality is the strongest possible answer. The
+    // baseline's semantic tokenizer remains responsible for Unicode meaning.
     let mut gnorm = alloc::string::String::new();
     let mut anorm = alloc::string::String::new();
     for b in ground_truth.as_bytes() {
@@ -173,30 +218,59 @@ pub unsafe extern "C" fn rank_answer(
     for b in miner_answer.as_bytes() {
         if b.is_ascii_alphanumeric() { anorm.push(vr_lower(*b) as char); }
     }
-    if !gnorm.is_empty() && gnorm == anorm { return 1.0; }
+    if !gnorm.is_empty() && gnorm == anorm {
+        return (1.0, 1.0, 1.0, 1.0);
+    }
 
-    let mut s = rank_answer_base(q_ptr, q_len, gt_ptr, gt_len, ma_ptr, ma_len);
-    if !s.is_finite() { return 0.0; }
+    let mut base = rank_answer_base(q_ptr, q_len, gt_ptr, gt_len, ma_ptr, ma_len);
+    if !base.is_finite() { return (0.0, 0.0, 0.0, 0.0); }
+    if base < 0.0 { base = 0.0; }
+    if base > 1.0 { base = 1.0; }
 
     let gt_bytes = ground_truth.as_bytes();
     let ans_bytes = miner_answer.as_bytes();
-    if vr_opposite(gt_bytes, ans_bytes) { s *= 0.06; }
-    if vr_numeric_mismatch(gt_bytes, ans_bytes) { s *= 0.22; }
-    if vr_question_requires_number(question.as_bytes()) && vr_first_number(ans_bytes).is_none() { s *= 0.82; }
-
-    vr_safe_pow(s)
+    let factual_guard = if vr_opposite(gt_bytes, ans_bytes) {
+        0.06
+    } else if vr_numeric_mismatch(gt_bytes, ans_bytes) {
+        0.22
+    } else {
+        1.0
+    };
+    let question_guard = vr_question_guard(question.as_bytes(), gt_bytes, ans_bytes);
+    let guarded = base * factual_guard * question_guard;
+    let final_score = vr_safe_pow(guarded);
+    (final_score, base, factual_guard, question_guard)
 }
 
-// Keep the baseline breakdown export available for diagnostics. It remains a
-// faithful report of the underlying four baseline signals, while rank_answer
-// is the Veridex guarded decision path.
+static mut VERIDEX_BREAKDOWN: [f32; 5] = [0.0; 5];
+
+#[no_mangle]
+pub unsafe extern "C" fn rank_answer(
+    q_ptr: i32, q_len: i32,
+    gt_ptr: i32, gt_len: i32,
+    ma_ptr: i32, ma_len: i32,
+) -> f32 {
+    veridex_score(q_ptr, q_len, gt_ptr, gt_len, ma_ptr, ma_len).0
+}
+
 #[no_mangle]
 pub unsafe extern "C" fn breakdown_answer(
     q_ptr: i32, q_len: i32,
     gt_ptr: i32, gt_len: i32,
     ma_ptr: i32, ma_len: i32,
 ) -> i32 {
-    breakdown_answer_base(q_ptr, q_len, gt_ptr, gt_len, ma_ptr, ma_len)
+    let (final_score, base, factual_guard, question_guard) =
+        veridex_score(q_ptr, q_len, gt_ptr, gt_len, ma_ptr, ma_len);
+
+    // Layout: [base_semantic, factual_guard, question_guard, calibrated,
+    // final]. Every value is bounded and slot 4 is exactly rank_answer's
+    // authoritative final result. For empty inputs all five values are zero.
+    VERIDEX_BREAKDOWN[0] = base;
+    VERIDEX_BREAKDOWN[1] = factual_guard;
+    VERIDEX_BREAKDOWN[2] = question_guard;
+    VERIDEX_BREAKDOWN[3] = final_score;
+    VERIDEX_BREAKDOWN[4] = final_score;
+    VERIDEX_BREAKDOWN.as_ptr() as i32
 }
 '''
 
@@ -235,11 +309,8 @@ def main() -> None:
             "pub unsafe extern \"C\" fn breakdown_answer_base(",
             1,
         )
-        # The base functions were #[no_mangle] exports. They remain available as
-        # implementation symbols; Telegraph only needs the final rank_answer.
         lib.write_text(text + WRAPPER, encoding="utf-8")
 
-        # Build with the real INT8 MiniLM weights included by the pinned baseline.
         run(["rustup", "target", "add", "wasm32-unknown-unknown"], upstream)
         run(["cargo", "build", "--release", "--target", "wasm32-unknown-unknown", "--features", "real_weights"], upstream)
         built = upstream / "target" / "wasm32-unknown-unknown" / "release" / "telegraph_scoring.wasm"
