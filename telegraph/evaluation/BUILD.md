@@ -71,7 +71,7 @@ Where available, also run the pinned public Wazero compatibility checker in stri
 
 ## Competitive gate
 
-The local suite is necessary but not sufficient. Telegraph's canonical evaluation can include independent/held-out data. A candidate must be registered on-chain and evaluated by Telegraph before any claim of competitive placement is made. The current hackathon's Script Author track is judged on automated evaluator performance, ranking accuracy and resistance to gaming. citeturn2search2
+The local suite is necessary but not sufficient. Telegraph's canonical evaluation can include independent/held-out data. The current hackathon's Script Author track is judged on automated evaluator performance, ranking accuracy and resistance to gaming. The public hackathon page is authoritative for the current season's rules and judging criteria.
 
 The release pipeline is:
 
