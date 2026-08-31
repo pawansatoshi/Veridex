@@ -30,10 +30,19 @@ _RELEASE_CONFLICT = r'''fn vr_release_predicate_polarity(text:&[u8])->Option<boo
     let p=vr_has_any(text,POS);let n=vr_has_any(text,NEG);
     match(p,n){(true,false)=>Some(true),(false,true)=>Some(false),_=>None}
 }
-fn vr_question_predicate_conflict(q:&[u8],gt:&[u8],ans:&[u8])->bool{
+
+// A yes/no answer must be interpreted relative to the polarity of the
+// proposition being asked. Ground truth is often only "yes"/"no", so comparing
+// GT predicate polarity with answer predicate polarity is insufficient.
+// Examples:
+//   Q: "Was transfer denied?" + "No, it was approved."   => consistent
+//   Q: "Was transfer denied?" + "No, it was rejected."   => contradictory
+//   Q: "Was transfer unauthorized?" + "Yes, it was unauthorized." => consistent
+fn vr_question_predicate_conflict(q:&[u8],_gt:&[u8],ans:&[u8])->bool{
     if !vr_question_is_binary(q){return false;}
-    match(vr_release_predicate_polarity(gt),vr_release_predicate_polarity(ans)){
-      (Some(g),Some(a))=>g!=a,_=>false
+    match(vr_release_predicate_polarity(q),vr_release_predicate_polarity(ans),vr_first_binary_polarity(ans)){
+      (Some(qp),Some(ap),Some(bin))=>if bin{ap!=qp}else{ap==qp},
+      _=>false
     }
 }
 
@@ -58,13 +67,16 @@ fn vr_release_numeric_equivalent(q:&[u8],gt:&[u8],ans:&[u8])->bool{
     }
 }'''
 
+// Treat only genuinely incomplete deictic fragments as undercomplete. A full
+// answer such as "No, it was approved." is four words and must not receive the
+// same penalty as the two-word mutant "No, it".
 _RELEASE_BINARY_FRAGMENT = r'''fn vr_release_binary_fragment(ans:&[u8])->bool{
     let mut words=0usize;let mut saw_binary=false;let mut saw_deictic=false;let mut i=0usize;
     while i<ans.len(){
         while i<ans.len()&&!ans[i].is_ascii_alphanumeric(){i+=1;}
         let s=i;while i<ans.len()&&ans[i].is_ascii_alphanumeric(){i+=1;}
         if s>=i{continue;}
-        words+=1;if words>4{return false;}
+        words+=1;if words>2{return false;}
         let w=&ans[s..i];
         if vr_word_eq(ans,s,i,b"yes")||vr_word_eq(ans,s,i,b"no")||vr_word_eq(ans,s,i,b"true")||vr_word_eq(ans,s,i,b"false"){saw_binary=true;}
         if vr_word_eq(ans,s,i,b"it")||vr_word_eq(ans,s,i,b"this")||vr_word_eq(ans,s,i,b"that")||vr_word_eq(ans,s,i,b"they"){saw_deictic=true;}
