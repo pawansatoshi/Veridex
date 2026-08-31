@@ -67,9 +67,9 @@ fn vr_release_numeric_equivalent(q:&[u8],gt:&[u8],ans:&[u8])->bool{
     }
 }'''
 
-// Treat only genuinely incomplete deictic fragments as undercomplete. A full
-// answer such as "No, it was approved." is four words and must not receive the
-// same penalty as the two-word mutant "No, it".
+# Treat only genuinely incomplete deictic fragments as undercomplete. A full
+# answer such as "No, it was approved." is four words and must not receive the
+# same penalty as the two-word mutant "No, it".
 _RELEASE_BINARY_FRAGMENT = r'''fn vr_release_binary_fragment(ans:&[u8])->bool{
     let mut words=0usize;let mut saw_binary=false;let mut saw_deictic=false;let mut i=0usize;
     while i<ans.len(){
