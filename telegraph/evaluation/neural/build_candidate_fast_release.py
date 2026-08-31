@@ -93,10 +93,19 @@ _RELEASE_NEGATION = r'''fn vr_release_negation_conflict(gt:&[u8],ans:&[u8])->boo
 
 _RELEASE_GUARD = r'''fn vr_question_guard(q:&[u8],gt:&[u8],ans:&[u8])->f32{
     let mut g=1.0f32;
+
+    // Factual/entity checks must run for both binary and ordinary factual
+    // questions. The previous implementation accidentally scoped them to
+    // yes/no questions, which let "Microsoft ..." beat the correct
+    // cross-unit numeric paraphrase for "what was ... revenue for Apple?".
     let entity_conflict=vr_release_entity_conflict(q,gt,ans);
     if entity_conflict{g*=0.02;}
+
     let numeric_equiv=vr_release_numeric_equivalent(q,gt,ans);
     if numeric_equiv&&!entity_conflict{
+        // Numeric equivalence is a factual confirmation, not a multiplier
+        // outside the scoring range. The fast scorer already performs the
+        // bounded high-score lift for verified numeric equivalence.
         g=1.0;
     }else if vr_numeric_context(q){
         match(vr_first_number(gt),vr_first_number(ans)){
@@ -105,6 +114,7 @@ _RELEASE_GUARD = r'''fn vr_question_guard(q:&[u8],gt:&[u8],ans:&[u8])->f32{
             _=>{}
         }
     }
+
     if vr_question_is_binary(q){
         if let Some(p)=vr_first_binary_polarity(gt){
             match vr_first_binary_polarity(ans){Some(a)if a!=p=>g*=0.06,None=>g*=0.88,_=>{}}
