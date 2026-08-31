@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Release wrapper for the bounded-performance Track 2 builder.
 
-Runs the established fast builder, then applies a generic binary-question
-predicate-consistency guard before the baseline Rust source is written.
+Runs the established fast builder, then applies generic binary-question
+predicate consistency plus a strictly increasing score-contrast transform.
 """
 from __future__ import annotations
 
@@ -32,22 +32,32 @@ fn vr_question_predicate_conflict(q:&[u8],gt:&[u8],ans:&[u8])->bool{
         _=>false
     };
     if direct{return true;}
-    match(vr_question_predicate_polarity(q),vr_answer_predicate_polarity(ans),vr_first_binary_polarity(ans)){
-        (Some(qp),Some(ap),Some(bp))=>{let expected=if bp{qp}else{!qp};ap!=expected},
+    match(vr_question_predicate_polarity(q),vr_answer_predicate_polarity(ans),vr_first_binary_polarity(ans),vr_first_binary_polarity(gt)){
+        (Some(qp),Some(ap),Some(bp),_)=>{let expected=if bp{qp}else{!qp};ap!=expected},
+        (Some(qp),Some(ap),_,Some(gb))=>{let expected=if gb{qp}else{!qp};ap!=expected},
         _=>false
     }
 }'''
 
+_OLD_SHARPEN = "fn vr_safe_pow(score:f32)->f32{if !score.is_finite(){return 0.0;}if score<=0.0{return 0.0;}if score>=1.0{return 1.0;}let t=score.clamp(0.0,1.0);let lift=t*t*(3.0-2.0*t)*(1.0-t);let y=t+lift;if y.is_finite(){y.clamp(0.0,1.0)}else{0.0}}"
+_CONTRAST_SHARPEN = "fn vr_safe_pow(score:f32)->f32{if !score.is_finite(){return 0.0;}if score<=0.0{return 0.0;}if score>=1.0{return 1.0;}let t=score.clamp(0.0,1.0);let y=t+0.75*t*(1.0-t)*(2.0*t-1.0);if y.is_finite(){y.clamp(0.0,1.0)}else{0.0}}"
 
-def patch_predicate_logic() -> None:
+
+def patch_release_guards() -> None:
+    """Run the original fast patcher and add release-only corrections."""
     _ORIGINAL_FAST_PATCH()
     if _ORIGINAL_CONFLICT not in build_candidate.WRAPPER:
         raise SystemExit("release wrapper: expected binary predicate guard marker not found")
     build_candidate.WRAPPER = build_candidate.WRAPPER.replace(
         _ORIGINAL_CONFLICT, _GENERIC_CONFLICT, 1
     )
+    if _OLD_SHARPEN not in build_candidate.WRAPPER:
+        raise SystemExit("release wrapper: expected score transform marker not found")
+    build_candidate.WRAPPER = build_candidate.WRAPPER.replace(
+        _OLD_SHARPEN, _CONTRAST_SHARPEN, 1
+    )
 
 
 if __name__ == "__main__":
-    build_candidate_fast.patch_semantic_guards = patch_predicate_logic
+    build_candidate_fast.patch_semantic_guards = patch_release_guards
     build_candidate_fast.main()
