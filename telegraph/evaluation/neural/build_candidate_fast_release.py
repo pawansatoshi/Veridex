@@ -35,6 +35,27 @@ fn vr_question_predicate_conflict(q:&[u8],gt:&[u8],ans:&[u8])->bool{
     match(vr_release_predicate_polarity(gt),vr_release_predicate_polarity(ans)){
       (Some(g),Some(a))=>g!=a,_=>false
     }
+}
+
+fn vr_release_entity_conflict(q:&[u8],gt:&[u8],ans:&[u8])->bool{
+    let mut i=0usize;
+    while i<ans.len(){
+        while i<ans.len()&&!ans[i].is_ascii_alphabetic(){i+=1;}
+        let s=i;while i<ans.len()&&ans[i].is_ascii_alphabetic(){i+=1;}
+        if s>=i{continue;}
+        let word=&ans[s..i];
+        let titlecase=word.len()>=3&&word[0].is_ascii_uppercase()&&word[1..].iter().any(|b|b.is_ascii_lowercase());
+        if titlecase&&!vr_is_ignored_entity(word)&&!vr_has_word(q,word)&&!vr_has_word(gt,word){return true;}
+    }
+    false
+}
+
+fn vr_release_numeric_equivalent(q:&[u8],gt:&[u8],ans:&[u8])->bool{
+    if !vr_numeric_context(q){return false;}
+    match(vr_first_number(gt),vr_first_number(ans)){
+      (Some((g,gp)),Some((a,ap)))=>gp==ap&&(g-a).abs()<=g.abs().max(a.abs()).max(1.0)*1e-9,
+      _=>false
+    }
 }'''
 
 _RELEASE_BINARY_FRAGMENT = r'''fn vr_release_binary_fragment(ans:&[u8])->bool{
@@ -60,7 +81,28 @@ _RELEASE_NEGATION = r'''fn vr_release_negation_conflict(gt:&[u8],ans:&[u8])->boo
 
 _RELEASE_GUARD = r'''fn vr_question_guard(q:&[u8],gt:&[u8],ans:&[u8])->f32{
     let mut g=1.0f32;
-    if vr_question_requires_number(q)&&vr_first_number(ans).is_none(){g*=0.82;}
+
+    // Factual/entity checks must run for both binary and ordinary factual
+    // questions. The previous implementation accidentally scoped them to
+    // yes/no questions, which let "Microsoft ..." beat the correct
+    // cross-unit numeric paraphrase for "what was ... revenue for Apple?".
+    let entity_conflict=vr_release_entity_conflict(q,gt,ans);
+    if entity_conflict{g*=0.02;}
+
+    let numeric_equiv=vr_release_numeric_equivalent(q,gt,ans);
+    if numeric_equiv&&!entity_conflict{
+        // A verified numeric fact is a strong factual signal even when the
+        // MiniLM semantic score is conservative. Use a bounded multiplier;
+        // vr_safe_pow() still clamps the final score to [0,1].
+        g=12.0;
+    }else if vr_numeric_context(q){
+        match(vr_first_number(gt),vr_first_number(ans)){
+            (Some(_),Some(_))=>g*=0.05,
+            (Some(_),None)=>g*=0.65,
+            _=>{}
+        }
+    }
+
     if vr_question_is_binary(q){
         if let Some(p)=vr_first_binary_polarity(gt){
             match vr_first_binary_polarity(ans){Some(a)if a!=p=>g*=0.06,None=>g*=0.88,_=>{}}
@@ -124,10 +166,6 @@ def patch_release_guards() -> None:
         build_candidate.WRAPPER=build_candidate.WRAPPER[:pos]+_RELEASE_NEGATION+"\n"+build_candidate.WRAPPER[pos:]
 
     build_candidate.WRAPPER=_replace_function(
-        build_candidate.WRAPPER,
-        "fn vr_question_guard( q:",
-        _RELEASE_GUARD,
-    ) if "fn vr_question_guard( q:" in build_candidate.WRAPPER else _replace_function(
         build_candidate.WRAPPER,
         "fn vr_question_guard(",
         _RELEASE_GUARD,
