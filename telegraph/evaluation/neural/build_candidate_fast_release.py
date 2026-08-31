@@ -32,16 +32,22 @@ _RELEASE_CONFLICT = r'''fn vr_release_predicate_polarity(text:&[u8])->Option<boo
 }
 
 // A yes/no answer must be interpreted relative to the polarity of the
-// proposition being asked. Ground truth is often only "yes"/"no", so comparing
-// GT predicate polarity with answer predicate polarity is insufficient.
-// Examples:
-//   Q: "Was transfer denied?" + "No, it was approved."   => consistent
-//   Q: "Was transfer denied?" + "No, it was rejected."   => contradictory
-//   Q: "Was transfer unauthorized?" + "Yes, it was unauthorized." => consistent
-fn vr_question_predicate_conflict(q:&[u8],_gt:&[u8],ans:&[u8])->bool{
+// proposition being asked. For an ordinary single-polarity question, use the
+// question predicate plus the explicit yes/no prefix. For compound questions
+// that contain both positive and negative predicates (for example, "compromised
+// or secure"), the question predicate itself is ambiguous, so compare the
+// answer predicate against the ground-truth predicate instead. This preserves
+// the binary semantics while preventing an "or" question from disabling the
+// contradiction guard entirely.
+fn vr_question_predicate_conflict(q:&[u8],gt:&[u8],ans:&[u8])->bool{
     if !vr_question_is_binary(q){return false;}
-    match(vr_release_predicate_polarity(q),vr_release_predicate_polarity(ans),vr_first_binary_polarity(ans)){
-      (Some(qp),Some(ap),Some(bin))=>if bin{ap!=qp}else{ap==qp},
+    let qp=vr_release_predicate_polarity(q);
+    let ap=vr_release_predicate_polarity(ans);
+    let gp=vr_release_predicate_polarity(gt);
+    match(qp,ap,vr_first_binary_polarity(ans),gp){
+      (Some(qp),Some(ap),Some(bin),_)=>if bin{ap!=qp}else{ap==qp},
+      (Some(qp),None,Some(bin),_)=>if bin{false}else{false},
+      (None,Some(ap),_,Some(gp))=>ap!=gp,
       _=>false
     }
 }
