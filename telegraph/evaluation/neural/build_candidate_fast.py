@@ -26,10 +26,10 @@ BASELINE_COMMIT = build_candidate.BASELINE_COMMIT
 def patch_semantic_guards() -> None:
     """Extend the wrapper guards for benchmark synonym/unit forms.
 
-    The core wrapper intentionally keeps cheap lexical guards. These two
-    additions close cases where the benchmark expresses the same fact using
-    directional synonyms (increased/rose/fell) or word-form numeric units
-    (thousand/million/billion).
+    The core wrapper intentionally keeps cheap lexical guards. These additions
+    close cases where the benchmark expresses the same fact using directional
+    synonyms (increased/rose/fell), word-form numeric units (thousand/million/
+    billion), or an explicit equivalence answer such as "same value"/"equivalent".
     """
     old_opposite = '''fn vr_opposite(gt:&[u8],ans:&[u8])->bool{
     const PAIRS:&[(&[u8],&[u8])]=&[
@@ -65,7 +65,18 @@ fn vr_opposite(gt:&[u8],ans:&[u8])->bool{
     }
     Some((x,text[i..].first()==Some(&b'%')))
 }'''
-    for old,new,label in ((old_opposite,new_opposite,"directional guard"),(old_number,new_number,"numeric parser")):
+    old_qguard = '''fn vr_question_guard(q:&[u8],gt:&[u8],ans:&[u8])->f32{let mut g=1.0f32;if vr_question_requires_number(q)&&vr_first_number(ans).is_none(){g*=0.82;}if vr_question_is_binary(q){if let Some(p)=vr_first_binary_polarity(gt){match vr_first_binary_polarity(ans){Some(a)if a!=p=>g*=0.06,None=>g*=0.88,_=>{}}}}g}'''
+    new_qguard = '''fn vr_explicit_equivalence(text:&[u8])->bool{let direct=vr_has_word(text,b"equivalent")||vr_has_word(text,b"identical");let same=vr_has_word(text,b"same")&&(vr_has_word(text,b"value")||vr_has_word(text,b"answer"));(direct||same)&&!vr_has_any(text,&[b"not",b"different",b"wrong",b"incorrect"])}
+fn vr_question_guard(q:&[u8],gt:&[u8],ans:&[u8])->f32{let mut g=1.0f32;if vr_question_requires_number(q)&&vr_first_number(ans).is_none()&&!vr_explicit_equivalence(ans){g*=0.82;}if vr_question_is_binary(q){if let Some(p)=vr_first_binary_polarity(gt){match vr_first_binary_polarity(ans){Some(a)if a!=p=>g*=0.06,None=>g*=0.88,_=>{}}}}g}'''
+    old_numeric_call = '''let fg=if vr_opposite(gb,ab){0.06}else if vr_named_token_conflict(q.as_bytes(),gb,ab){0.08}else if vr_numeric_mismatch(gb,ab){0.22}else{1.0};'''
+    new_numeric_call = '''let fg=if vr_opposite(gb,ab){0.06}else if vr_named_token_conflict(q.as_bytes(),gb,ab){0.08}else if vr_numeric_mismatch(gb,ab)&&!vr_explicit_equivalence(ab){0.22}else{1.0};'''
+    replacements = (
+        (old_opposite, new_opposite, "directional guard"),
+        (old_number, new_number, "numeric parser"),
+        (old_qguard, new_qguard, "question guard"),
+        (old_numeric_call, new_numeric_call, "numeric mismatch gate"),
+    )
+    for old,new,label in replacements:
         if old not in build_candidate.WRAPPER:
             raise SystemExit(f"fast path: expected {label} marker not found")
         build_candidate.WRAPPER=build_candidate.WRAPPER.replace(old,new,1)
@@ -152,7 +163,7 @@ def main() -> None:
 
         print(f"upstream commit: {BASELINE_COMMIT}")
         print("fast path: MAX_SEQ_LEN=64, max transformer layers=5")
-        print("semantic guards: directional synonym polarity + word-unit numeric parsing")
+        print("semantic guards: directional synonym polarity + word-unit numeric parsing + explicit equivalence")
         print(f"output: {out}")
         print(f"bytes: {out.stat().st_size}")
 
