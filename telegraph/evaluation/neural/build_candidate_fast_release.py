@@ -35,12 +35,16 @@ fn vr_question_predicate_conflict(q:&[u8],gt:&[u8],ans:&[u8])->bool{
     }
 }'''
 
-_OLD_SHARPEN_BASELINE = "fn vr_safe_pow(score:f32)->f32{if score<=0.0{return 0.0;}if score>=1.0{return 1.0;}let y=libm::powf(score,1.18);if y.is_finite(){y.clamp(0.0,1.0)}else{0.0}}"
-_OLD_SHARPEN_COMPAT = "fn vr_safe_pow(score:f32{if score<=0.0{return 0.0;}if score>=1.0{return 1.0;}let t=score.clamp(0.0,1.0);let lift=t*t*(3.0-2.0*t)*(1.0-t);let y=t+lift;if y.is_finite(){y.clamp(0.0,1.0)}else{0.0}}"
-_OLD_SHARPEN_COMPAT_CORRECT = "fn vr_safe_pow(score:f32)->f32{if score<=0.0{return 0.0;}if score>=1.0{return 1.0;}let t=score.clamp(0.0,1.0);let lift=t*t*(3.0-2.0*t)*(1.0-t);let y=t+lift;if y.is_finite(){y.clamp(0.0,1.0)}else{0.0}}"
-_OLD_SHARPEN_SMOOTHSTEP = "fn vr_safe_pow(score:f32)->f32{if !score.is_finite(){return 0.0;}if score<=0.0{return 0.0;}if score>=1.0{return 1.0;}let t=score.clamp(0.0,1.0);let y=t*t*(3.0-2.0*t);if y.is_finite(){y.clamp(0.0,1.0)}else{0.0}}"
-_OLD_SHARPEN_CONTRAST = "fn vr_safe_pow(score:f32)->f32{if !score.is_finite(){return 0.0;}if score<=0.0{return 0.0;}if score>=1.0{return 1.0;}let t=score.clamp(0.0,1.0);let y=t+0.75*t*(1.0-t)*(2.0*t-1.0);if y.is_finite(){y.clamp(0.0,1.0)}else{0.0}}"
 _ODDS_SHARPEN = "fn vr_safe_pow(score:f32)->f32{if !score.is_finite(){return 0.0;}if score<=0.0{return 0.0;}if score>=1.0{return 1.0;}let t=score.clamp(0.0,1.0);let a=libm::powf(t,3.0);let b=libm::powf(1.0-t,3.0);let d=a+b;if !d.is_finite()||d<=0.0{return 0.0;}let y=a/d;if y.is_finite(){y.clamp(0.0,1.0)}else{0.0}}"
+
+def _replace_safe_pow(wrapper: str) -> str:
+    start = wrapper.find("fn vr_safe_pow(score:f32)->f32{")
+    if start < 0:
+        raise SystemExit("release wrapper: vr_safe_pow function not found")
+    end = wrapper.find("\nunsafe fn veridex_score", start)
+    if end < 0:
+        raise SystemExit("release wrapper: veridex_score boundary not found")
+    return wrapper[:start] + _ODDS_SHARPEN + wrapper[end:]
 
 
 def patch_release_guards() -> None:
@@ -48,17 +52,7 @@ def patch_release_guards() -> None:
     if _ORIGINAL_CONFLICT not in build_candidate.WRAPPER:
         raise SystemExit("release wrapper: expected binary predicate guard marker not found")
     build_candidate.WRAPPER = build_candidate.WRAPPER.replace(_ORIGINAL_CONFLICT, _GENERIC_CONFLICT, 1)
-    for marker in (
-        _ODDS_SHARPEN,
-        _OLD_SHARPEN_COMPAT_CORRECT,
-        _OLD_SHARPEN_SMOOTHSTEP,
-        _OLD_SHARPEN_CONTRAST,
-        _OLD_SHARPEN_BASELINE,
-    ):
-        if marker in build_candidate.WRAPPER:
-            build_candidate.WRAPPER = build_candidate.WRAPPER.replace(marker, _ODDS_SHARPEN, 1)
-            return
-    raise SystemExit("release wrapper: no supported score transform marker found")
+    build_candidate.WRAPPER = _replace_safe_pow(build_candidate.WRAPPER)
 
 
 if __name__ == "__main__":
