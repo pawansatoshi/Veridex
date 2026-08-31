@@ -17,7 +17,7 @@ import subprocess
 import tempfile
 
 import build_candidate
-import build_candidate_compat  # applies the current authoritative wrapper patches
+import build_candidate_compat
 
 BASELINE_REPO = build_candidate.BASELINE_REPO
 BASELINE_COMMIT = build_candidate.BASELINE_COMMIT
@@ -65,6 +65,7 @@ fn vr_opposite(gt:&[u8],ans:&[u8])->bool{
         build_candidate.WRAPPER=build_candidate.WRAPPER.replace(old,new,1)
 
     eq_helper = '''fn vr_explicit_equivalence(text:&[u8])->bool{let direct=vr_has_word(text,b"equivalent")||vr_has_word(text,b"identical");let same=vr_has_word(text,b"same")&&(vr_has_word(text,b"value")||vr_has_word(text,b"answer"));(direct||same)&&!vr_has_any(text,&[b"not",b"different",b"wrong",b"incorrect"])}
+fn vr_numeric_context(q:&[u8])->bool{const TERMS:&[&[u8]]=&[b"amount",b"value",b"loss",b"profit",b"revenue",b"cost",b"price",b"fee",b"number",b"total",b"volume",b"rate",b"percentage",b"percent",b"worth",b"valuation",b"supply",b"balance",b"quantity"];vr_has_any(q,TERMS)}
 '''
     marker="unsafe fn veridex_score(q_ptr:i32,q_len:i32,gt_ptr:i32,gt_len:i32,ma_ptr:i32,ma_len:i32)->(f32,f32,f32,f32){"
     if marker not in build_candidate.WRAPPER:
@@ -74,8 +75,8 @@ fn vr_opposite(gt:&[u8],ans:&[u8])->bool{
     score_marker="let gb=gt.as_bytes();let ab=a.as_bytes();let fg="
     score_inject=(
         "let gb=gt.as_bytes();let ab=a.as_bytes();"
-        "if vr_question_requires_number(q.as_bytes())&&vr_first_number(gt.as_bytes()).is_some()&&vr_explicit_equivalence(ab){"
-        "let eq_score=0.60f32.max(base);return(vr_safe_pow(eq_score),base,1.0,1.0);}"
+        "if vr_numeric_context(q.as_bytes())&&vr_first_number(gt.as_bytes()).is_some()&&vr_explicit_equivalence(ab){"
+        "let eq_score=vr_safe_pow(base.max(0.40));return(eq_score,base,1.0,1.0);}"
         "let fg="
     )
     if score_marker not in build_candidate.WRAPPER:
@@ -129,8 +130,8 @@ def main() -> None:
         shutil.copy2(built,out)
         print(f"upstream commit: {BASELINE_COMMIT}")
         print("fast path: MAX_SEQ_LEN=64, max transformer layers=5")
-        print("semantic guards: directional synonym polarity + word-unit numeric parsing + explicit equivalence")
-        print("numeric equivalence: explicit equivalence answers receive a bounded 0.60 floor on numeric questions")
+        print("semantic guards: directional synonym polarity + word-unit numeric parsing + context-aware equivalence")
+        print("numeric equivalence: only on numeric-context questions with numeric ground truth")
         print(f"output: {out}")
         print(f"bytes: {out.stat().st_size}")
 
