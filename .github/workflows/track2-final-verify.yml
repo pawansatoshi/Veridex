@@ -56,7 +56,7 @@ jobs:
       - name: Install system tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y wabt golang-go python3
+          sudo apt-get install -y wabt golang-go python3 clang lld
 
       - name: Install Rust target
         run: |
@@ -67,11 +67,11 @@ jobs:
       - name: Prepare evidence directory
         run: mkdir -p telegraph/evaluation/ci-evidence
 
-      - name: Build Veridex neural-hybrid candidate
+      - name: Build Veridex fast neural-hybrid candidate
         env:
           RUSTFLAGS: -Aunsafe-op-in-unsafe-fn
         run: |
-          python3 telegraph/evaluation/neural/build_candidate_compat.py \
+          python3 telegraph/evaluation/neural/build_candidate_fast.py \
             --out telegraph/evaluation/veridex-track2-final.wasm
 
       - name: Structural validation
@@ -108,7 +108,7 @@ jobs:
       - name: Prepare pinned public Wazero checker
         run: |
           set -euo pipefail
-          git clone https://github.com/neromtoobad/telegraph-wasm-check /tmp/telegraph-wasm-check
+          git clone --filter=blob:none https://github.com/neromtoobad/telegraph-wasm-check /tmp/telegraph-wasm-check
           git -C /tmp/telegraph-wasm-check checkout --detach f537c7c085e9d3366c5615fe1ad1f98a0abeff7c
           cd /tmp/telegraph-wasm-check
           go build -trimpath -o /tmp/telegraph-wasm-check-bin .
@@ -134,7 +134,7 @@ jobs:
           set -euo pipefail
           sha256sum telegraph/evaluation/veridex-track2-final.wasm | tee telegraph/evaluation/VERIDEX_TRACK2_FINAL_SHA256.txt
           echo "source baseline commit: dfa0cf7fda72789267811ba2190f61a8eaacedf6" >> telegraph/evaluation/VERIDEX_TRACK2_FINAL_SHA256.txt
-          echo "build: neural-hybrid Veridex wrapper + real MiniLM baseline" >> telegraph/evaluation/VERIDEX_TRACK2_FINAL_SHA256.txt
+          echo "build: Veridex neural-hybrid wrapper + real MiniLM baseline + 64-token fast path" >> telegraph/evaluation/VERIDEX_TRACK2_FINAL_SHA256.txt
           echo "checker commit: f537c7c085e9d3366c5615fe1ad1f98a0abeff7c" >> telegraph/evaluation/VERIDEX_TRACK2_FINAL_SHA256.txt
           echo "source commit: $GITHUB_SHA" >> telegraph/evaluation/VERIDEX_TRACK2_FINAL_SHA256.txt
 
