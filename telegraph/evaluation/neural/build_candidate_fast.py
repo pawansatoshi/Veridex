@@ -68,9 +68,10 @@ fn vr_numeric_context(q:&[u8])->bool{const TERMS:&[&[u8]]=&[b"amount",b"value",b
     score_marker="let gb=gt.as_bytes();let ab=a.as_bytes();let fg="
     score_inject=(
         "let gb=gt.as_bytes();let ab=a.as_bytes();"
-        "let safe_numeric_equiv=vr_safe_numeric_equiv(gb,ab)&&vr_numeric_context(q.as_bytes())&&!vr_opposite(gb,ab)&&!vr_named_token_conflict(q.as_bytes(),gb,ab);"
-        "let numeric_mismatch=vr_numeric_mismatch(gb,ab)&&!safe_numeric_equiv;"
-        "let fg=if vr_opposite(gb,ab){0.06}else if vr_named_token_conflict(q.as_bytes(),gb,ab){0.08}else if numeric_mismatch{0.08}else{1.0};"
+        "let numeric_pair=(vr_first_number(gb),vr_first_number(ab));"
+        "let safe_numeric_equiv=match numeric_pair{(Some((g,gp)),Some((a,ap)))=>gp==ap&&(g-a).abs()<=g.abs().max(a.abs()).max(1.0)*1e-9&&vr_numeric_context(q.as_bytes())&&!vr_opposite(gb,ab)&&!vr_named_token_conflict(q.as_bytes(),gb,ab),_=>false};"
+        "let numeric_mismatch_strict=vr_numeric_context(q.as_bytes())&&match numeric_pair{(Some(_),Some(_))=>!safe_numeric_equiv,_=>false};"
+        "let fg=if vr_opposite(gb,ab){0.06}else if vr_named_token_conflict(q.as_bytes(),gb,ab){0.08}else if numeric_mismatch_strict{0.08}else{1.0};"
     )
     if score_marker not in build_candidate.WRAPPER:
         raise SystemExit("fast path: score guard insertion marker not found")
@@ -81,7 +82,7 @@ fn vr_numeric_context(q:&[u8])->bool{const TERMS:&[&[u8]]=&[b"amount",b"value",b
         "let qg=vr_question_guard(q.as_bytes(),gb,ab);"
         "if safe_numeric_equiv{let lifted=vr_safe_pow(base.max(0.95));return(lifted,base,1.0,qg);}"
         "let mut final_score=vr_safe_pow(base*fg*qg);"
-        "if numeric_mismatch{final_score=final_score.min(0.30);}(final_score,base,fg,qg)"
+        "if numeric_mismatch_strict{final_score=final_score.min(0.30);}(final_score,base,fg,qg)"
     )
     if sharpen_marker not in build_candidate.WRAPPER:
         raise SystemExit("fast path: final-score marker not found")
@@ -135,8 +136,8 @@ def main() -> None:
         print(f"upstream commit: {BASELINE_COMMIT}")
         print("fast path: MAX_SEQ_LEN=64, max transformer layers=5")
         print("semantic guards: directional polarity + robust numeric parsing + factual equivalence")
-        print("numeric equivalence: exact normalized numeric equality with 1e-9 relative floating tolerance")
-        print("numeric mismatch: score-factor 0.08 and final score cap 0.30")
+        print("numeric equivalence: strict normalized equality with 1e-9 relative tolerance")
+        print("numeric mismatch: strict context-aware detection, factor 0.08, final score cap 0.30")
         print(f"output: {out}")
         print(f"bytes: {out.stat().st_size}")
 
