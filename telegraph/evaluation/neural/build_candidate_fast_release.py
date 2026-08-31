@@ -91,10 +91,10 @@ _RELEASE_GUARD = r'''fn vr_question_guard(q:&[u8],gt:&[u8],ans:&[u8])->f32{
 
     let numeric_equiv=vr_release_numeric_equivalent(q,gt,ans);
     if numeric_equiv&&!entity_conflict{
-        // A verified numeric fact is a strong factual signal even when the
-        // MiniLM semantic score is conservative. Use a bounded multiplier;
-        // vr_safe_pow() still clamps the final score to [0,1].
-        g=12.0;
+        // Numeric equivalence is a factual confirmation, not a multiplier
+        // outside the scoring range. The fast scorer already performs the
+        // bounded high-score lift for verified numeric equivalence.
+        g=1.0;
     }else if vr_numeric_context(q){
         match(vr_first_number(gt),vr_first_number(ans)){
             (Some(_),Some(_))=>g*=0.05,
