@@ -54,8 +54,9 @@ fn vr_release_numeric_equivalent(q:&[u8],gt:&[u8],ans:&[u8])->bool{
       _=>false
     }
 }
+'''
 
-fn vr_release_binary_fragment(ans:&[u8])->bool{
+_RELEASE_BINARY_FRAGMENT = r'''fn vr_release_binary_fragment(ans:&[u8])->bool{
     let mut words=0usize;let mut saw_binary=false;let mut saw_deictic=false;let mut i=0usize;
     while i<ans.len(){
         while i<ans.len()&&!ans[i].is_ascii_alphanumeric(){i+=1;}
@@ -67,12 +68,14 @@ fn vr_release_binary_fragment(ans:&[u8])->bool{
     }
     saw_binary&&saw_deictic
 }
+'''
 
-fn vr_release_negation_conflict(gt:&[u8],ans:&[u8])->bool{
+_RELEASE_NEGATION = r'''fn vr_release_negation_conflict(gt:&[u8],ans:&[u8])->bool{
     let ans_not=vr_has_word(ans,b"not")||vr_has_word(ans,b"never");
     let gt_not=vr_has_word(gt,b"not")||vr_has_word(gt,b"never");
     ans_not&&!gt_not
-}'''
+}
+'''
 
 _RELEASE_GUARD = r'''fn vr_question_guard(q:&[u8],gt:&[u8],ans:&[u8])->f32{
     let mut g=1.0f32;
@@ -132,25 +135,22 @@ def patch_release_guards() -> None:
     _ORIGINAL_FAST_PATCH()
 
     if "fn vr_question_predicate_conflict(" in build_candidate.WRAPPER:
-        build_candidate.WRAPPER=_replace_function(build_candidate.WRAPPER,"fn vr_question_predicate_conflict(",_RELEASE_CONFLICT)
+        build_candidate.WRAPPER=_replace_function(build_candidate.WRAPPER,"fn vr_question_predicate_conflict(",_RELEASE_CONFLICT.strip())
     else:
         insert_at=build_candidate.WRAPPER.find("fn vr_question_guard(")
         if insert_at<0:
             raise SystemExit("release wrapper: question guard marker not found")
-        build_candidate.WRAPPER=build_candidate.WRAPPER[:insert_at]+_RELEASE_CONFLICT+"\n"+build_candidate.WRAPPER[insert_at:]
-
-    for marker,helper in (("fn vr_release_binary_fragment(",_RELEASE_CONFLICT),("fn vr_release_negation_conflict(",_RELEASE_CONFLICT)):
-        if marker not in build_candidate.WRAPPER:
-            raise SystemExit(f"release wrapper: helper missing after patch: {marker}")
+        build_candidate.WRAPPER=build_candidate.WRAPPER[:insert_at]+_RELEASE_CONFLICT+build_candidate.WRAPPER[insert_at:]
 
     guard_marker="fn vr_question_guard("
     guard_pos=build_candidate.WRAPPER.find(guard_marker)
     if guard_pos<0:
         raise SystemExit("release wrapper: question guard marker not found")
-    if "fn vr_release_entity_conflict(" not in build_candidate.WRAPPER:
-        build_candidate.WRAPPER=build_candidate.WRAPPER[:guard_pos]+_RELEASE_CONFLICT.split("fn vr_question_predicate_conflict",1)[0]+build_candidate.WRAPPER[guard_pos:]
+    helpers=_RELEASE_BINARY_FRAGMENT+"\n"+_RELEASE_NEGATION
+    build_candidate.WRAPPER=build_candidate.WRAPPER[:guard_pos]+helpers+build_candidate.WRAPPER[guard_pos:]
+
     build_candidate.WRAPPER=_replace_function(build_candidate.WRAPPER,guard_marker,_RELEASE_GUARD)
-    build_candidate.WRAPPER=_replace_function(build_candidate.WRAPPER,"fn vr_safe_pow(score:f32)->f32{",_MONOTONIC_SHARPEN)
+    build_candidate.WRAPPER=_replace_function(build_candidate.WRAPPER,"fn vr_safe_pow(score:f32){",_MONOTONIC_SHARPEN)
 
 
 if __name__=="__main__":
