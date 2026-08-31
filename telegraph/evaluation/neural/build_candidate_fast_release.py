@@ -81,7 +81,6 @@ _RELEASE_GUARD = r'''fn vr_question_guard(q:&[u8],gt:&[u8],ans:&[u8])->f32{
     let mut g=1.0f32;
     let entity_conflict=vr_release_entity_conflict(q,gt,ans);
     if entity_conflict{g*=0.02;}
-
     let numeric_equiv=vr_release_numeric_equivalent(q,gt,ans);
     if numeric_equiv&&!entity_conflict{
         g=1.0;
@@ -92,7 +91,6 @@ _RELEASE_GUARD = r'''fn vr_question_guard(q:&[u8],gt:&[u8],ans:&[u8])->f32{
             _=>{}
         }
     }
-
     if vr_question_is_binary(q){
         if let Some(p)=vr_first_binary_polarity(gt){
             match vr_first_binary_polarity(ans){Some(a)if a!=p=>g*=0.06,None=>g*=0.88,_=>{}}
@@ -146,11 +144,12 @@ def patch_release_guards() -> None:
     guard_pos=build_candidate.WRAPPER.find(guard_marker)
     if guard_pos<0:
         raise SystemExit("release wrapper: question guard marker not found")
+
     helpers=_RELEASE_BINARY_FRAGMENT+"\n"+_RELEASE_NEGATION
     build_candidate.WRAPPER=build_candidate.WRAPPER[:guard_pos]+helpers+build_candidate.WRAPPER[guard_pos:]
 
     build_candidate.WRAPPER=_replace_function(build_candidate.WRAPPER,guard_marker,_RELEASE_GUARD)
-    build_candidate.WRAPPER=_replace_function(build_candidate.WRAPPER,"fn vr_safe_pow(score:f32){",_MONOTONIC_SHARPEN)
+    build_candidate.WRAPPER=_replace_function(build_candidate.WRAPPER,"fn vr_safe_pow(score:f32)->f32{",_MONOTONIC_SHARPEN)
 
 
 if __name__=="__main__":
