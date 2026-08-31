@@ -46,7 +46,7 @@ fn vr_question_predicate_conflict(q:&[u8],gt:&[u8],ans:&[u8])->bool{
     let gp=vr_release_predicate_polarity(gt);
     match(qp,ap,vr_first_binary_polarity(ans),gp){
       (Some(qp),Some(ap),Some(bin),_)=>if bin{ap!=qp}else{ap==qp},
-      (Some(qp),None,Some(bin),_)=>if bin{false}else{false},
+      (Some(_qp),None,Some(_bin),_)=>false,
       (None,Some(ap),_,Some(gp))=>ap!=gp,
       _=>false
     }
@@ -97,6 +97,19 @@ _RELEASE_NEGATION = r'''fn vr_release_negation_conflict(gt:&[u8],ans:&[u8])->boo
     ans_not&&!gt_not
 }'''
 
+_RELEASE_TAIL = r'''fn vr_release_tail_contamination(ans:&[u8])->bool{
+    let mut i=0usize;let mut last_start=0usize;let mut last_end=0usize;
+    while i<ans.len(){
+        while i<ans.len()&&!ans[i].is_ascii_alphanumeric(){i+=1;}
+        if i>=ans.len(){break;}
+        let s=i;while i<ans.len()&&ans[i].is_ascii_alphanumeric(){i+=1;}
+        last_start=s;last_end=i;
+    }
+    if last_start>=last_end{return false;}
+    if vr_word_eq(ans,last_start,last_end,b"not")||vr_word_eq(ans,last_start,last_end,b"never"){return true;}
+    vr_has_word(ans,b"unrelated")&&(vr_has_word(ans,b"background")||vr_has_word(ans,b"another")||vr_has_word(ans,b"topic")||vr_has_word(ans,b"entity"))
+}'''
+
 _RELEASE_GUARD = r'''fn vr_question_guard(q:&[u8],gt:&[u8],ans:&[u8])->f32{
     let mut g=1.0f32;
 
@@ -109,9 +122,8 @@ _RELEASE_GUARD = r'''fn vr_question_guard(q:&[u8],gt:&[u8],ans:&[u8])->f32{
 
     let numeric_equiv=vr_release_numeric_equivalent(q,gt,ans);
     if numeric_equiv&&!entity_conflict{
-        // Numeric equivalence is a factual confirmation, not a multiplier
-        // outside the scoring range. The fast scorer already performs the
-        // bounded high-score lift for verified numeric equivalence.
+        // Numeric equivalence is confirmation; downstream guards must still
+        // be allowed to reject appended contradiction/contamination.
         g=1.0;
     }else if vr_numeric_context(q){
         match(vr_first_number(gt),vr_first_number(ans)){
@@ -129,7 +141,40 @@ _RELEASE_GUARD = r'''fn vr_question_guard(q:&[u8],gt:&[u8],ans:&[u8])->f32{
         if vr_release_binary_fragment(ans){g*=0.20;}
     }
     if vr_release_negation_conflict(gt,ans){g*=0.05;}
+    if vr_release_tail_contamination(ans){g*=0.05;}
     g
+}'''
+
+# Keep numeric-equivalence lifting inside the complete guard pipeline. The old
+# fast builder returned before qg, which made equivalent numeric answers immune
+# to terminal negation and appended-distractor checks in live-risk stress.
+_RELEASE_SCORE = r'''unsafe fn veridex_score(q_ptr:i32,q_len:i32,gt_ptr:i32,gt_len:i32,ma_ptr:i32,ma_len:i32)->(f32,f32,f32,f32){
+    let q=read_str(q_ptr,q_len);let gt=read_str(gt_ptr,gt_len);let a=read_str(ma_ptr,ma_len);
+    if gt.trim().is_empty()||a.trim().is_empty(){return(0.0,0.0,0.0,0.0);}
+    let mut gn=alloc::string::String::new();let mut an=alloc::string::String::new();
+    for b in gt.as_bytes(){if b.is_ascii_alphanumeric(){gn.push(vr_lower(*b)as char);}}
+    for b in a.as_bytes(){if b.is_ascii_alphanumeric(){an.push(vr_lower(*b)as char);}}
+    if !gn.is_empty()&&gn==an{return(1.0,1.0,1.0,1.0);}
+
+    let mut base=rank_answer_base(q_ptr,q_len,gt_ptr,gt_len,ma_ptr,ma_len);
+    if !base.is_finite(){return(0.0,0.0,0.0,0.0);}
+    base=base.clamp(0.0,1.0);
+    let gb=gt.as_bytes();let ab=a.as_bytes();
+    let numeric_pair=(vr_first_number(gb),vr_first_number(ab));
+    let safe_numeric_equiv=match numeric_pair{
+        (Some((g,gp)),Some((a,ap)))=>gp==ap&&(g-a).abs()<=g.abs().max(a.abs()).max(1.0)*1e-9&&vr_numeric_context(q.as_bytes())&&!vr_opposite(gb,ab)&&!vr_named_token_conflict(q.as_bytes(),gb,ab),
+        _=>false
+    };
+    let numeric_mismatch_strict=vr_numeric_context(q.as_bytes())&&match numeric_pair{
+        (Some(_),Some(_))=>!safe_numeric_equiv,
+        _=>false
+    };
+    let fg=if vr_opposite(gb,ab){0.06}else if vr_named_token_conflict(q.as_bytes(),gb,ab){0.08}else if numeric_mismatch_strict{0.08}else{1.0};
+    let qg=vr_question_guard(q.as_bytes(),gb,ab);
+    let shaped_base=if safe_numeric_equiv{base.max(0.95)}else{base};
+    let mut final_score=vr_safe_pow(shaped_base*fg*qg);
+    if numeric_mismatch_strict{final_score=final_score.min(0.30);}
+    (final_score,base,fg,qg)
 }'''
 
 _MONOTONIC_SHARPEN = "fn vr_safe_pow(score:f32)->f32{if !score.is_finite(){return 0.0;}if score<=0.0{return 0.0;}if score>=1.0{return 1.0;}let t=score.clamp(0.0,1.0);let y=t+t*t*(3.0-2.0*t)*(1.0-t);if y.is_finite(){y.clamp(0.0,1.0)}else{0.0}}"
@@ -160,8 +205,6 @@ def _replace_function(wrapper: str, marker: str, replacement: str) -> str:
 
 def patch_release_guards() -> None:
     _ORIGINAL_FAST_PATCH()
-    # Replace whichever predicate-conflict helper the fast path currently has;
-    # do not depend on its exact implementation or on obsolete numeric snippets.
     if "fn vr_question_predicate_conflict(" in build_candidate.WRAPPER:
         build_candidate.WRAPPER=_replace_function(
             build_candidate.WRAPPER,
@@ -183,10 +226,22 @@ def patch_release_guards() -> None:
         if pos<0: raise SystemExit("release wrapper: question guard marker not found")
         build_candidate.WRAPPER=build_candidate.WRAPPER[:pos]+_RELEASE_NEGATION+"\n"+build_candidate.WRAPPER[pos:]
 
+    if "fn vr_release_tail_contamination(" not in build_candidate.WRAPPER:
+        marker="fn vr_question_guard("
+        pos=build_candidate.WRAPPER.find(marker)
+        if pos<0: raise SystemExit("release wrapper: question guard marker not found")
+        build_candidate.WRAPPER=build_candidate.WRAPPER[:pos]+_RELEASE_TAIL+"\n"+build_candidate.WRAPPER[pos:]
+
     build_candidate.WRAPPER=_replace_function(
         build_candidate.WRAPPER,
         "fn vr_question_guard(",
         _RELEASE_GUARD,
+    )
+
+    build_candidate.WRAPPER=_replace_function(
+        build_candidate.WRAPPER,
+        "unsafe fn veridex_score(",
+        _RELEASE_SCORE,
     )
 
     build_candidate.WRAPPER=_replace_function(
