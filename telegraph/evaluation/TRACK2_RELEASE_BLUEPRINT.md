@@ -1,121 +1,168 @@
-# Veridex Track 2 — Release Blueprint
+# Veridex Track 2 — FINAL RELEASE BLUEPRINT
+
+Last consolidated: 2026-08-30
+
+This document supersedes older Track-2 release plans where they conflict. Historical candidate files and evidence remain preserved.
 
 ## Objective
 
-Produce the strongest defensible `FRAUD_DETECTION` scoring module for Telegraph Track 2 while keeping the implementation coherent with Veridex's evidence-first architecture.
+Release the strongest defensible `FRAUD_DETECTION` Script Author for Telegraph Track 2, maximizing the probability of beating the incumbent on hidden Stage 2 while maintaining deterministic WASM safety, semantic generalization, factual integrity, reproducibility and clean provenance.
 
-The target is not simply a passing binary. Release quality means:
+No local benchmark can establish #1. Only Telegraph live evaluation can establish the final competitive result.
 
-- Stage-1 structural/runtime gates pass;
-- deterministic, bounded and standalone behavior;
-- strong semantic and lexical ranking;
-- explicit factual-integrity guards for numbers, entities and polarity;
-- no known local ordering regressions;
-- provenance and licensing are explicit;
-- the exact released bytes are reproducible and hash-recorded;
-- live Telegraph evaluation confirms the result before claiming a competitive win.
+## Final candidate decision
 
-## Architecture
+**Primary release line:** neural-hybrid V10.1
 
-### Primary: Neural Hybrid
+**Semantic foundation:** pinned official Telegraph WASM baseline, MIT licensed, commit `dfa0cf7fda72789267811ba2190f61a8eaacedf6`.
 
-`telegraph/evaluation/neural/build_candidate.py` builds the current release candidate from the pinned official MIT-licensed Telegraph WASM baseline.
+**Veridex contribution:** independently authored wrapper/integrity logic, integration, release gates, diagnostics and product coherence.
 
-The baseline documents:
+**Fallback/reference:** V6/V7/V9 compact candidates remain preserved. V9 is explicitly rejected for release because its historical implementation had a nonfunctional breakdown path and 16-bit token-offset limitations.
 
-- real INT8 MiniLM-L6-v2 semantic embeddings;
-- BM25 lexical scoring;
-- question/ground-truth relevance;
-- ground-truth correctness;
-- length-quality scoring;
-- freestanding `wasm32-unknown-unknown` execution.
+## Scoring stack
 
-Veridex adds a deterministic wrapper for:
+`safe input → empty hard-zero → normalized exact match → MiniLM/BM25 semantic signals → factual guards → question/answer-shape guards → bounded score → monotonic calibration only if independently proven`
 
-1. empty/whitespace and empty-ground-truth hard-zero behavior;
-2. normalized exact-match shortcut;
-3. polarity/direction contradiction protection;
-4. numeric mismatch protection;
-5. numeric-question answer-shape protection;
-6. a strictly monotone score transform intended to improve useful separation without deliberately changing semantic order.
+Factual guards cover:
 
-### Fallback: Independent compact scorer
+- contradiction/polarity;
+- negation;
+- direction/relation changes;
+- numeric/value/unit/date mutation;
+- entity conflict;
+- numeric-question shape;
+- unambiguous binary answer shape.
 
-`veridex_evaluator_v9.c` is retained as an independently authored compact evaluator for regression, audit and fallback. It is not the preferred competitive release line while the neural hybrid is available.
+The semantic model remains responsible for broad paraphrase/generalization. Rules are guardrails, not a replacement for semantic representation.
 
-## Official reference implementations
+## Official/reference repositories
 
-The development process uses the official repositories as protocol references:
+The engineering process uses:
 
-- `telegraphprotocol/telegraph-examples` — live feature/registration/verification examples.
-- `telegraphprotocol/telegraph-wasm-baseline` — official open-source WASM scoring reference and real MiniLM build path.
+- `telegraphprotocol/telegraph-examples` for protocol, registration, node and verification flow;
+- `telegraphprotocol/telegraph-wasm-baseline` for the official semantic WASM reference and reproducible MiniLM/BM25 foundation;
+- the pinned public Wazero compatibility checker for independent runtime validation.
 
-The pinned baseline source commit is:
+External source code/weights remain explicitly attributed and license-compatible. No competitor binary/code/weights are presented as original Veridex work.
 
-`dfa0cf7fda72789267811ba2190f61a8eaacedf6`
+## Benchmark and differential evaluation
 
-## Competitive lesson
+Primary local benchmark: `track2-benchmark-v2.json` — **49 cases in the current source file**. Older documentation claiming 50 is stale.
 
-Observed top leaderboard binaries were roughly 24 MB and contained a very large static representation. The official baseline confirms why that size class is plausible: semantic-model weights and tokenizer data dominate the artifact while scoring code can remain comparatively small.
+Supplemental contract-security benchmark: `track2-benchmark-contract-v1.json` — 6 cases.
 
-Size itself is not a score metric. The useful capability is semantic representation capacity.
+The tournament must report:
 
-## Benchmarks
+- total cases/pairs;
+- wins/losses/ties;
+- inversions;
+- mean/median/worst/best margin;
+- self-match;
+- standard deviation/spread;
+- invalid scores;
+- repeat/fresh determinism;
+- runtime and memory behaviour;
+- per-inversion component diagnostics.
 
-`track2-benchmark-v2.json` is an internally authored regression corpus covering:
+Where tooling permits, compare against the official baseline and record both improvements and regressions. Do not optimize to a public fixture in isolation.
 
-- exact answers;
-- paraphrases;
-- synonym/equivalence cases;
-- partial answers;
-- unrelated answers;
-- wrong entities;
-- wrong numeric values/units;
-- wrong dates;
-- polarity and direction flips;
-- answer-shape errors;
-- Unicode and long input.
+## Adversarial mutation coverage
 
-`track2-preflight.js` performs runtime/edge checks and `track2-tournament.js` enforces pairwise high-vs-low ordering.
+Required mutation classes include entity swap, numeric mutation, unit/date mutation, polarity/direction flip, authority substitution, irrelevant insertion, surface-overlap deception, incomplete answers and long-answer padding.
 
-The internal benchmark is not a substitute for Telegraph's hidden Stage-2 fixtures. A benchmark should not be treated as an optimization target unless the incumbent/reference behaves sensibly on it.
+A candidate must not systematically reward factually corrupted answers merely because they preserve keywords.
 
-## Failure-driven regression set
+## Hard gates
 
-Historical registration failures remain regression evidence:
+Before registration all must pass:
 
-- #1766 — self-match/cross-match failure;
-- #1772 — insufficient separation;
-- #1792 — malformed WASM module;
-- #1809 — whitespace answer not exactly zero;
-- #1818 — 14/15 ordering vs 15/15 incumbent;
-- #1821 — 14/15 ordering vs 15/15 incumbent.
+- valid WASM;
+- required exports: `memory`, `alloc`, `dealloc`, `rank_answer`, `breakdown_answer`;
+- zero imports;
+- no WASI/network/filesystem dependency;
+- empty answer exactly `0`;
+- whitespace-only exactly `0`;
+- empty ground truth safely handled;
+- exact normalized answer exactly `1`;
+- finite scores in `[0,1]`;
+- repeated and fresh-instance deterministic execution;
+- >65,535-byte input safety;
+- UTF-8/CJK/emoji/accent safety;
+- embedded NUL safety;
+- pointer/allocator safety;
+- breakdown final equals `rank_answer`;
+- binary <=32 MiB;
+- no unacceptable local ordering inversion;
+- meaningful score distribution;
+- mutation suite green;
+- strict public Wazero checker green.
 
-These IDs are never reused for changed bytes.
+## Runtime budget
+
+Current team clarification indicates a hard **10-minute evaluation budget per module**. Treat this as release-critical. Benchmark cold start, warm calls, repeated scoring and memory growth. Prefer bounded execution and compact host interaction without reducing semantic quality.
+
+## Breakdown ABI
+
+`rank_answer` and `breakdown_answer` must call the same authoritative score function.
+
+Breakdown layout:
+
+`[base_semantic, factual_guard, question_guard, calibrated, final]`
+
+The final slot must equal `rank_answer` exactly within the release contract. Empty/whitespace/empty-GT paths must return zeroed breakdown values.
 
 ## Release pipeline
 
-`source → reproducible build → wasm validation → import/size gate → preflight → tournament → official Wazero checker → hash/provenance → IPFS → fresh Telegraph registration → wait → inspect live result → exact Track-2 submission`
+```text
+source
+ → reproducible build
+ → wasm-validate
+ → exports/imports/size
+ → hard preflight
+ → primary tournament
+ → contract-security tournament
+ → mutation suite
+ → public hard.json checks
+ → strict public Wazero checker
+ → SHA-256 + provenance
+ → freeze exact bytes
+ → fresh Telegraph registration
+ → wait for active/rejected
+ → inspect live Stage-2 result
+ → submit exact accepted artifact
+```
 
-**No green local gate → no registration.**
+**NO GREEN GATE → NO REGISTRATION.**
 
-## Provenance
+## Registration discipline
 
-The neural hybrid uses an MIT-licensed official baseline. The full MIT notice is retained in `neural/UPSTREAM_BASELINE_LICENSE.md`.
+A registration is tied to the exact submitted artifact/hash. If source or bytes change, create a new binary/hash and fresh registration. `pending` is not acceptance.
 
-The Veridex wrapper and product integration are the original contribution. Never describe the upstream semantic model/weights as Veridex-authored research.
+Never modify registered bytes. Never reuse rejected registrations for changed artifacts.
 
-Legacy calibration experiments derived from another upstream artifact are retained only for historical research and are not the default release candidate.
+## Competitive interpretation
+
+Historical `15/15` versus `14/15` results are treated as an ordinal diagnostic lesson, not the complete leaderboard formula. The actual hidden Stage-2 fixture set is not reconstructed from those historical numbers.
+
+The optimization target is robust ordering across unseen answer styles:
+
+`correct semantic/factual answer > partial/correct-core > unrelated > contradictory/wrong-entity/wrong-number`
+
+subject to the actual Telegraph evaluator.
 
 ## Completion definition
 
 Track 2 is complete only when:
 
-1. the final binary is reproducibly built;
-2. all local/CI gates are green;
-3. the exact SHA-256 is recorded;
-4. the fresh Telegraph registration is accepted/active;
-5. the Stage-2 live result is recorded;
-6. the exact accepted artifact/registration is submitted to the Hackathon form.
+1. source is pinned;
+2. exact binary is reproducibly built;
+3. all local/CI gates are green;
+4. public checker passes;
+5. SHA-256 is recorded;
+6. exact bytes are frozen;
+7. fresh Telegraph registration is accepted/active;
+8. live Stage-2 result is recorded;
+9. exact accepted artifact/registration is submitted.
 
-Until step 5, the correct status is **validation pending**, not “won.”
+Until step 8, status is **validation/acceptance pending**, not #1.

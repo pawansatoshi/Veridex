@@ -4,30 +4,35 @@ This directory contains the freestanding `wasm32` scoring work used for the Tele
 
 ## Candidate lines
 
-### 1. Independent Veridex evaluator
+### 1. Historical compact evaluators
 
-`veridex_evaluator_v9.c` is the compact independently-authored scorer. It combines exact/normalized matching, lexical precision/recall, conservative semantic families, morphology, contradiction/direction checks, numeric equivalence, entity-conflict protection, and limited question/answer-shape relevance.
+`veridex_evaluator_v6.c` and `veridex_evaluator_v7.c` are retained for regression/reference history. `veridex_evaluator_v9.c` is also retained as a source candidate, but is **not a release candidate**: its `breakdown_answer` implementation returns `0`, and its token offsets are `uint16_t`, so it is not safe for the >65,535-byte hardening gate.
 
-### 2. Neural-hybrid competitive evaluator — current strongest engineering path
+### 2. Neural-hybrid evaluator — current engineering candidate
 
 `neural/build_candidate.py` reproducibly builds `veridex-track2-final.wasm` from the pinned MIT-licensed Telegraph baseline commit `dfa0cf7fda72789267811ba2190f61a8eaacedf6`, which contains real INT8 MiniLM-L6-v2 weights and the protocol-compatible semantic/BM25 scoring pipeline.
 
-Veridex adds a deterministic factual-integrity wrapper around that semantic foundation:
+Veridex adds a deterministic factual-integrity wrapper:
 
 - exact normalized answer => `1.0`;
 - empty/whitespace answer or empty ground truth => `0.0`;
 - polarity/direction contradiction penalty;
+- named-entity conflict protection using question + ground-truth context;
 - numeric mismatch penalty;
 - numeric-question answer-shape guard;
-- gentle monotone score transform to increase separation without intentionally changing the unguarded semantic ranking.
+- binary answer-shape/polarity guard where the ground truth is unambiguous;
+- question-context contribution through answer-shape requirements;
+- monotone power calibration to increase separation without intentionally changing the unguarded semantic ordering.
 
-The wrapper is our contribution; the embedded baseline model/weights remain upstream work and are disclosed under `neural/UPSTREAM_BASELINE_LICENSE.md`.
+The wrapper is independently authored Veridex work. The embedded baseline source/weights remain upstream work and are disclosed under `neural/UPSTREAM_BASELINE_LICENSE.md`.
 
-## Official baseline research
+## Authoritative scoring / breakdown contract
 
-The official `telegraphprotocol/telegraph-wasm-baseline` repository documents a real MiniLM-L6-v2 sentence transformer, BM25 lexical signal, length quality and question/ground-truth relevance. It supports a `wasm32-unknown-unknown` real-weights build. The baseline is MIT licensed.
+`rank_answer` and `breakdown_answer` call the same `veridex_score` function. The breakdown buffer is five little-endian `f32` values:
 
-The official `telegraphprotocol/telegraph-examples` repository is also the canonical reference for live protocol usage, registration and verification flows.
+`[base_semantic, factual_guard, question_guard, calibrated, final]`
+
+Slot 4 is exactly the final `rank_answer` result. Empty/whitespace/empty-ground-truth inputs produce five zero values. The preflight rejects any disagreement between the breakdown final slot and `rank_answer`.
 
 ## Required exports
 
@@ -39,16 +44,16 @@ The final candidate must expose at least:
 - `rank_answer(q_ptr, q_len, gt_ptr, gt_len, ma_ptr, ma_len) -> f32`
 - `breakdown_answer(q_ptr, q_len, gt_ptr, gt_len, ma_ptr, ma_len) -> i32`
 
-Extra exports are tolerated by the baseline tooling, but the required interface above must remain intact.
-
 ## Required behavior
 
-- empty ground truth => `0`
+- empty ground truth => exactly `0`
 - empty or whitespace-only miner answer => exactly `0`
-- exact normalized answer => `1`
+- exact normalized answer => exactly `1`
 - finite score in `[0,1]`
-- deterministic repeated execution
-- long input and UTF-8 tolerant
+- deterministic repeated and fresh-instance execution
+- safe >65,535-byte input
+- UTF-8/CJK/emoji/accented input tolerant
+- embedded NUL tolerant
 - no WASI/network/filesystem dependency inside the WASM
 - binary <= 32 MiB
 
@@ -59,17 +64,18 @@ Run:
 ```bash
 node telegraph/evaluation/track2-preflight.js veridex-track2-final.wasm telegraph/evaluation/track2-benchmark-v2.json
 node telegraph/evaluation/track2-tournament.js veridex-track2-final.wasm telegraph/evaluation/track2-benchmark-v2.json
+node telegraph/evaluation/track2-mutation-suite.mjs veridex-track2-final.wasm telegraph/evaluation/track2-benchmark-v2.json
 ```
 
-Where available, also run the public Wazero checker in strict mode. Any invalid score, import, zero-input failure, nondeterminism or high-vs-low inversion is a release blocker.
+Where available, also run the pinned public Wazero compatibility checker in strict mode. Any invalid score, import, zero-input failure, breakdown disagreement, nondeterminism or high-vs-low inversion is a release blocker.
 
 ## Competitive gate
 
-The local suite is necessary but not sufficient. Telegraph's Stage 2 benchmark is independent/partly hidden. A candidate must be registered on-chain and evaluated by Telegraph before any claim of competitive placement is made.
+The local suite is necessary but not sufficient. Telegraph's canonical evaluation can include independent/held-out data. The current hackathon's Script Author track is judged on automated evaluator performance, ranking accuracy and resistance to gaming. The public hackathon page is authoritative for the current season's rules and judging criteria.
 
 The release pipeline is:
 
-`source -> reproducible build -> wasm-validate -> size/import gate -> preflight -> tournament -> official Wazero checker -> SHA-256/provenance record -> fresh registration -> wait for live status -> inspect Stage 2 metrics -> submit exact accepted artifact`
+`source -> reproducible build -> wasm-validate -> size/import gate -> preflight -> tournament -> mutation suite -> public Wazero checker -> SHA-256/provenance record -> fresh registration -> wait for live status -> inspect Stage 2 metrics -> submit exact accepted artifact`
 
 **No green gate, no registration.**
 

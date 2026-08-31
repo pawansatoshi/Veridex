@@ -37,7 +37,7 @@ Pinned baseline for the current neural-hybrid build:
 
 `dfa0cf7fda72789267811ba2190f61a8eaacedf6`
 
-The baseline repository documents real INT8 MiniLM-L6-v2 inference, BM25 lexical scoring, question/ground-truth relevance and length-quality scoring, compiled for `wasm32-unknown-unknown`.
+The baseline documents real INT8 MiniLM-L6-v2 inference, BM25 lexical scoring, question/ground-truth relevance and length-quality scoring, compiled for `wasm32-unknown-unknown`.
 
 The baseline is MIT licensed. Preserve the MIT notice and provenance when redistributing/modifying it.
 
@@ -51,31 +51,35 @@ Historical rejected registrations are regression evidence, not candidates to res
 - `#1809` — whitespace answer returned `0.0097`, but protocol required exactly `0`.
 - `#1818` — Stage 2 ordering: 14/15 vs incumbent 15/15.
 - `#1821` — Stage 2 ordering: 14/15 vs incumbent 15/15.
+- `#2084` — live `FRAUD_DETECTION` evaluation rejected at 10m40s including module load because the fixture gate exceeded Telegraph's hard time budget.
 
 The lesson is: never spend another registration on an unverified candidate.
 
 ## Current Track 2 architecture
 
-### Primary release path: neural hybrid
+### Primary release path: bounded neural hybrid
 
-`telegraph/evaluation/neural/build_candidate.py`
+`telegraph/evaluation/neural/build_candidate_fast.py`
 
-The builder:
+The current builder:
 
 1. clones the pinned MIT-licensed Telegraph baseline in a temporary build workspace;
-2. renames the baseline's primary scorer exports;
-3. adds a Veridex wrapper;
-4. builds the real-weight MiniLM-based scorer for `wasm32-unknown-unknown`;
-5. emits `telegraph/evaluation/veridex-track2-final.wasm` when the CI gate passes.
+2. patches `MAX_SEQ_LEN` to 64 and caps executed transformer layers at 5 for the performance candidate;
+3. renames baseline exports;
+4. adds a Veridex factual-integrity wrapper;
+5. builds the real-weight MiniLM/BM25 scorer for `wasm32-unknown-unknown`;
+6. emits the candidate only for CI validation.
 
-Veridex wrapper layers:
+Veridex wrapper layers include:
 
 - empty/whitespace answer or empty ground truth → `0`;
 - normalized exact match → `1`;
 - polarity/direction contradiction guard;
-- numeric mismatch guard;
-- numeric-question answer-shape guard;
-- monotone score transform for separation.
+- numeric mismatch guard with word-unit parsing;
+- entity-conflict protection;
+- answer-shape protection;
+- context-aware explicit-equivalence handling that preserves factual guards;
+- bounded deterministic score shaping.
 
 The semantic base and its weights are upstream and are not described as original Veridex model research. Veridex's contribution is the wrapper, factual-integrity logic, integration and overall product architecture.
 
@@ -87,7 +91,7 @@ Retained for audit/regression/fallback; not the primary competitive path while t
 
 ## Competitive insight
 
-Observed leading FRAUD_DETECTION binaries were approximately 24 MB and had much larger static representation than the original KB-scale Veridex rule scorer. The official baseline explains this size class through embedded model weights/tokenizer/semantic machinery.
+Observed leading `FRAUD_DETECTION` binaries were approximately 24 MB and had much larger static representation than the original KB-scale Veridex rule scorer. The official baseline explains this size class through embedded model weights/tokenizer/semantic machinery.
 
 Do **not** equate file size with quality. The objective is useful semantic representational capacity plus factual integrity and reliable ordering.
 
@@ -101,24 +105,11 @@ Current automated tools:
 
 - `track2-preflight.js`
 - `track2-tournament.js`
-
-They test required exports, zero imports, zero-input behavior, self-match, local high-vs-low ordering, long/Unicode/NUL inputs, determinism, margin and variance.
+- `track2-mutation-suite.mjs`
 
 The local benchmark is a regression suite. It is **not** the hidden Telegraph Stage 2 benchmark.
 
-Future expansion should include generated/mutated cases for:
-
-- entity swap;
-- numeric mutation;
-- date mutation;
-- direction flip;
-- negation;
-- surface-overlap traps;
-- incomplete answers;
-- answer-shape mismatch;
-- multilingual/Unicode stress.
-
-Do not optimize to public probes alone.
+The release process also uses a supplemental contract-security benchmark and the strict public Wazero checker.
 
 ## Release gates
 
@@ -135,16 +126,35 @@ No registration until all relevant gates are green:
 9. deterministic repeated/fresh execution;
 10. long/UTF-8/NUL safety;
 11. zero local ordering inversions;
-12. meaningful score variance;
-13. <=32 MiB;
-14. public Wazero checker in strict mode where available;
-15. SHA-256 and provenance recorded.
+12. contract-security ordering passes;
+13. adversarial mutation passes;
+14. strict public Wazero checks pass;
+15. performance/memory margin is acceptable;
+16. <=32 MiB binary;
+17. SHA-256 and provenance recorded;
+18. exact artifact frozen;
+19. fresh Telegraph registration;
+20. actual Telegraph acceptance and live Stage-2 result recorded.
 
 ## CI
 
-`.github/workflows/track2-final-verify.yml` is the release gate. It builds the neural hybrid, validates the WASM, runs preflight and tournament, runs the public Wazero checker, records SHA-256 and only then publishes the exact candidate.
+`.github/workflows/track2-final-verify.yml` is the release gate.
 
-The workflow is configured to avoid self-triggering on its generated binary/hash output.
+The workflow deliberately triggers only on Track-2 code/benchmark/workflow changes, not documentation-only changes, because the public checker can take tens of minutes. It now uses a 60-minute GitHub job timeout and builds a pinned public Wazero checker once for reuse.
+
+The workflow does **not** register candidates automatically.
+
+## Current release experiment
+
+Branch: `track2-v10-hardening`
+
+PR: `#203` (open, draft)
+
+Current head: `e6d4694be3e19d39e158b22fbac513cb7f69c10e`
+
+The latest observed predecessor run (#124) built a 24,194,340-byte zero-import candidate but failed primary preflight on three explicit-equivalence/value pairs. The current source has been changed to make equivalence context-aware and non-early-returning while preserving factual guards.
+
+A fresh Track-2 workflow is expected for the current source head; until it completes, the current candidate remains **UNVERIFIED**.
 
 ## Live registration discipline
 
@@ -168,7 +178,8 @@ We want the strongest defensible probability of beating the incumbent, measured 
 - self-match quality;
 - score variance;
 - rank consistency;
-- robustness to semantic/factual adversarial cases.
+- robustness to semantic/factual adversarial cases;
+- live runtime safety.
 
 A hidden Stage 2 win cannot be guaranteed in advance.
 
@@ -184,23 +195,20 @@ Legacy calibration experiments from other upstream work remain clearly labeled a
 
 ## Current status
 
-The neural-hybrid release path is implemented in the repository. The remaining proof is external: CI must pass, the exact final binary must be available, Telegraph must accept a fresh registration, and the live Stage 2 result must be recorded.
+**TRACK 2: VALIDATION PENDING.**
 
-Until those external steps succeed, the correct label is **validation pending**, not “#1” or “won.”
+The current branch has an active controlled candidate and release documentation, but no current candidate is yet approved for registration. Historical registration #2084 remains rejected for runtime budget and must not be reused.
 
-## Next agent checklist
+The correct final labels remain separate:
 
-1. Read this file.
-2. Read `telegraph/evaluation/BUILD.md`.
-3. Read `telegraph/evaluation/TRACK2_BLUEPRINT.md`.
-4. Read `telegraph/evaluation/TRACK2_RELEASE_BLUEPRINT.md`.
-5. Read `telegraph/evaluation/TRACK2_TOP3_AUDIT.md`.
-6. Read `telegraph/evaluation/neural/README.md` and license notice.
-7. Inspect the latest Track 2 workflow run and logs.
-8. Inspect the generated final WASM before upload.
-9. Run or confirm all gates.
-10. Only then perform a fresh Telegraph registration.
-11. Record the live result and update this document.
+- IMPLEMENTED — source change exists;
+- CI VALIDATED — exact commit has a successful Track-2 workflow;
+- PUBLIC CHECKER PASSED — strict pinned Wazero checker passed;
+- HASH FROZEN — exact artifact and SHA-256 recorded;
+- REGISTERED — fresh on-chain registration exists;
+- ACCEPTED — Telegraph accepts the candidate;
+- COMPETITIVE — live Stage-2 evidence exists;
+- SUBMITTED — exact accepted candidate is in the hackathon form.
 
 ## Non-negotiables
 

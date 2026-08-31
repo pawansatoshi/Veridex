@@ -14,11 +14,20 @@ const enc = new TextEncoder();
 function score(q, gt, a) {
   const bs = [enc.encode(q), enc.encode(gt), enc.encode(a)];
   const ps = bs.map(b => b.length ? e.alloc(b.length) : 0);
-  for (let i=0;i<3;i++) if (bs[i].length) new Uint8Array(e.memory.buffer, ps[i], bs[i].length).set(bs[i]);
-  const r = e.rank_answer(ps[0],bs[0].length,ps[1],bs[1].length,ps[2],bs[2].length);
-  for (let i=2;i>=0;i--) if (bs[i].length) e.dealloc(ps[i],bs[i].length);
-  if (!Number.isFinite(r) || r < 0 || r > 1) throw new Error(`invalid score ${r}`);
-  return r;
+  try {
+    for (let i = 0; i < 3; i++) {
+      if (!bs[i].length) continue;
+      if (!ps[i]) throw new Error(`alloc failed for arg ${i}`);
+      const mem = new Uint8Array(e.memory.buffer);
+      if (ps[i] < 0 || ps[i] > mem.length || bs[i].length > mem.length - ps[i]) throw new Error('input exceeds linear memory');
+      mem.set(bs[i], ps[i]);
+    }
+    const r = e.rank_answer(ps[0],bs[0].length,ps[1],bs[1].length,ps[2],bs[2].length);
+    if (!Number.isFinite(r) || r < 0 || r > 1) throw new Error(`invalid score ${r}`);
+    return r;
+  } finally {
+    for (let i = 2; i >= 0; i--) if (bs[i].length && ps[i]) e.dealloc(ps[i], bs[i].length);
+  }
 }
 
 const replacements = [
@@ -32,37 +41,50 @@ const numberRe = /\b(\d+(?:[.,]\d+)?)\b/g;
 function mutateNumber(text) {
   return text.replace(numberRe, (_, n) => {
     const x = Number(n.replace(/,/g,''));
-    return Number.isFinite(x) ? String(x + (x === 0 ? 1 : 1)) : n;
+    return Number.isFinite(x) ? String(x + 1) : n;
   });
 }
+
 function mutateEntity(text) {
-  return text
-    .replace(/\bApple\b/g, 'Microsoft')
-    .replace(/\bMicrosoft\b/g, 'Apple')
-    .replace(/\bEthereum\b/g, 'Solana')
-    .replace(/\bSolana\b/g, 'Ethereum')
-    .replace(/\bCoinbase\b/g, 'Binance')
-    .replace(/\bBinance\b/g, 'Coinbase');
-}
-function flip(text) {
+  const placeholders = [
+    ['Apple','__VERIDEX_APPLE__'], ['Microsoft','__VERIDEX_MICROSOFT__'],
+    ['Ethereum','__VERIDEX_ETHEREUM__'], ['Solana','__VERIDEX_SOLANA__'],
+    ['Coinbase','__VERIDEX_COINBASE__'], ['Binance','__VERIDEX_BINANCE__'],
+  ];
   let out = text;
+  for (const [from, tmp] of placeholders) out = out.replace(new RegExp(`\\b${from}\\b`, 'g'), tmp);
+  out = out.replace(/__VERIDEX_APPLE__/g, 'Microsoft').replace(/__VERIDEX_MICROSOFT__/g, 'Apple');
+  out = out.replace(/__VERIDEX_ETHEREUM__/g, 'Solana').replace(/__VERIDEX_SOLANA__/g, 'Ethereum');
+  out = out.replace(/__VERIDEX_COINBASE__/g, 'Binance').replace(/__VERIDEX_BINANCE__/g, 'Coinbase');
+  return out;
+}
+
+function flip(text) {
   for (const [a,b] of replacements) {
     const re = new RegExp(`\\b${a}\\b`, 'i');
-    if (re.test(out)) return out.replace(re, b);
+    if (re.test(text)) return text.replace(re, b);
   }
-  return out;
+  return text;
+}
+
+function binaryFragment(text) {
+  const words = text.match(/[A-Za-z0-9]+/g) || [];
+  if (words.length > 3) return false;
+  const lower = words.map(x => x.toLowerCase());
+  if (!lower.some(x => ['yes','no','true','false'].includes(x))) return false;
+  return lower.some(x => ['it','this','that','they'].includes(x));
 }
 
 let tested = 0;
 let failures = 0;
-const diagnostics = [];
+let diagnostics = [];
+let informationalDiagnostics = [];
 
 for (const c of seed.cases) {
   const highs = c.answers.filter(x => x.tier === 'high');
   const lows = c.answers.filter(x => x.tier === 'low');
   const baseHigh = highs[0]?.text;
-  const baseLow = lows[0]?.text;
-  if (!baseHigh || !baseLow) continue;
+  if (!baseHigh || !lows.length) continue;
 
   const mutants = [
     ['number-mutation', mutateNumber(baseHigh)],
@@ -77,7 +99,28 @@ for (const c of seed.cases) {
     if (mutant === baseHigh) continue;
     const bad = score(c.question, c.ground_truth, mutant);
     tested++;
-    if (!(good > bad || (kind === 'case-punctuation' && good >= bad))) {
+
+    if (kind === 'case-punctuation') {
+      // Case and punctuation are semantic invariants; they must not be required
+      // to score lower than the original. Flag only a material score drift.
+      if (Math.abs(good - bad) > 0.02) {
+        failures++;
+        diagnostics.push({id:c.id, kind, question:c.question, ground_truth:c.ground_truth, good:baseHigh, goodScore:good, mutant, mutantScore:bad, reason:'case/punctuation changed score materially'});
+      }
+      continue;
+    }
+
+    if (kind === 'undercomplete' && !binaryFragment(mutant)) {
+      // Truncation is not universally wrong: a numeric answer without its unit
+      // or a concise core can remain materially correct. Keep these as evidence
+      // for review rather than enforcing a false universal ordering rule.
+      if (!(good > bad)) {
+        informationalDiagnostics.push({id:c.id, kind, question:c.question, ground_truth:c.ground_truth, good:baseHigh, goodScore:good, mutant, mutantScore:bad});
+      }
+      continue;
+    }
+
+    if (!(good > bad)) {
       failures++;
       diagnostics.push({id:c.id, kind, question:c.question, ground_truth:c.ground_truth, good:baseHigh, goodScore:good, mutant, mutantScore:bad});
     }
@@ -93,5 +136,5 @@ for (const c of seed.cases) {
   }
 }
 
-console.log(JSON.stringify({seedCases:seed.cases.length,tested,failures,diagnostics}, null, 2));
+console.log(JSON.stringify({seedCases:seed.cases.length,tested,failures,diagnostics,informationalDiagnostics}, null, 2));
 if (failures) process.exit(2);

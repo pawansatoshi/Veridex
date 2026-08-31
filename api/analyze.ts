@@ -25,7 +25,10 @@ export default async function handler(req: { method?: string; body?: unknown }, 
       capabilityPassport: buildCapabilityPassport(result),
     }));
   } catch (error) {
+    // Keep operational diagnostics in server-side logs/observability. Do not
+    // expose RPC/provider/stack details to untrusted callers.
+    console.error("veridex analysis unavailable", error);
     res.statusCode = 503;
-    res.end(JSON.stringify({ error: "analysis_unavailable", detail: error instanceof Error ? error.message : String(error) }));
+    res.end(JSON.stringify({ error: "analysis_unavailable", detail: "The analysis service is temporarily unavailable" }));
   }
 }
