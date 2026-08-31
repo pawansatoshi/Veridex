@@ -1,11 +1,5 @@
 #!/usr/bin/env python3
-"""Release wrapper for the bounded-performance Track 2 builder.
-
-Runs the established fast builder, then applies generic binary-question
-predicate consistency plus a strictly increasing odds-temperature score
-transform. The transform preserves ordering while driving strong answers
-up toward 0.9+ and weak answers toward 0.
-"""
+"""Release wrapper for the bounded-performance Track 2 builder."""
 from __future__ import annotations
 
 import build_candidate
