@@ -41,16 +41,10 @@ fn vr_opposite(gt:&[u8],ans:&[u8])->bool{
     if !any{return None;} while i<text.len()&&vr_ws(text[i]){i+=1;} if i<text.len(){match vr_lower(text[i]){b'k'=>x*=1e3,b'm'=>x*=1e6,b'b'=>x*=1e9,_=>{}}} Some((x,text[i..].first()==Some(&b'%')))
 }'''
     new_number = '''fn vr_first_number(text:&[u8])->Option<(f64,bool)>{
-    let mut i=0usize; while i<text.len() && !(text[i].is_ascii_digit()||text[i]==b'.'){i+=1;} if i>=text.len(){return None;}
+    let mut i=0usize; while i<text.len() && !(text[i].is_ascii_digit()){i+=1;} if i>=text.len(){return None;}
     let mut x=0.0f64; let mut frac=0.1f64; let mut dot=false; let mut any=false;
-    while i<text.len(){let c=text[i]; if c.is_ascii_digit(){any=true;if dot{x+=(c-b'0')as f64*frac;frac*=0.1;}else{x=x*10.0+(c-b'0')as f64;}i+=1;}else if c==b','||c==b'_'{i+=1;}else if c==b'.'&&!dot{dot=true;i+=1;}else{break;}}
-    if !any{return None;}
-    while i<text.len()&&vr_ws(text[i]){i+=1;}
-    if i<text.len(){
-        match vr_lower(text[i]){b'k'=>x*=1e3,b'm'=>x*=1e6,b'b'=>x*=1e9,_=>{}}
-        if vr_has_word(text,b"thousand"){x*=1e3;}else if vr_has_word(text,b"million"){x*=1e6;}else if vr_has_word(text,b"billion"){x*=1e9;}
-    }
-    Some((x,text[i..].first()==Some(&b'%')))
+    while i<text.len(){let c=text[i]; if c.is_ascii_digit(){any=true;if dot{x+=(c-b'0')as f64*frac;frac*=0.1;}else{x=x*10.0+(c-b'0')as f64;}i+=1;}else if c==b','||c==b'_'{i+=1;}else if c==b'.'&&!dot&&i+1<text.len()&&text[i+1].is_ascii_digit(){dot=true;i+=1;}else{break;}}
+    if !any{return None;} while i<text.len()&&vr_ws(text[i]){i+=1;} if i<text.len(){match vr_lower(text[i]){b'k'=>x*=1e3,b'm'=>x*=1e6,b'b'=>x*=1e9,_=>{}}} if vr_has_word(text,b"thousand"){x*=1e3;}else if vr_has_word(text,b"million"){x*=1e6;}else if vr_has_word(text,b"billion"){x*=1e9;} Some((x,text[i..].first()==Some(&b'%')))
 }'''
     for old,new,label in ((old_opposite,new_opposite,"directional guard"),(old_number,new_number,"numeric parser")):
         if old not in build_candidate.WRAPPER:
@@ -58,7 +52,7 @@ fn vr_opposite(gt:&[u8],ans:&[u8])->bool{
         build_candidate.WRAPPER=build_candidate.WRAPPER.replace(old,new,1)
 
     eq_helper = '''fn vr_explicit_equivalence(text:&[u8])->bool{let direct=vr_has_word(text,b"equivalent")||vr_has_word(text,b"identical");let same=vr_has_word(text,b"same")&&(vr_has_word(text,b"value")||vr_has_word(text,b"answer")||vr_has_word(text,b"amount")||vr_has_word(text,b"number"));(direct||same)&&!vr_has_any(text,&[b"not",b"different",b"wrong",b"incorrect"])}
-fn vr_safe_numeric_equiv(gt:&[u8],ans:&[u8])->bool{match(vr_first_number(gt),vr_first_number(ans)){(Some((g,gp)),Some((a,ap)))=>{if gp!=ap{return false;}let scale=g.abs().max(a.abs()).max(1.0);(g-a).abs()<=scale*0.001+1e-6},_=>false}}
+fn vr_safe_numeric_equiv(gt:&[u8],ans:&[u8])->bool{match(vr_first_number(gt),vr_first_number(ans)){(Some((g,gp)),Some((a,ap)))=>{if gp!=ap{return false;}let scale=g.abs().max(a.abs()).max(1.0);(g-a).abs()<=scale*1e-9},_=>false}}
 fn vr_numeric_context(q:&[u8])->bool{const TERMS:&[&[u8]]=&[b"amount",b"value",b"loss",b"profit",b"revenue",b"cost",b"price",b"fee",b"number",b"total",b"volume",b"rate",b"percentage",b"percent",b"worth",b"valuation",b"supply",b"balance",b"quantity"];vr_has_any(q,TERMS)}
 '''
     marker="unsafe fn veridex_score(q_ptr:i32,q_len:i32,gt_ptr:i32,gt_len:i32,ma_ptr:i32,ma_len:i32)->(f32,f32,f32,f32){"
@@ -79,8 +73,8 @@ fn vr_numeric_context(q:&[u8])->bool{const TERMS:&[&[u8]]=&[b"amount",b"value",b
     sharpen_marker="let qg=vr_question_guard(q.as_bytes(),gb,ab);let final_score=vr_safe_pow(base*fg*qg);(final_score,base,fg,qg)"
     sharpen_replacement=(
         "let qg=vr_question_guard(q.as_bytes(),gb,ab);"
-        "let adjusted_base=if safe_numeric_equiv{base.max(0.85)}else{base};"
-        "let final_score=vr_safe_pow(adjusted_base*fg*qg);(final_score,base,fg,qg)"
+        "if safe_numeric_equiv{let lifted=vr_safe_pow(base.max(0.95));return(lifted,base,1.0,qg);}"
+        "let final_score=vr_safe_pow(base*fg*qg);(final_score,base,fg,qg)"
     )
     if sharpen_marker not in build_candidate.WRAPPER:
         raise SystemExit("fast path: final-score marker not found")
@@ -133,8 +127,8 @@ def main() -> None:
         shutil.copy2(built,out)
         print(f"upstream commit: {BASELINE_COMMIT}")
         print("fast path: MAX_SEQ_LEN=64, max transformer layers=5")
-        print("semantic guards: directional polarity + word-unit numeric parsing + context-aware, factual equivalence")
-        print("numeric equivalence: exact normalized numeric equality is lifted only in numeric-context questions, after contradiction/entity guards")
+        print("semantic guards: directional polarity + robust numeric parsing + factual equivalence")
+        print("numeric equivalence: equal numeric value across comma/word-unit variants is promoted only in numeric-context questions after contradiction/entity guards")
         print(f"output: {out}")
         print(f"bytes: {out.stat().st_size}")
 
