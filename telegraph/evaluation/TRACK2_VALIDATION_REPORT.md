@@ -2,106 +2,84 @@
 
 ## Release status
 
-**Status: NOT RELEASED / NOT REGISTERED**
+**Status: NOT RELEASED / LIVE REGISTRATION #2084 REJECTED FOR TIME BUDGET**
 
 This report is evidence-driven. No hidden-benchmark result is inferred from local fixtures.
 
 ## Candidate identity
 
-- Source: `telegraph/evaluation/neural/build_candidate.py`
+- Source line: `telegraph/evaluation/neural/build_candidate.py` plus `build_candidate_fast.py`
 - Pinned upstream baseline: `telegraphprotocol/telegraph-wasm-baseline`
 - Upstream commit: `dfa0cf7fda72789267811ba2190f61a8eaacedf6`
-- Candidate family: Veridex neural-hybrid V10.1 hardening
-- Current branch head: `b1e5631cc3740a7f964a55973a0aa18af2426a98`
+- Current fast candidate path: `build_candidate_fast.py`
+- Current branch: `track2-v10-hardening`
 - Exact WASM: generated per CI run; not frozen until all gates pass
 - SHA-256: `PENDING_GREEN_CI`
 
-## Iteration history
+## Live Telegraph result — registration #2084
 
-### First V10 run — 33294105111
+Registration #2084 for `FRAUD_DETECTION` was rejected by Telegraph because the evaluation fixture gate exceeded the hard time budget:
 
-Build/structural validation passed, but preflight found 3 ordering inversions. The failures were:
+`evaluation exceeded its time budget: the fixture gate did not complete in time (10m40s elapsed, including module load).`
 
-1. payment link: semantic equivalent lost to `legitimate and safe`;
-2. Apple Q3 revenue: cross-unit paraphrase lost to wrong-entity answer;
-3. trusted owner: synonym lost to dangerous opposite.
+Interpretation: this was a **performance/runtime rejection**, not evidence that the scorer's ordering quality failed. The corresponding CI candidate had already passed the local primary ordering, contract-security ordering, mutation suite, public hard.json gate, and deterministic/runtime safety checks before its public Wazero step hit the GitHub 35-minute workflow cap.
 
-That run also exposed an incorrect JavaScript fresh-instance assumption. The harness was corrected.
+## Pre-rejection CI evidence
 
-### V10.1 rerun — 33294197111
+The candidate associated with the V10.1 line demonstrated:
 
-The same exact candidate build passed the preflight gate:
-
-- WASM: **24,192,001 bytes**
+- WASM: **24,194,663 bytes** class
 - imports: **0**
-- cases: **49** in the current `track2-benchmark-v2.json`
-- high-vs-low pairs: **55**
-- inversions: **0**
-- mean margin: **0.4689717406216501**
-- worst margin: **0.00018387287855148315**
-- self-match: **1**
-- score stddev: **0.342690178381962**
+- primary preflight: **0 inversions**
+- primary tournament: **55/55 wins, 0 losses, 0 ties**
+- contract-security tournament: **6/6 wins**
+- adversarial mutation suite: **157 tested, 0 failures**
+- deterministic repeat and fresh-instance checks: pass
+- fuzzing: pass
+- sustained memory check: pass
 
-The workflow then stopped in the tournament because the tournament harness still contained the same `WebAssembly.instantiate` return-shape bug. That harness is now fixed in the current branch.
+The live rejection proves these local properties were not sufficient because Telegraph's own fixture gate has its own 10-minute module evaluation budget.
 
-### Benchmark-count discrepancy
+## Performance correction
 
-The current file named `track2-benchmark-v2.json` contains **49 cases**, not the 50 cases described by older project context. This is now treated as a source-of-truth discrepancy rather than silently claiming 50. A separate six-case `track2-benchmark-contract-v1.json` supplemental suite was added to cover contract-security authority, evidence, overclaim and entity-conflict reasoning while preserving the `FRAUD_DETECTION` intent.
+The previous neural release path used the full 6-layer INT8 MiniLM-L6-v2 inference path. Even with question/ground-truth caching, live Telegraph registration #2084 exceeded the 10-minute fixture budget by ~40 seconds.
 
-## Current rerun
+The release line has therefore moved to an explicitly bounded **fast neural path** which preserves the Veridex wrapper, cache, factual guards, provenance and zero-import architecture while reducing inference work:
 
-The current branch has a fresh Track 2 workflow queued (`run 33294293728`) after the tournament harness correction and supplemental contract-security suite. Until that run completes, V10.1 remains **UNVERIFIED**.
+- maximum tokenizer sequence length: **64 tokens**;
+- maximum transformer layers executed: **5 of 6**;
+- full pinned weight blob retained for reproducibility/provenance;
+- full six-layer path remains available for regression/reference.
 
-## Hard gates
+This is an engineering performance candidate, not yet an accepted Telegraph candidate.
 
-| Gate | Required result | Evidence/status |
-|---|---|---|
-| WASM validation | pass | V10.1 pass |
-| Required exports | memory, alloc, dealloc, rank_answer, breakdown_answer | V10.1 pass |
-| Imports | exactly 0 | V10.1 pass |
-| Size | <= 32 MiB | V10.1 pass: 24,192,001 B |
-| Empty answer | exactly 0 | V10.1 preflight pass |
-| Whitespace answer | exactly 0 | V10.1 preflight pass |
-| Empty ground truth | exactly 0 | V10.1 preflight pass |
-| Exact normalized answer | exactly 1 | V10.1 preflight pass |
-| Breakdown final | equals rank_answer | V10.1 preflight pass |
-| >65,535-byte input | safe | V10.1 preflight reached and passed |
-| Unicode/CJK/emoji/accented input | safe | V10.1 preflight reached and passed |
-| Embedded NUL | safe | V10.1 preflight reached and passed |
-| Same-instance determinism | exact repeat | V10.1 preflight pass |
-| Fresh-instance determinism | exact repeat | V10.1 preflight pass after harness fix |
-| Primary benchmark inversions | 0 | V10.1 preflight: 0 |
-| Primary tournament | pass | **PENDING CURRENT RERUN** |
-| Supplemental contract-security suite | 0 inversions | **PENDING CURRENT RERUN** |
-| Mutation suite | pass | **PENDING CURRENT RERUN** |
-| Public Wazero compatibility checker | pass | **PENDING CURRENT RERUN** |
-| SHA-256 | recorded | **PENDING GREEN CI** |
-
-## Competitive metrics
-
-Do not treat the preflight summary as the final tournament report. The current tournament must produce:
-
-- wins / losses / ties
-- mean / median / worst / best margin
-- self-match
-- score stddev
-- deterministic repeatability
-- runtime
-- inversion diagnostics with component scores
-
-All remain pending until the current run completes.
-
-## Historical regression gates
+## Historical regressions
 
 - #1809: whitespace-only answer must be exactly `0`.
-- #1818: behavioral ordering loss against incumbent must not be repeated blindly.
-- #1821: behavioral ordering loss against incumbent must not be repeated blindly.
+- #1818: historical 14/15 ordering loss against incumbent.
+- #1821: historical 14/15 ordering loss against incumbent.
+
+## Current verification workflow
+
+The Track 2 final workflow now:
+
+1. builds the fast neural candidate;
+2. validates WASM structure/size/imports;
+3. runs primary preflight and tournament;
+4. runs contract-security preflight/tournament;
+5. builds one pinned Wazero checker binary and reuses it;
+6. runs strict hard.json;
+7. runs adversarial mutation;
+8. runs strict full Wazero compatibility;
+9. records SHA-256 and uploads the exact artifact only after all gates pass.
+
+The CI job timeout is **60 minutes**, because the public checker itself can be expensive. This CI timeout is not the Telegraph 10-minute module evaluation budget; the candidate must satisfy both.
 
 ## Registration policy
 
 **No green gate → no registration.**
 
-When a binary is registered, record the exact registration ID, exact SHA-256 and Telegraph acceptance status here. If the binary changes, create a new registration and preserve the historical record.
+A registration binds the exact submitted bytes/hash. Any change to source or binary requires a new build, new hash and fresh registration. Pending is not acceptance.
 
 ## Evidence classification
 
@@ -113,3 +91,9 @@ When a binary is registered, record the exact registration ID, exact SHA-256 and
 - ACCEPTED BY TELEGRAPH: only after Telegraph accepts it.
 - COMPETITIVE ON LIVE EVALUATION: only after Telegraph live evaluation provides evidence.
 - OFFICIALLY SUBMITTED: only after the exact accepted artifact is used in the hackathon submission.
+
+## Current status
+
+**Fast V10 candidate: UNVERIFIED — CI run pending.**
+
+Do not use any previously registered artifact for Track 2 submission. The next registration must use the exact artifact produced by the first complete green CI run of the fast path.
