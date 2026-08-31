@@ -10,12 +10,6 @@ on:
       - 'telegraph/evaluation/track2-preflight.js'
       - 'telegraph/evaluation/track2-tournament.js'
       - 'telegraph/evaluation/track2-mutation-suite.mjs'
-      - 'telegraph/evaluation/BUILD.md'
-      - 'telegraph/evaluation/TRACK2_BLUEPRINT.md'
-      - 'telegraph/evaluation/TRACK2_RELEASE_BLUEPRINT.md'
-      - 'telegraph/evaluation/TRACK2_CANDIDATE_MATRIX.md'
-      - 'telegraph/evaluation/TRACK2_VALIDATION_REPORT.md'
-      - 'telegraph/evaluation/UPSTREAM_NOTICE.md'
       - '.github/workflows/track2-final-verify.yml'
   pull_request:
     paths:
@@ -25,12 +19,6 @@ on:
       - 'telegraph/evaluation/track2-preflight.js'
       - 'telegraph/evaluation/track2-tournament.js'
       - 'telegraph/evaluation/track2-mutation-suite.mjs'
-      - 'telegraph/evaluation/BUILD.md'
-      - 'telegraph/evaluation/TRACK2_BLUEPRINT.md'
-      - 'telegraph/evaluation/TRACK2_RELEASE_BLUEPRINT.md'
-      - 'telegraph/evaluation/TRACK2_CANDIDATE_MATRIX.md'
-      - 'telegraph/evaluation/TRACK2_VALIDATION_REPORT.md'
-      - 'telegraph/evaluation/UPSTREAM_NOTICE.md'
       - '.github/workflows/track2-final-verify.yml'
   workflow_dispatch:
 
@@ -44,9 +32,6 @@ concurrency:
 jobs:
   build-verify-publish:
     runs-on: ubuntu-latest
-    # The public hard.json + full Wazero checks are intentionally expensive. The
-    # previous 35-minute cap cancelled a run after all substantive local/mutation
-    # gates had already passed, before immutable evidence could be recorded.
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
