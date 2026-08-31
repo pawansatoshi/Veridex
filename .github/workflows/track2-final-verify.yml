@@ -10,6 +10,7 @@ on:
       - 'telegraph/evaluation/track2-preflight.js'
       - 'telegraph/evaluation/track2-tournament.js'
       - 'telegraph/evaluation/track2-mutation-suite.mjs'
+      - 'telegraph/evaluation/track2-live-risk-stress.mjs'
       - '.github/workflows/track2-final-verify.yml'
   pull_request:
     paths:
@@ -19,6 +20,7 @@ on:
       - 'telegraph/evaluation/track2-preflight.js'
       - 'telegraph/evaluation/track2-tournament.js'
       - 'telegraph/evaluation/track2-mutation-suite.mjs'
+      - 'telegraph/evaluation/track2-live-risk-stress.mjs'
       - '.github/workflows/track2-final-verify.yml'
   workflow_dispatch:
 
@@ -68,7 +70,7 @@ jobs:
           IMPORTS=$(wasm-objdump -x telegraph/evaluation/veridex-track2-final.wasm | grep -c '^ *import' || true)
           test "$IMPORTS" -eq 0
           wasm-objdump -x telegraph/evaluation/veridex-track2-final.wasm > telegraph/evaluation/ci-evidence/wasm-objdump.txt
-          printf 'size=%s\\nimports=%s\\n' "$SIZE" "$IMPORTS" | tee telegraph/evaluation/ci-evidence/structural.txt
+          printf 'size=%s\nimports=%s\n' "$SIZE" "$IMPORTS" | tee telegraph/evaluation/ci-evidence/structural.txt
 
       - name: Run primary preflight edge and determinism gates
         run: |
@@ -109,6 +111,11 @@ jobs:
           set -euo pipefail
           node telegraph/evaluation/track2-mutation-suite.mjs telegraph/evaluation/veridex-track2-final.wasm telegraph/evaluation/track2-benchmark-v2.json | tee telegraph/evaluation/ci-evidence/mutation-suite.json
 
+      - name: Run live-risk margin stress gate
+        run: |
+          set -euo pipefail
+          node telegraph/evaluation/track2-live-risk-stress.mjs telegraph/evaluation/veridex-track2-final.wasm telegraph/evaluation/track2-benchmark-v2.json | tee telegraph/evaluation/ci-evidence/live-risk-stress.json
+
       - name: Run public Wazero compatibility checker
         run: |
           set -euo pipefail
@@ -119,7 +126,7 @@ jobs:
           set -euo pipefail
           sha256sum telegraph/evaluation/veridex-track2-final.wasm | tee telegraph/evaluation/VERIDEX_TRACK2_FINAL_SHA256.txt
           echo "source baseline commit: dfa0cf7fda72789267811ba2190f61a8eaacedf6" >> telegraph/evaluation/VERIDEX_TRACK2_FINAL_SHA256.txt
-          echo "build: Veridex neural-hybrid wrapper + real MiniLM baseline + 64-token fast path + generic binary predicate consistency" >> telegraph/evaluation/VERIDEX_TRACK2_FINAL_SHA256.txt
+          echo "build: Veridex neural-hybrid wrapper + real MiniLM baseline + 64-token fast path + generic binary predicate consistency + odds-temperature separation" >> telegraph/evaluation/VERIDEX_TRACK2_FINAL_SHA256.txt
           echo "checker commit: f537c7c085e9d3366c5615fe1ad1f98a0abeff7c" >> telegraph/evaluation/VERIDEX_TRACK2_FINAL_SHA256.txt
           echo "source commit: $GITHUB_SHA" >> telegraph/evaluation/VERIDEX_TRACK2_FINAL_SHA256.txt
 
