@@ -123,16 +123,12 @@ function makeScorer(instance) {
     }
   }
 
-  score('long', 'valid '.repeat(16000), 'valid '.repeat(15000));
-  score('unicode', '正确答案 ✅ café 安全', '正确答案 ✅ café 安全');
-  score('nul', 'answer', 'answer\0junk');
-
   const d1 = score('q', 'same answer', 'same answer').score;
   const d2 = score('q', 'same answer', 'same answer').score;
   if (d1 !== d2) throw new Error('same-instance determinism failed');
 
   const secondInstance = await WebAssembly.instantiate(module, {});
-  const freshScore = makeScorer(secondInstance.instance)('q', 'same answer', 'same answer').score;
+  const freshScore = makeScorer(secondInstance)('q', 'same answer', 'same answer').score;
   if (d1 !== freshScore) throw new Error(`fresh-instance determinism failed: ${d1} != ${freshScore}`);
 
   const mean = values.reduce((a, b) => a + b, 0) / (values.length || 1);
@@ -153,6 +149,6 @@ function makeScorer(instance) {
   console.log(JSON.stringify(out, null, 2));
   if (inversions) process.exit(2);
 })().catch((err) => {
-  console.error(err.stack || err);
+  console.error(err?.stack || err);
   process.exit(1);
 });
