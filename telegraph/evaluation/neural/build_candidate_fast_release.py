@@ -39,9 +39,10 @@ fn vr_question_predicate_conflict(q:&[u8],gt:&[u8],ans:&[u8])->bool{
     }
 }'''
 
-_OLD_SHARPEN = "fn vr_safe_pow(score:f32)->f32{if !score.is_finite(){return 0.0;}if score<=0.0{return 0.0;}if score>=1.0{return 1.0;}let t=score.clamp(0.0,1.0);let y=t+0.75*t*(1.0-t)*(2.0*t-1.0);if y.is_finite(){y.clamp(0.0,1.0)}else{0.0}}"
-# Smoothstep is strictly increasing on (0,1), keeps exact endpoints fixed,
-# and provides stronger central separation than the previous near-identity map.
+# Accept both the baseline's original transform and the previously patched
+# release transform. This avoids brittle coupling to import-time wrapper order.
+_OLD_SHARPEN_BASELINE = "fn vr_safe_pow(score:f32)->f32{if score<=0.0{return 0.0;}if score>=1.0{return 1.0;}let y=libm::powf(score,1.18);if y.is_finite(){y.clamp(0.0,1.0)}else{0.0}}"
+_OLD_SHARPEN_RELEASE = "fn vr_safe_pow(score:f32)->f32{if !score.is_finite(){return 0.0;}if score<=0.0{return 0.0;}if score>=1.0{return 1.0;}let t=score.clamp(0.0,1.0);let lift=t*t*(3.0-2.0*t)*(1.0-t);let y=t+lift;if y.is_finite(){y.clamp(0.0,1.0)}else{0.0}}"
 _CONTRAST_SHARPEN = "fn vr_safe_pow(score:f32)->f32{if !score.is_finite(){return 0.0;}if score<=0.0{return 0.0;}if score>=1.0{return 1.0;}let t=score.clamp(0.0,1.0);let y=t*t*(3.0-2.0*t);if y.is_finite(){y.clamp(0.0,1.0)}else{0.0}}"
 
 
@@ -53,11 +54,16 @@ def patch_release_guards() -> None:
     build_candidate.WRAPPER = build_candidate.WRAPPER.replace(
         _ORIGINAL_CONFLICT, _GENERIC_CONFLICT, 1
     )
-    if _OLD_SHARPEN not in build_candidate.WRAPPER:
-        raise SystemExit("release wrapper: expected score transform marker not found")
-    build_candidate.WRAPPER = build_candidate.WRAPPER.replace(
-        _OLD_SHARPEN, _CONTRAST_SHARPEN, 1
-    )
+    if _OLD_SHARPEN_BASELINE in build_candidate.WRAPPER:
+        build_candidate.WRAPPER = build_candidate.WRAPPER.replace(
+            _OLD_SHARPEN_BASELINE, _CONTRAST_SHARPEN, 1
+        )
+    elif _OLD_SHARPEN_RELEASE in build_candidate.WRAPPER:
+        build_candidate.WRAPPER = build_candidate.WRAPPER.replace(
+            _OLD_SHARPEN_RELEASE, _CONTRAST_SHARPEN, 1
+        )
+    else:
+        raise SystemExit("release wrapper: no supported score transform marker found")
 
 
 if __name__ == "__main__":
