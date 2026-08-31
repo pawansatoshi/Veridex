@@ -1,46 +1,111 @@
 #!/usr/bin/env python3
-"""Track 2 fast candidate builder.
+"""Build the bounded-performance Veridex Track 2 neural candidate.
 
-Loads the existing Veridex compatibility wrapper (all scoring guards/cache logic)
-and applies bounded performance optimizations to the pinned MiniLM baseline:
-- cap tokenizer sequence length at 64 tokens;
-- execute only the first 5 of the baseline's 6 transformer layers.
-
-The full pinned weight blob remains present for provenance/reproducibility, but
-unnecessary upper-layer computation is skipped at runtime. This is intentionally
-kept in a separate build entry point so the full V10 neural candidate remains
-available for regression/reference.
+This builder intentionally patches the pinned baseline source files themselves.
+MAX_SEQ_LEN is defined in src/tokenizer.rs and the transformer layer count plus
+position-table assertion are in src/embed.rs; they are not part of the Veridex
+wrapper string. The Veridex wrapper remains authoritative and is supplied by
+build_candidate.py + build_candidate_compat.py.
 """
 from __future__ import annotations
-import sys
+
+import argparse
+import pathlib
+import re
+import shutil
+import subprocess
+import tempfile
+
 import build_candidate
-import build_candidate_compat  # applies the authoritative Veridex wrapper patches
+import build_candidate_compat  # applies the current authoritative wrapper patches
 
-src = build_candidate.WRAPPER
+BASELINE_REPO = build_candidate.BASELINE_REPO
+BASELINE_COMMIT = build_candidate.BASELINE_COMMIT
 
-old_len = "pub const MAX_SEQ_LEN: usize = 128;"
-new_len = "pub const MAX_SEQ_LEN: usize = 64;"
-if old_len not in src:
-    raise SystemExit("baseline MAX_SEQ_LEN marker not found; upstream wrapper changed")
-src = src.replace(old_len, new_len, 1)
 
-old_assert = '''assert_eq!(
-        num_positions, MAX_SEQ_LEN,
-        "weights.bin position table size doesn't match tokenizer::MAX_SEQ_LEN"
-    );'''
-new_assert = "let _num_positions = num_positions;"
-if old_assert not in src:
-    raise SystemExit("baseline position-table assertion not found; upstream embed.rs changed")
-src = src.replace(old_assert, new_assert, 1)
+def run(cmd: list[str], cwd: pathlib.Path) -> None:
+    print("$", " ".join(cmd))
+    subprocess.run(cmd, cwd=cwd, check=True)
 
-old_layers = "let num_layers = read_u32(w, &mut c) as usize; // 6"
-new_layers = "let num_layers = core::cmp::min(read_u32(w, &mut c) as usize, 5); // bounded fast path: max 5 layers"
-if old_layers not in src:
-    raise SystemExit("baseline layer-count marker not found; upstream embed.rs changed")
-src = src.replace(old_layers, new_layers, 1)
 
-build_candidate.WRAPPER = src
+def patch_fast_sources(upstream: pathlib.Path) -> None:
+    tokenizer = upstream / "src" / "tokenizer.rs"
+    text = tokenizer.read_text(encoding="utf-8")
+    text, n = re.subn(
+        r"pub\s+const\s+MAX_SEQ_LEN\s*:\s*usize\s*=\s*\d+\s*;",
+        "pub const MAX_SEQ_LEN: usize = 64;",
+        text, count=1,
+    )
+    if n != 1:
+        raise SystemExit("fast path: MAX_SEQ_LEN definition not found in pinned tokenizer.rs")
+    tokenizer.write_text(text, encoding="utf-8")
+
+    embed = upstream / "src" / "embed.rs"
+    text = embed.read_text(encoding="utf-8")
+
+    text, n = re.subn(
+        r"let\s+num_layers\s*=\s*read_u32\(w,\s*&mut\s*c\)\s+as\s+usize\s*;",
+        "let num_layers = core::cmp::min(read_u32(w, &mut c) as usize, 5);",
+        text, count=1,
+    )
+    if n != 1:
+        raise SystemExit("fast path: transformer layer-count definition not found in pinned embed.rs")
+
+    # Keep the complete 128-row position table consumption so the binary cursor
+    # stays aligned; only the tokenizer/model execution window is reduced to 64.
+    text, n = re.subn(
+        r"assert_eq!\(\s*num_positions,\s*MAX_SEQ_LEN,\s*\n?\s*\"weights\.bin position table size doesn't match tokenizer::MAX_SEQ_LEN\"\s*\n?\s*\);",
+        'assert!(num_positions >= MAX_SEQ_LEN, "weights.bin position table is shorter than tokenizer::MAX_SEQ_LEN");',
+        text, count=1,
+    )
+    if n != 1:
+        raise SystemExit("fast path: position-table assertion not found in pinned embed.rs")
+
+    embed.write_text(text, encoding="utf-8")
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--out", required=True)
+    args = ap.parse_args()
+    out = pathlib.Path(args.out).resolve()
+    out.parent.mkdir(parents=True, exist_ok=True)
+
+    with tempfile.TemporaryDirectory(prefix="veridex-neural-fast-") as td:
+        root = pathlib.Path(td)
+        upstream = root / "baseline"
+        run(["git", "clone", "--filter=blob:none", BASELINE_REPO, str(upstream)], root)
+        run(["git", "checkout", BASELINE_COMMIT], upstream)
+
+        patch_fast_sources(upstream)
+
+        lib = upstream / "src" / "lib.rs"
+        text = lib.read_text(encoding="utf-8")
+        replacements = (
+            ('pub unsafe extern "C" fn rank_answer(', 'pub unsafe extern "C" fn rank_answer_base('),
+            ('pub unsafe extern "C" fn breakdown_answer(', 'pub unsafe extern "C" fn breakdown_answer_base('),
+            ('pub unsafe extern "C" fn alloc(', 'pub unsafe extern "C" fn baseline_alloc('),
+            ('pub unsafe extern "C" fn dealloc(', 'pub unsafe extern "C" fn baseline_dealloc('),
+        )
+        for old, new in replacements:
+            if old not in text:
+                raise SystemExit(f"unexpected pinned baseline lib.rs: missing {old}")
+            text = text.replace(old, new, 1)
+        lib.write_text(text + build_candidate.WRAPPER, encoding="utf-8")
+
+        run(["rustup", "target", "add", "wasm32-unknown-unknown"], upstream)
+        run(["cargo", "build", "--release", "--target", "wasm32-unknown-unknown", "--features", "real_weights"], upstream)
+
+        built = upstream / "target" / "wasm32-unknown-unknown" / "release" / "telegraph_scoring.wasm"
+        if not built.exists():
+            raise SystemExit(f"build succeeded but output missing: {built}")
+        shutil.copy2(built, out)
+
+        print(f"upstream commit: {BASELINE_COMMIT}")
+        print("fast path: MAX_SEQ_LEN=64, max transformer layers=5")
+        print(f"output: {out}")
+        print(f"bytes: {out.stat().st_size}")
+
 
 if __name__ == "__main__":
-    sys.argv[0] = "build_candidate.py"
-    build_candidate.main()
+    main()
