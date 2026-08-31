@@ -50,6 +50,35 @@ _NEW_SAFE_EQ = (
 _OLD_LIFT = "if safe_numeric_equiv{let lifted=vr_safe_pow(base.max(0.95));return(lifted,base,1.0,qg);}"
 _NEW_LIFT = "if safe_numeric_equiv{let lifted=(base+0.15*(1.0-base)).min(0.97);return(lifted,base,1.0,qg);}"
 
+_NEGATION_HELPERS = r'''fn vr_has_trailing_word(text:&[u8],needle:&[u8])->bool{
+    let mut i=text.len();
+    while i>0 && !text[i-1].is_ascii_alphanumeric(){i-=1;}
+    let end=i;
+    while i>0 && text[i-1].is_ascii_alphanumeric(){i-=1;}
+    i<end && vr_word_eq(text,i,end,needle)
+}
+fn vr_explicit_negation_conflict(gt:&[u8],ans:&[u8])->bool{
+    if vr_has_trailing_word(ans,b"not") && !vr_has_word(gt,b"not"){return true;}
+    let ans_has_not=vr_has_word(ans,b"not")||vr_has_word(ans,b"never");
+    if !ans_has_not || vr_has_word(gt,b"not") || vr_has_word(gt,b"never"){return false;}
+    match vr_first_binary_polarity(ans){
+        Some(_)=>true,
+        None=>false
+    }
+}'''
+
+_NEW_QUESTION_GUARD = r'''fn vr_question_guard(q:&[u8],gt:&[u8],ans:&[u8])->f32{
+    let mut g=1.0f32;
+    if vr_question_requires_number(q)&&vr_first_number(ans).is_none(){g*=0.82;}
+    if vr_question_is_binary(q){
+        if let Some(p)=vr_first_binary_polarity(gt){
+            match vr_first_binary_polarity(ans){Some(a)if a!=p=>g*=0.06,None=>g*=0.88,_=>{}}
+        }
+    }
+    if vr_explicit_negation_conflict(gt,ans){g*=0.05;}
+    g
+}'''
+
 
 def _replace_function(wrapper: str, function_marker: str, replacement: str) -> str:
     start=wrapper.find(function_marker)
@@ -87,9 +116,10 @@ def _replace_function(wrapper: str, function_marker: str, replacement: str) -> s
 
 def patch_release_guards() -> None:
     _ORIGINAL_FAST_PATCH()
-    if _ORIGINAL_CONFLICT not in build_candidate.WRAPPER:
-        raise SystemExit("release wrapper: expected binary predicate guard marker not found")
-    build_candidate.WRAPPER=build_candidate.WRAPPER.replace(_ORIGINAL_CONFLICT,_GENERIC_CONFLICT,1)
+    if _ORIGINAL_CONFLICT in build_candidate.WRAPPER:
+        build_candidate.WRAPPER=build_candidate.WRAPPER.replace(_ORIGINAL_CONFLICT,_GENERIC_CONFLICT,1)
+    elif "fn vr_question_predicate_conflict(" not in build_candidate.WRAPPER:
+        raise SystemExit("release wrapper: predicate conflict helper unavailable")
 
     safe_eq_hits=build_candidate.WRAPPER.count(_OLD_SAFE_EQ)
     if safe_eq_hits!=1:
@@ -100,6 +130,11 @@ def patch_release_guards() -> None:
     if lift_hits!=1:
         raise SystemExit(f"release wrapper: expected one numeric-equivalence lift, found {lift_hits}")
     build_candidate.WRAPPER=build_candidate.WRAPPER.replace(_OLD_LIFT,_NEW_LIFT,1)
+
+    marker="fn vr_question_guard(q:&[u8],gt:&[u8],ans:&[u8])->f32{"
+    if marker not in build_candidate.WRAPPER:
+        raise SystemExit("release wrapper: question guard marker not found")
+    build_candidate.WRAPPER=build_candidate.WRAPPER.replace(marker,_NEGATION_HELPERS+"\n"+_NEW_QUESTION_GUARD,1)
 
     build_candidate.WRAPPER=_replace_function(
         build_candidate.WRAPPER,
