@@ -1,12 +1,5 @@
 #!/usr/bin/env python3
-"""Build the bounded-performance Veridex Track 2 neural candidate.
-
-This builder intentionally patches the pinned baseline source files themselves.
-MAX_SEQ_LEN is defined in src/tokenizer.rs and the transformer layer count plus
-position-table assertion are in src/embed.rs; they are not part of the Veridex
-wrapper string. The Veridex wrapper remains authoritative and is supplied by
-build_candidate.py + build_candidate_compat.py.
-"""
+"""Build the bounded-performance Veridex Track 2 neural candidate."""
 from __future__ import annotations
 
 import argparse
@@ -65,6 +58,7 @@ fn vr_opposite(gt:&[u8],ans:&[u8])->bool{
         build_candidate.WRAPPER=build_candidate.WRAPPER.replace(old,new,1)
 
     eq_helper = '''fn vr_explicit_equivalence(text:&[u8])->bool{let direct=vr_has_word(text,b"equivalent")||vr_has_word(text,b"identical");let same=vr_has_word(text,b"same")&&(vr_has_word(text,b"value")||vr_has_word(text,b"answer")||vr_has_word(text,b"amount")||vr_has_word(text,b"number"));(direct||same)&&!vr_has_any(text,&[b"not",b"different",b"wrong",b"incorrect"])}
+fn vr_safe_numeric_equiv(gt:&[u8],ans:&[u8])->bool{vr_first_number(gt).is_some()&&vr_first_number(ans).is_none()&&vr_explicit_equivalence(ans)&&!vr_opposite(gt,ans)}
 fn vr_numeric_context(q:&[u8])->bool{const TERMS:&[&[u8]]=&[b"amount",b"value",b"loss",b"profit",b"revenue",b"cost",b"price",b"fee",b"number",b"total",b"volume",b"rate",b"percentage",b"percent",b"worth",b"valuation",b"supply",b"balance",b"quantity"];vr_has_any(q,TERMS)}
 '''
     marker="unsafe fn veridex_score(q_ptr:i32,q_len:i32,gt_ptr:i32,gt_len:i32,ma_ptr:i32,ma_len:i32)->(f32,f32,f32,f32){"
@@ -75,7 +69,7 @@ fn vr_numeric_context(q:&[u8])->bool{const TERMS:&[&[u8]]=&[b"amount",b"value",b
     score_marker="let gb=gt.as_bytes();let ab=a.as_bytes();let fg="
     score_inject=(
         "let gb=gt.as_bytes();let ab=a.as_bytes();"
-        "let safe_numeric_equiv=vr_numeric_context(q.as_bytes())&&vr_first_number(gt.as_bytes()).is_some()&&vr_explicit_equivalence(ab)&&vr_first_number(ab).is_none()&&!vr_opposite(gb,ab)&&!vr_named_token_conflict(q.as_bytes(),gb,ab);"
+        "let safe_numeric_equiv=vr_safe_numeric_equiv(gb,ab)&&vr_numeric_context(q.as_bytes());"
         "let fg=if vr_opposite(gb,ab){0.06}else if vr_named_token_conflict(q.as_bytes(),gb,ab){0.08}else if vr_numeric_mismatch(gb,ab)&&!safe_numeric_equiv{0.22}else{1.0};"
     )
     if score_marker not in build_candidate.WRAPPER:
@@ -139,8 +133,8 @@ def main() -> None:
         shutil.copy2(built,out)
         print(f"upstream commit: {BASELINE_COMMIT}")
         print("fast path: MAX_SEQ_LEN=64, max transformer layers=5")
-        print("semantic guards: directional synonym polarity + word-unit numeric parsing + context-aware equivalence")
-        print("numeric equivalence: factual-context guarded, no early return")
+        print("semantic guards: directional polarity + word-unit numeric parsing + context-aware, factual equivalence")
+        print("numeric equivalence: gated by numeric ground truth, equivalence language, no conflicting predicate, and numeric question context")
         print(f"output: {out}")
         print(f"bytes: {out.stat().st_size}")
 
