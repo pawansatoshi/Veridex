@@ -85,7 +85,6 @@ fn vr_numeric_context(q:&[u8])->bool{const TERMS:&[&[u8]]=&[b"amount",b"value",b
     sharpen_marker="let qg=vr_question_guard(q.as_bytes(),gb,ab);let final_score=vr_safe_pow(base*fg*qg);(final_score,base,fg,qg)"
     sharpen_replacement=(
         "let qg=vr_question_guard(q.as_bytes(),gb,ab);"
-        "let safe_numeric_equiv=vr_numeric_context(q.as_bytes())&&vr_first_number(gb).is_some()&&vr_explicit_equivalence(ab)&&vr_first_number(ab).is_none()&&!vr_opposite(gb,ab)&&!vr_named_token_conflict(q.as_bytes(),gb,ab);"
         "let adjusted_base=if safe_numeric_equiv{base.max(0.40)}else{base};"
         "let final_score=vr_safe_pow(adjusted_base*fg*qg);(final_score,base,fg,qg)"
     )
