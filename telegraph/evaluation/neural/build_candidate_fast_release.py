@@ -10,6 +10,11 @@ import build_candidate
 import build_candidate_fast
 
 
+# Preserve the original fast-builder patcher before replacing the module
+# attribute. The previous implementation called the replaced attribute from
+# inside itself, causing infinite recursion during CI builds.
+_ORIGINAL_FAST_PATCH = build_candidate_fast.patch_semantic_guards
+
 _ORIGINAL_CONFLICT = (
     "fn vr_question_predicate_conflict(q:&[u8],gt:&[u8],ans:&[u8])->bool{"
     "if !vr_question_is_binary(q){return false;}"
@@ -23,7 +28,9 @@ fn vr_question_predicate_conflict(q:&[u8],_gt:&[u8],ans:&[u8])->bool{if !vr_ques
 
 
 def patch_predicate_logic() -> None:
-    build_candidate_fast.patch_semantic_guards()
+    # Run the original fast-builder patches exactly once, then add the
+    # release-specific generic predicate-consistency guard.
+    _ORIGINAL_FAST_PATCH()
     if _ORIGINAL_CONFLICT not in build_candidate.WRAPPER:
         raise SystemExit("release wrapper: expected binary predicate guard marker not found")
     build_candidate.WRAPPER = build_candidate.WRAPPER.replace(
