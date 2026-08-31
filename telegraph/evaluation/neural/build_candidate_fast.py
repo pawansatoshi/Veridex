@@ -64,7 +64,7 @@ fn vr_opposite(gt:&[u8],ans:&[u8])->bool{
             raise SystemExit(f"fast path: expected {label} marker not found")
         build_candidate.WRAPPER=build_candidate.WRAPPER.replace(old,new,1)
 
-    eq_helper = '''fn vr_explicit_equivalence(text:&[u8])->bool{let direct=vr_has_word(text,b"equivalent")||vr_has_word(text,b"identical");let same=vr_has_word(text,b"same")&&(vr_has_word(text,b"value")||vr_has_word(text,b"answer"));(direct||same)&&!vr_has_any(text,&[b"not",b"different",b"wrong",b"incorrect"])}
+    eq_helper = '''fn vr_explicit_equivalence(text:&[u8])->bool{let direct=vr_has_word(text,b"equivalent")||vr_has_word(text,b"identical");let same=vr_has_word(text,b"same")&&(vr_has_word(text,b"value")||vr_has_word(text,b"answer")||vr_has_word(text,b"amount")||vr_has_word(text,b"number"));(direct||same)&&!vr_has_any(text,&[b"not",b"different",b"wrong",b"incorrect"])}
 fn vr_numeric_context(q:&[u8])->bool{const TERMS:&[&[u8]]=&[b"amount",b"value",b"loss",b"profit",b"revenue",b"cost",b"price",b"fee",b"number",b"total",b"volume",b"rate",b"percentage",b"percent",b"worth",b"valuation",b"supply",b"balance",b"quantity"];vr_has_any(q,TERMS)}
 '''
     marker="unsafe fn veridex_score(q_ptr:i32,q_len:i32,gt_ptr:i32,gt_len:i32,ma_ptr:i32,ma_len:i32)->(f32,f32,f32,f32){"
@@ -75,13 +75,23 @@ fn vr_numeric_context(q:&[u8])->bool{const TERMS:&[&[u8]]=&[b"amount",b"value",b
     score_marker="let gb=gt.as_bytes();let ab=a.as_bytes();let fg="
     score_inject=(
         "let gb=gt.as_bytes();let ab=a.as_bytes();"
-        "if vr_numeric_context(q.as_bytes())&&vr_first_number(gt.as_bytes()).is_some()&&vr_explicit_equivalence(ab){"
-        "let eq_score=vr_safe_pow(base.max(0.40));return(eq_score,base,1.0,1.0);}"
-        "let fg="
+        "let safe_numeric_equiv=vr_numeric_context(q.as_bytes())&&vr_first_number(gt.as_bytes()).is_some()&&vr_explicit_equivalence(ab)&&vr_first_number(ab).is_none()&&!vr_opposite(gb,ab)&&!vr_named_token_conflict(q.as_bytes(),gb,ab);"
+        "let fg=if vr_opposite(gb,ab){0.06}else if vr_named_token_conflict(q.as_bytes(),gb,ab){0.08}else if vr_numeric_mismatch(gb,ab)&&!safe_numeric_equiv{0.22}else{1.0};"
     )
     if score_marker not in build_candidate.WRAPPER:
         raise SystemExit("fast path: score guard insertion marker not found")
     build_candidate.WRAPPER=build_candidate.WRAPPER.replace(score_marker,score_inject,1)
+
+    sharpen_marker="let qg=vr_question_guard(q.as_bytes(),gb,ab);let final_score=vr_safe_pow(base*fg*qg);(final_score,base,fg,qg)"
+    sharpen_replacement=(
+        "let qg=vr_question_guard(q.as_bytes(),gb,ab);"
+        "let safe_numeric_equiv=vr_numeric_context(q.as_bytes())&&vr_first_number(gb).is_some()&&vr_explicit_equivalence(ab)&&vr_first_number(ab).is_none()&&!vr_opposite(gb,ab)&&!vr_named_token_conflict(q.as_bytes(),gb,ab);"
+        "let adjusted_base=if safe_numeric_equiv{base.max(0.40)}else{base};"
+        "let final_score=vr_safe_pow(adjusted_base*fg*qg);(final_score,base,fg,qg)"
+    )
+    if sharpen_marker not in build_candidate.WRAPPER:
+        raise SystemExit("fast path: final-score marker not found")
+    build_candidate.WRAPPER=build_candidate.WRAPPER.replace(sharpen_marker,sharpen_replacement,1)
 
 
 def run(cmd: list[str], cwd: pathlib.Path) -> None:
@@ -131,7 +141,7 @@ def main() -> None:
         print(f"upstream commit: {BASELINE_COMMIT}")
         print("fast path: MAX_SEQ_LEN=64, max transformer layers=5")
         print("semantic guards: directional synonym polarity + word-unit numeric parsing + context-aware equivalence")
-        print("numeric equivalence: only on numeric-context questions with numeric ground truth")
+        print("numeric equivalence: factual-context guarded, no early return")
         print(f"output: {out}")
         print(f"bytes: {out.stat().st_size}")
 
