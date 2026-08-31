@@ -69,7 +69,8 @@ fn vr_numeric_context(q:&[u8])->bool{const TERMS:&[&[u8]]=&[b"amount",b"value",b
     score_inject=(
         "let gb=gt.as_bytes();let ab=a.as_bytes();"
         "let safe_numeric_equiv=vr_safe_numeric_equiv(gb,ab)&&vr_numeric_context(q.as_bytes())&&!vr_opposite(gb,ab)&&!vr_named_token_conflict(q.as_bytes(),gb,ab);"
-        "let fg=if vr_opposite(gb,ab){0.06}else if vr_named_token_conflict(q.as_bytes(),gb,ab){0.08}else if vr_numeric_mismatch(gb,ab)&&!safe_numeric_equiv{0.22}else{1.0};"
+        "let numeric_mismatch=vr_numeric_mismatch(gb,ab)&&!safe_numeric_equiv;"
+        "let fg=if vr_opposite(gb,ab){0.06}else if vr_named_token_conflict(q.as_bytes(),gb,ab){0.08}else if numeric_mismatch{0.08}else{1.0};"
     )
     if score_marker not in build_candidate.WRAPPER:
         raise SystemExit("fast path: score guard insertion marker not found")
@@ -79,7 +80,8 @@ fn vr_numeric_context(q:&[u8])->bool{const TERMS:&[&[u8]]=&[b"amount",b"value",b
     sharpen_replacement=(
         "let qg=vr_question_guard(q.as_bytes(),gb,ab);"
         "if safe_numeric_equiv{let lifted=vr_safe_pow(base.max(0.95));return(lifted,base,1.0,qg);}"
-        "let final_score=vr_safe_pow(base*fg*qg);(final_score,base,fg,qg)"
+        "let mut final_score=vr_safe_pow(base*fg*qg);"
+        "if numeric_mismatch{final_score=final_score.min(0.30);}(final_score,base,fg,qg)"
     )
     if sharpen_marker not in build_candidate.WRAPPER:
         raise SystemExit("fast path: final-score marker not found")
@@ -133,7 +135,8 @@ def main() -> None:
         print(f"upstream commit: {BASELINE_COMMIT}")
         print("fast path: MAX_SEQ_LEN=64, max transformer layers=5")
         print("semantic guards: directional polarity + robust numeric parsing + factual equivalence")
-        print("numeric equivalence: normalized numeric equality across comma/word-unit variants in numeric-context questions")
+        print("numeric equivalence: exact normalized numeric equality with 1e-9 relative floating tolerance")
+        print("numeric mismatch: score-factor 0.08 and final score cap 0.30")
         print(f"output: {out}")
         print(f"bytes: {out.stat().st_size}")
 
