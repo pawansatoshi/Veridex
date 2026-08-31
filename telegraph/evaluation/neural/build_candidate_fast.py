@@ -41,10 +41,15 @@ fn vr_opposite(gt:&[u8],ans:&[u8])->bool{
     if !any{return None;} while i<text.len()&&vr_ws(text[i]){i+=1;} if i<text.len(){match vr_lower(text[i]){b'k'=>x*=1e3,b'm'=>x*=1e6,b'b'=>x*=1e9,_=>{}}} Some((x,text[i..].first()==Some(&b'%')))
 }'''
     new_number = '''fn vr_first_number(text:&[u8])->Option<(f64,bool)>{
-    let mut i=0usize; while i<text.len() && !(text[i].is_ascii_digit()){i+=1;} if i>=text.len(){return None;}
+    let mut i=0usize; while i<text.len() && !text[i].is_ascii_digit(){i+=1;} if i>=text.len(){return None;}
     let mut x=0.0f64; let mut frac=0.1f64; let mut dot=false; let mut any=false;
     while i<text.len(){let c=text[i]; if c.is_ascii_digit(){any=true;if dot{x+=(c-b'0')as f64*frac;frac*=0.1;}else{x=x*10.0+(c-b'0')as f64;}i+=1;}else if c==b','||c==b'_'{i+=1;}else if c==b'.'&&!dot&&i+1<text.len()&&text[i+1].is_ascii_digit(){dot=true;i+=1;}else{break;}}
-    if !any{return None;} while i<text.len()&&vr_ws(text[i]){i+=1;} if i<text.len(){match vr_lower(text[i]){b'k'=>x*=1e3,b'm'=>x*=1e6,b'b'=>x*=1e9,_=>{}}} if vr_has_word(text,b"thousand"){x*=1e3;}else if vr_has_word(text,b"million"){x*=1e6;}else if vr_has_word(text,b"billion"){x*=1e9;} Some((x,text[i..].first()==Some(&b'%')))
+    if !any{return None;}
+    while i<text.len()&&vr_ws(text[i]){i+=1;}
+    let mut scaled=false;
+    if i<text.len(){match vr_lower(text[i]){b'k'|b'm'|b'b' if i+1==text.len()||!text[i+1].is_ascii_alphabetic()=>{match vr_lower(text[i]){b'k'=>x*=1e3,b'm'=>x*=1e6,b'b'=>x*=1e9,_=>{}}scaled=true;},_=>{}}}
+    if !scaled{if vr_has_word(text,b"thousand"){x*=1e3;}else if vr_has_word(text,b"million"){x*=1e6;}else if vr_has_word(text,b"billion"){x*=1e9;}}
+    Some((x,vr_has_word(text,b"percent")||vr_has_word(text,b"percentage")||text[i..].first()==Some(&b'%')))
 }'''
     for old,new,label in ((old_opposite,new_opposite,"directional guard"),(old_number,new_number,"numeric parser")):
         if old not in build_candidate.WRAPPER:
@@ -128,7 +133,7 @@ def main() -> None:
         print(f"upstream commit: {BASELINE_COMMIT}")
         print("fast path: MAX_SEQ_LEN=64, max transformer layers=5")
         print("semantic guards: directional polarity + robust numeric parsing + factual equivalence")
-        print("numeric equivalence: equal numeric value across comma/word-unit variants is promoted only in numeric-context questions after contradiction/entity guards")
+        print("numeric equivalence: normalized numeric equality across comma/word-unit variants in numeric-context questions")
         print(f"output: {out}")
         print(f"bytes: {out.stat().st_size}")
 
