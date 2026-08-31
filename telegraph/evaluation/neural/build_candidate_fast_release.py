@@ -35,7 +35,10 @@ fn vr_question_predicate_conflict(q:&[u8],gt:&[u8],ans:&[u8])->bool{
     }
 }'''
 
-_MILD_CALIBRATION = "fn vr_safe_pow(score:f32)->f32{if !score.is_finite(){return 0.0;}if score<=0.0{return 0.0;}if score>=1.0{return 1.0;}let t=score.clamp(0.0,1.0);let y=t+0.22*t*(1.0-t);if y.is_finite(){y.clamp(0.0,1.0)}else{0.0}}"
+# Champion-style smoothstep sharpening. It is strictly monotone on [0,1],
+# preserves endpoints, and pushes middling correct scores toward 1 without
+# changing their ordinal order.
+_MONOTONIC_SHARPEN = "fn vr_safe_pow(score:f32)->f32{if !score.is_finite(){return 0.0;}if score<=0.0{return 0.0;}if score>=1.0{return 1.0;}let t=score.clamp(0.0,1.0);let y=t+t*t*(3.0-2.0*t)*(1.0-t);if y.is_finite(){y.clamp(0.0,1.0)}else{0.0}}"
 
 _OLD_SAFE_EQ = (
     "let safe_numeric_equiv=vr_safe_numeric_equiv(gb,ab)&&vr_numeric_context(q.as_bytes())"
@@ -74,6 +77,10 @@ _NEW_QUESTION_GUARD = r'''fn vr_question_guard(q:&[u8],gt:&[u8],ans:&[u8])->f32{
         if let Some(p)=vr_first_binary_polarity(gt){
             match vr_first_binary_polarity(ans){Some(a)if a!=p=>g*=0.06,None=>g*=0.88,_=>{}}
         }
+        // Apply the generic predicate model even when neither side is a literal
+        // yes/no token (e.g. compromised vs secure, approved vs rejected).
+        if vr_question_predicate_conflict(q,gt,ans){g*=0.06;}
+        if vr_binary_fragment(ans){g*=0.20;}
     }
     if vr_explicit_negation_conflict(gt,ans){g*=0.05;}
     g
@@ -131,7 +138,7 @@ def patch_release_guards() -> None:
         raise SystemExit(f"release wrapper: expected one numeric-equivalence lift, found {lift_hits}")
     build_candidate.WRAPPER=build_candidate.WRAPPER.replace(_OLD_LIFT,_NEW_LIFT,1)
 
-    marker="fn vr_question_guard(q:&[u8],gt:&[u8],ans:&[u8]) -> f32{" 
+    marker="fn vr_question_guard(q:&[u8],gt:&[u8],ans:&[u8]) -> f32{"
     marker_compact="fn vr_question_guard(q:&[u8],gt:&[u8],ans:&[u8])->f32{"
     marker = marker if marker in build_candidate.WRAPPER else marker_compact
     replacement=_NEGATION_HELPERS+"\n"+_NEW_QUESTION_GUARD
@@ -140,7 +147,7 @@ def patch_release_guards() -> None:
     build_candidate.WRAPPER=_replace_function(
         build_candidate.WRAPPER,
         "fn vr_safe_pow(score:f32)->f32{",
-        _MILD_CALIBRATION,
+        _MONOTONIC_SHARPEN,
     )
 
 
