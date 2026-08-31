@@ -1,7 +1,9 @@
 # Veridex — FINAL Roadmap Status
 
-Last consolidated: 2026-08-30
+Last consolidated: 2026-08-31
 Branch: `track2-v10-hardening`
+Current Track-2 source head: `e6d4694be3e19d39e158b22fbac513cb7f69c10e`
+Current PR: #203 (draft, open)
 
 ## Status semantics
 
@@ -16,85 +18,62 @@ Branch: `track2-v10-hardening`
 
 | Area | Status | Evidence | Remaining work | Risk | Priority | Validation |
 |---|---|---|---|---|---|---|
-| Core EVM analysis | COMPLETE | `src/domain` + phase gates | Fresh production smoke when changing core | Medium | P2 | tests/CI |
-| Proxy-aware composition | COMPLETE | proxy-composition implementation + tests | Fresh production smoke when relevant | Low | P2 | tests/CI |
-| Track 1 Miner | COMPLETE / LIVE | Miner `1001`, registration `#144`, production endpoint | Fresh live operational verification before final submission | Medium | P1 | production/Telegraph |
-| Track 2 historical compact V6/V7 | COMPLETE AS HISTORY | preserved source and historical evidence | no promotion | Low | P3 | regression/reference |
-| Track 2 V9 | BROKEN / REJECTED | source audit: breakdown/16-bit-offset weaknesses | retain for regression only | High | P0 | source audit |
-| Track 2 neural V10.1 | PARTIAL / ACTIVE CANDIDATE | reproducible builder + V10 hardening branch | complete fresh CI, freeze exact artifact | Critical | P0 | CI |
-| Track 2 primary benchmark | PARTIAL | current file has 49 cases; previous V10.1 preflight had 55/55 wins | fresh tournament + baseline differential evidence | High | P0 | tournament |
-| Track 2 contract-security benchmark | PARTIAL | 6-case supplemental suite | fresh tournament | High | P0 | tournament |
-| Track 2 mutation suite | PARTIAL | suite implemented | fresh green run | High | P0 | CI |
-| Track 2 public hard.json | PARTIAL | gate implemented | fresh green run | High | P0 | CI/public checker |
-| Track 2 public Wazero | BLOCKED / IN PROGRESS | previous run exposed no-dealloc memory growth | verify allocator hardening | Critical | P0 | strict checker |
-| Track 2 artifact/hash | UNVERIFIED | hash intentionally not frozen | green CI → exact SHA-256 | Critical | P0 | CI |
-| Track 2 registration | BLOCKED BY GREEN GATE | current candidate deliberately not registered | exact green artifact → fresh registration | Critical | P0 | Telegraph |
-| Track 2 live competitive result | UNVERIFIED | no accepted current candidate | active registration + Stage-2 result | Critical | P0 | Telegraph |
-| Track 3 application | COMPLETE / PRESENTATION READY | `/telegraph/application/` and product routes | final browser/production smoke | Medium | P1 | production/browser |
-| Security | PARTIAL | validation/error-boundary/security configuration | fresh dependency scan + final audit | Medium | P1 | CI/security |
-| CI/CD | PARTIAL / HARDENING | active final lane + obsolete publishing lanes disabled | prove current head green and preserve artifact evidence | Medium | P1 | Actions |
-| Deployment | PARTIAL / OPERATIONAL | Vercel deployment and health tooling | final production smoke | Medium | P1 | production |
-| Documentation | PARTIAL / HARDENING | master context, blueprint, BUILD, candidate matrix, validation report | synchronize final CI/registration evidence | Low | P1 | review |
-| Hackathon Track 2 submission | BLOCKED | no accepted current artifact | Telegraph acceptance + exact submission record | Critical | P0 | official submission |
+| Core EVM analysis | COMPLETE | existing domain implementation + CI | none for Track 2 release | Medium | P2 | tests/CI |
+| Proxy-aware composition | COMPLETE | implementation + tests | none for Track 2 release | Low | P2 | CI |
+| Track 1 Miner | COMPLETE / LIVE | existing Miner, registration and production integration | final submission smoke only | Medium | P1 | production/Telegraph |
+| Track 2 historical compact V6/V7 | COMPLETE AS HISTORY | preserved source and rejection evidence | no promotion | Low | P3 | regression/reference |
+| Track 2 V9 | BROKEN / REJECTED | historical audit | retain only | High | P3 | source audit |
+| Track 2 neural V10.1 | PARTIAL / ACTIVE CANDIDATE | pinned MIT baseline + Veridex wrapper + fast path | current head must pass complete gates | Critical | P0 | CI |
+| Primary benchmark | PARTIAL | previous fast candidate: 3/55 inversions | current head must reach 0 | Critical | P0 | preflight/tournament |
+| Contract-security benchmark | UNVERIFIED CURRENT HEAD | suite exists | fresh current-head run | High | P0 | preflight/tournament |
+| Adversarial mutation | UNVERIFIED CURRENT HEAD | prior candidate had 157/157 | fresh current-head run | High | P0 | mutation suite |
+| Public hard.json | UNVERIFIED CURRENT HEAD | strict gate exists | fresh current-head run | High | P0 | public checker |
+| Public Wazero | UNVERIFIED CURRENT HEAD | prior CI reached checker; live #2084 exceeded Telegraph budget | fresh current-head strict checker + performance margin | Critical | P0 | Wazero |
+| Track 2 exact artifact/hash | UNVERIFIED | exact binary generated per CI; not frozen | green CI then hash freeze | Critical | P0 | CI |
+| Track 2 live registration | BLOCKED BY GREEN GATE | #2084 rejected for 10m40s live budget | green exact candidate + fresh registration | Critical | P0 | Telegraph |
+| Track 2 live competitive result | UNVERIFIED | no accepted current artifact | live Stage-2 result | Critical | P0 | Telegraph |
+| Track 3 application | COMPLETE / PRESENTATION READY | existing app routes/UI | final smoke only | Medium | P1 | production/browser |
+| Security | PARTIAL | zero-import WASM + existing controls | final dependency/input/log review | Medium | P1 | CI/security |
+| CI/CD | PARTIAL / HARDENED | final Track-2 workflow; docs-only changes no longer trigger expensive run | fresh full green current-head run | Medium | P1 | Actions |
+| Deployment | PARTIAL / OPERATIONAL | Vercel deployment/health paths | final smoke | Medium | P1 | production |
+| Documentation | PARTIAL / HARDENED | master context, blueprints, matrix, validation report, roadmap | final exact hash/live result synchronization | Low | P1 | review |
+| Hackathon Track 2 submission | BLOCKED | no accepted current registration | acceptance + exact form submission | Critical | P0 | official submission |
 
-## Final Track 2 architecture decision
+## Current Track 2 architecture
 
-The old compact rule/lexical line is retained for regression but is **not** the competitive release line. The selected architecture is:
+`pinned official MIT MiniLM/BM25 semantic foundation → Veridex factual-integrity wrapper → deterministic bounded score → release gates`
 
-`official MIT MiniLM/BM25 semantic foundation → Veridex factual-integrity wrapper → deterministic bounded score → optional monotonic calibration`
+Current performance candidate:
 
-The wrapper protects against high-impact ranking failures without replacing the semantic foundation with a brittle rule system.
+- `MAX_SEQ_LEN = 64`
+- maximum transformer layers executed = `5`
+- zero WASM imports
+- binary target remains <=32 MiB
 
-## Final Track 2 release gates
+## Current blocker
 
-A candidate may be promoted only when all are green:
+The last fully observed fast candidate built successfully and passed structural validation but failed primary preflight on three equivalence/value pairs. The current source has a context-aware, non-early-return correction intended to resolve those without bypassing entity, contradiction or numeric mismatch guards.
 
-1. reproducible build;
-2. valid WASM;
-3. required `memory`, `alloc`, `dealloc`, `rank_answer`, `breakdown_answer` exports;
-4. zero imports/no WASI/network/filesystem dependency;
-5. empty answer exactly `0`;
-6. whitespace-only answer exactly `0`;
-7. empty ground truth safely handled;
-8. exact normalized answer exactly `1`;
-9. finite `[0,1]` scores;
-10. deterministic repeated execution;
-11. deterministic fresh-instance execution;
-12. long and >65,535-byte input safety;
-13. UTF-8/CJK/emoji/accented/NUL safety;
-14. safe allocator/pointer behaviour;
-15. breakdown final equals rank score;
-16. zero unacceptable local ordering inversions;
-17. meaningful score distribution;
-18. primary tournament green;
-19. contract-security tournament green;
-20. mutation suite green;
-21. public `hard.json` gate green;
-22. strict public Wazero checker green;
-23. exact SHA-256 recorded;
-24. exact artifact frozen;
-25. only then fresh Telegraph registration;
-26. actual Telegraph acceptance and Stage-2 result recorded;
-27. exact accepted artifact used for submission.
+The last observed CI run (#124) was:
 
-## Competitive interpretation
+- build: PASS
+- structural: PASS
+- size: 24,194,340 bytes
+- imports: 0
+- primary preflight: FAIL, 3 inversions / 55 pairs
+- self-match: 1.0
+- score stddev: 0.4222
 
-`15/15` is treated as a useful historical/diagnostic ordinal target, not a mathematical guarantee of #1. The hidden Stage-2 fixture set is independent from the local benchmark. The competitive objective is robust ranking of correct > partial > unrelated > contradictory answers across unseen answer styles.
+## Historical live runtime blocker
 
-The current team clarification that Stage-2 evaluation has a **10-minute hard module budget** is treated as a release-critical runtime constraint. Exact hidden scoring mechanics remain undisclosed.
+Registration #2084 was rejected by Telegraph at `10m40s elapsed, including module load`. This is treated as a separate runtime gate. CI runtime length is not the Telegraph runtime budget.
 
-## Three-track integration
+## Release state machine
 
-`Track 1 evidence → Track 2 quality evaluation → Track 3 product value`
+`IMPLEMENTED → CI VALIDATED → PUBLIC CHECKER PASSED → HASH FROZEN → REGISTERED → ACCEPTED → LIVE COMPETITIVE EVIDENCE → SUBMITTED`
 
-Track 1 remains the evidence source of truth. Track 2 evaluates answer fidelity and resistance to factual/semantic gaming. Track 3 presents the resulting intelligence through contract analysis, passport, evidence, history/monitoring and actionable workflows.
-
-## Current critical path
-
-`V10.1 allocator fix → fresh CI → tournament → contract suite → mutation → public hard.json → strict Wazero → SHA-256 → freeze → fresh registration → Telegraph acceptance → live Stage-2 result → exact submission`
+## Non-negotiable release rule
 
 **No green gate → no registration.**
 
-## Honest completion state
-
-As of 2026-08-30, Veridex is **not yet Track-2 accepted and not #1**. The engineering direction is selected; the remaining proof is runtime/CI/release validation followed by independent Telegraph evaluation.
+A changed binary requires a new hash and fresh registration. A pending registration is not acceptance. Local benchmark success does not prove hidden Stage-2 placement.
