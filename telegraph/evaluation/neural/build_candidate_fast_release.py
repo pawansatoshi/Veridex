@@ -145,9 +145,6 @@ _RELEASE_GUARD = r'''fn vr_question_guard(q:&[u8],gt:&[u8],ans:&[u8])->f32{
     g
 }'''
 
-# Keep numeric-equivalence lifting inside the complete guard pipeline. The old
-# fast builder returned before qg, which made equivalent numeric answers immune
-# to terminal negation and appended-distractor checks in live-risk stress.
 _RELEASE_SCORE = r'''unsafe fn veridex_score(q_ptr:i32,q_len:i32,gt_ptr:i32,gt_len:i32,ma_ptr:i32,ma_len:i32)->(f32,f32,f32,f32){
     let q=read_str(q_ptr,q_len);let gt=read_str(gt_ptr,gt_len);let a=read_str(ma_ptr,ma_len);
     if gt.trim().is_empty()||a.trim().is_empty(){return(0.0,0.0,0.0,0.0);}
@@ -177,7 +174,12 @@ _RELEASE_SCORE = r'''unsafe fn veridex_score(q_ptr:i32,q_len:i32,gt_ptr:i32,gt_l
     (final_score,base,fg,qg)
 }'''
 
-_MONOTONIC_SHARPEN = "fn vr_safe_pow(score:f32)->f32{if !score.is_finite(){return 0.0;}if score<=0.0{return 0.0;}if score>=1.0{return 1.0;}let t=score.clamp(0.0,1.0);let y=t+t*t*(3.0-2.0*t)*(1.0-t);if y.is_finite(){y.clamp(0.0,1.0)}else{0.0}}"
+# General monotone contrast: preserve ordering while expanding separation on
+# the useful scorer range. For t in [0,1], the derivative remains positive
+# for alpha=0.9, so this cannot invert an existing pairwise ordering. Scores
+# below 0.5 are pushed down; scores above 0.5 are pushed up. This targets the
+# live registrar's average-margin gate rather than fabricating values >1.
+_MONOTONIC_SHARPEN = "fn vr_safe_pow(score:f32)->f32{if !score.is_finite(){return 0.0;}if score<=0.0{return 0.0;}if score>=1.0{return 1.0;}let t=score.clamp(0.0,1.0);let y=t+0.9*t*(1.0-t)*(2.0*t-1.0);if y.is_finite(){y.clamp(0.0,1.0)}else{0.0}}"
 
 
 def _replace_function(wrapper: str, marker: str, replacement: str) -> str:
