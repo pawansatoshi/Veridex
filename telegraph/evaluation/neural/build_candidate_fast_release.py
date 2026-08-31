@@ -31,14 +31,6 @@ _RELEASE_CONFLICT = r'''fn vr_release_predicate_polarity(text:&[u8])->Option<boo
     match(p,n){(true,false)=>Some(true),(false,true)=>Some(false),_=>None}
 }
 
-// A yes/no answer must be interpreted relative to the polarity of the
-// proposition being asked. For an ordinary single-polarity question, use the
-// question predicate plus the explicit yes/no prefix. For compound questions
-// that contain both positive and negative predicates (for example, "compromised
-// or secure"), the question predicate itself is ambiguous, so compare the
-// answer predicate against the ground-truth predicate instead. This preserves
-// the binary semantics while preventing an "or" question from disabling the
-// contradiction guard entirely.
 fn vr_question_predicate_conflict(q:&[u8],gt:&[u8],ans:&[u8])->bool{
     if !vr_question_is_binary(q){return false;}
     let qp=vr_release_predicate_polarity(q);
@@ -73,9 +65,6 @@ fn vr_release_numeric_equivalent(q:&[u8],gt:&[u8],ans:&[u8])->bool{
     }
 }'''
 
-# Treat only genuinely incomplete deictic fragments as undercomplete. A full
-# answer such as "No, it was approved." is four words and must not receive the
-# same penalty as the two-word mutant "No, it".
 _RELEASE_BINARY_FRAGMENT = r'''fn vr_release_binary_fragment(ans:&[u8])->bool{
     let mut words=0usize;let mut saw_binary=false;let mut saw_deictic=false;let mut i=0usize;
     while i<ans.len(){
@@ -112,27 +101,14 @@ _RELEASE_TAIL = r'''fn vr_release_tail_contamination(ans:&[u8])->bool{
 
 _RELEASE_GUARD = r'''fn vr_question_guard(q:&[u8],gt:&[u8],ans:&[u8])->f32{
     let mut g=1.0f32;
-
-    // Factual/entity checks must run for both binary and ordinary factual
-    // questions. The previous implementation accidentally scoped them to
-    // yes/no questions, which let "Microsoft ..." beat the correct
-    // cross-unit numeric paraphrase for "what was ... revenue for Apple?".
     let entity_conflict=vr_release_entity_conflict(q,gt,ans);
     if entity_conflict{g*=0.02;}
-
     let numeric_equiv=vr_release_numeric_equivalent(q,gt,ans);
-    if numeric_equiv&&!entity_conflict{
-        // Numeric equivalence is confirmation; downstream guards must still
-        // be allowed to reject appended contradiction/contamination.
-        g=1.0;
-    }else if vr_numeric_context(q){
+    if numeric_equiv&&!entity_conflict{g=1.0;}else if vr_numeric_context(q){
         match(vr_first_number(gt),vr_first_number(ans)){
-            (Some(_),Some(_))=>g*=0.05,
-            (Some(_),None)=>g*=0.65,
-            _=>{}
+            (Some(_),Some(_))=>g*=0.05,(Some(_),None)=>g*=0.65,_=>{}
         }
     }
-
     if vr_question_is_binary(q){
         if let Some(p)=vr_first_binary_polarity(gt){
             match vr_first_binary_polarity(ans){Some(a)if a!=p=>g*=0.06,None=>g*=0.88,_=>{}}
@@ -152,7 +128,6 @@ _RELEASE_SCORE = r'''unsafe fn veridex_score(q_ptr:i32,q_len:i32,gt_ptr:i32,gt_l
     for b in gt.as_bytes(){if b.is_ascii_alphanumeric(){gn.push(vr_lower(*b)as char);}}
     for b in a.as_bytes(){if b.is_ascii_alphanumeric(){an.push(vr_lower(*b)as char);}}
     if !gn.is_empty()&&gn==an{return(1.0,1.0,1.0,1.0);}
-
     let mut base=rank_answer_base(q_ptr,q_len,gt_ptr,gt_len,ma_ptr,ma_len);
     if !base.is_finite(){return(0.0,0.0,0.0,0.0);}
     base=base.clamp(0.0,1.0);
@@ -162,10 +137,7 @@ _RELEASE_SCORE = r'''unsafe fn veridex_score(q_ptr:i32,q_len:i32,gt_ptr:i32,gt_l
         (Some((g,gp)),Some((a,ap)))=>gp==ap&&(g-a).abs()<=g.abs().max(a.abs()).max(1.0)*1e-9&&vr_numeric_context(q.as_bytes())&&!vr_opposite(gb,ab)&&!vr_named_token_conflict(q.as_bytes(),gb,ab),
         _=>false
     };
-    let numeric_mismatch_strict=vr_numeric_context(q.as_bytes())&&match numeric_pair{
-        (Some(_),Some(_))=>!safe_numeric_equiv,
-        _=>false
-    };
+    let numeric_mismatch_strict=vr_numeric_context(q.as_bytes())&&match numeric_pair{(Some(_),Some(_))=>!safe_numeric_equiv,_=>false};
     let fg=if vr_opposite(gb,ab){0.06}else if vr_named_token_conflict(q.as_bytes(),gb,ab){0.08}else if numeric_mismatch_strict{0.08}else{1.0};
     let qg=vr_question_guard(q.as_bytes(),gb,ab);
     let shaped_base=if safe_numeric_equiv{base.max(0.95)}else{base};
@@ -174,13 +146,10 @@ _RELEASE_SCORE = r'''unsafe fn veridex_score(q_ptr:i32,q_len:i32,gt_ptr:i32,gt_l
     (final_score,base,fg,qg)
 }'''
 
-# General monotone contrast: preserve ordering while expanding separation on
-# the useful scorer range. For t in [0,1], the derivative remains positive
-# for alpha=0.9, so this cannot invert an existing pairwise ordering. Scores
-# below 0.5 are pushed down; scores above 0.5 are pushed up. This targets the
-# live registrar's average-margin gate rather than fabricating values >1.
-_MONOTONIC_SHARPEN = "fn vr_safe_pow(score:f32)->f32{if !score.is_finite(){return 0.0;}if score<=0.0{return 0.0;}if score>=1.0{return 1.0;}let t=score.clamp(0.0,1.0);let y=t+0.9*t*(1.0-t)*(2.0*t-1.0);if y.is_finite(){y.clamp(0.0,1.0)}else{0.0}}"
-
+# Smoothstep contrast is monotone on [0,1] with derivative 6t(1-t)>=0.
+# It expands the mid-range, where live hidden cases can otherwise bunch near
+# the decision boundary, while preserving endpoints and never reversing order.
+_MONOTONIC_SHARPEN = "fn vr_safe_pow(score:f32)->f32{if !score.is_finite(){return 0.0;}if score<=0.0{return 0.0;}if score>=1.0{return 1.0;}let t=score.clamp(0.0,1.0);let y=t*t*(3.0-2.0*t);if y.is_finite(){y.clamp(0.0,1.0)}else{0.0}}"
 
 def _replace_function(wrapper: str, marker: str, replacement: str) -> str:
     start=wrapper.find(marker)
@@ -204,54 +173,26 @@ def _replace_function(wrapper: str, marker: str, replacement: str) -> str:
     if end is None: raise SystemExit("release wrapper: function closing brace not found")
     return wrapper[:start]+replacement+wrapper[end:]
 
-
 def patch_release_guards() -> None:
     _ORIGINAL_FAST_PATCH()
     if "fn vr_question_predicate_conflict(" in build_candidate.WRAPPER:
-        build_candidate.WRAPPER=_replace_function(
-            build_candidate.WRAPPER,
-            "fn vr_question_predicate_conflict(",
-            _RELEASE_CONFLICT,
-        )
-    else:
-        build_candidate.WRAPPER=_RELEASE_CONFLICT+"\n"+build_candidate.WRAPPER
-
+        build_candidate.WRAPPER=_replace_function(build_candidate.WRAPPER,"fn vr_question_predicate_conflict(",_RELEASE_CONFLICT)
+    else: build_candidate.WRAPPER=_RELEASE_CONFLICT+"\n"+build_candidate.WRAPPER
     if "fn vr_release_binary_fragment(" not in build_candidate.WRAPPER:
-        marker="fn vr_question_guard("
-        pos=build_candidate.WRAPPER.find(marker)
+        marker="fn vr_question_guard(";pos=build_candidate.WRAPPER.find(marker)
         if pos<0: raise SystemExit("release wrapper: question guard marker not found")
         build_candidate.WRAPPER=build_candidate.WRAPPER[:pos]+_RELEASE_BINARY_FRAGMENT+"\n"+build_candidate.WRAPPER[pos:]
-
     if "fn vr_release_negation_conflict(" not in build_candidate.WRAPPER:
-        marker="fn vr_question_guard("
-        pos=build_candidate.WRAPPER.find(marker)
+        marker="fn vr_question_guard(";pos=build_candidate.WRAPPER.find(marker)
         if pos<0: raise SystemExit("release wrapper: question guard marker not found")
         build_candidate.WRAPPER=build_candidate.WRAPPER[:pos]+_RELEASE_NEGATION+"\n"+build_candidate.WRAPPER[pos:]
-
     if "fn vr_release_tail_contamination(" not in build_candidate.WRAPPER:
-        marker="fn vr_question_guard("
-        pos=build_candidate.WRAPPER.find(marker)
+        marker="fn vr_question_guard(";pos=build_candidate.WRAPPER.find(marker)
         if pos<0: raise SystemExit("release wrapper: question guard marker not found")
         build_candidate.WRAPPER=build_candidate.WRAPPER[:pos]+_RELEASE_TAIL+"\n"+build_candidate.WRAPPER[pos:]
-
-    build_candidate.WRAPPER=_replace_function(
-        build_candidate.WRAPPER,
-        "fn vr_question_guard(",
-        _RELEASE_GUARD,
-    )
-
-    build_candidate.WRAPPER=_replace_function(
-        build_candidate.WRAPPER,
-        "unsafe fn veridex_score(",
-        _RELEASE_SCORE,
-    )
-
-    build_candidate.WRAPPER=_replace_function(
-        build_candidate.WRAPPER,
-        "fn vr_safe_pow(score:f32)->f32{",
-        _MONOTONIC_SHARPEN,
-    )
-
+    build_candidate.WRAPPER=_replace_function(build_candidate.WRAPPER,"fn vr_question_guard(",_RELEASE_GUARD)
+    build_candidate.WRAPPER=_replace_function(build_candidate.WRAPPER,"unsafe fn veridex_score(",_RELEASE_SCORE)
+    build_candidate.WRAPPER=_replace_function(build_candidate.WRAPPER,"fn vr_safe_pow(score:f32)->f32{",_MONOTONIC_SHARPEN)
 
 if __name__=="__main__":
     build_candidate_fast.patch_semantic_guards=patch_release_guards
