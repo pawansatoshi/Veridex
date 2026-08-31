@@ -2,17 +2,18 @@
 
 ## Release status
 
-**Status: NOT RELEASED / LIVE REGISTRATION #2084 REJECTED FOR TIME BUDGET**
+**Status: VALIDATION PENDING — NO NEW REGISTRATION**
 
 This report is evidence-driven. No hidden-benchmark result is inferred from local fixtures.
 
 ## Candidate identity
 
-- Source line: `telegraph/evaluation/neural/build_candidate.py` plus `build_candidate_fast.py`
+- Source line: `telegraph/evaluation/neural/build_candidate.py` + `build_candidate_compat.py` + `build_candidate_fast.py`
 - Pinned upstream baseline: `telegraphprotocol/telegraph-wasm-baseline`
 - Upstream commit: `dfa0cf7fda72789267811ba2190f61a8eaacedf6`
-- Current fast candidate path: `build_candidate_fast.py`
-- Current branch: `track2-v10-hardening`
+- Candidate branch: `track2-v10-hardening`
+- Current head: `f5719cae0e00d916da13d6f23fca8d3ea24da283`
+- Current fast builder commit: subsequent source changes are tracked by the branch head and must be rebuilt before release
 - Exact WASM: generated per CI run; not frozen until all gates pass
 - SHA-256: `PENDING_GREEN_CI`
 
@@ -22,78 +23,95 @@ Registration #2084 for `FRAUD_DETECTION` was rejected by Telegraph because the e
 
 `evaluation exceeded its time budget: the fixture gate did not complete in time (10m40s elapsed, including module load).`
 
-Interpretation: this was a **performance/runtime rejection**, not evidence that the scorer's ordering quality failed. The corresponding CI candidate had already passed the local primary ordering, contract-security ordering, mutation suite, public hard.json gate, and deterministic/runtime safety checks before its public Wazero step hit the GitHub 35-minute workflow cap.
+Interpretation: this was a **live runtime/performance rejection**, not a proof of poor hidden-benchmark ordering. Therefore every future candidate must satisfy both local quality gates and live execution-budget constraints.
 
-## Pre-rejection CI evidence
+## Latest verified CI evidence before the current source edit
 
-The candidate associated with the V10.1 line demonstrated:
+GitHub Actions run #124 for the previous fast candidate produced:
 
-- WASM: **24,194,663 bytes** class
+- WASM: **24,194,340 bytes**
 - imports: **0**
-- primary preflight: **0 inversions**
-- primary tournament: **55/55 wins, 0 losses, 0 ties**
-- contract-security tournament: **6/6 wins**
-- adversarial mutation suite: **157 tested, 0 failures**
-- deterministic repeat and fresh-instance checks: pass
-- fuzzing: pass
-- sustained memory check: pass
+- build: pass
+- structural validation: pass
+- primary preflight: **3 inversions / 55 pairs**
+- self-match: **1.0**
+- score stddev: **0.4222**
 
-The live rejection proves these local properties were not sufficient because Telegraph's own fixture gate has its own 10-minute module evaluation budget.
+The three inversions were explicit semantic-equivalence cases:
 
-## Performance correction
+1. `What was the reported loss?` — ground truth contains `$4.2 million`; `same value` scored below `wrong value`.
+2. `What was the loss?` — ground truth `$2.5 million`; `equivalent` scored below `wrong value`.
+3. `What was the transaction value?` — ground truth `$1.25 billion`; `equivalent` scored below `wrong value`.
 
-The previous neural release path used the full 6-layer INT8 MiniLM-L6-v2 inference path. Even with question/ground-truth caching, live Telegraph registration #2084 exceeded the 10-minute fixture budget by ~40 seconds.
+Root cause: the equivalence guard was conditioned on `vr_question_requires_number()`, which does not necessarily classify questions such as `What was the loss?` and `What was the transaction value?` as numeric-answer questions.
 
-The release line has therefore moved to an explicitly bounded **fast neural path** which preserves the Veridex wrapper, cache, factual guards, provenance and zero-import architecture while reducing inference work:
+## Current corrective change
 
-- maximum tokenizer sequence length: **64 tokens**;
-- maximum transformer layers executed: **5 of 6**;
-- full pinned weight blob retained for reproducibility/provenance;
-- full six-layer path remains available for regression/reference.
+The fast builder now defines a broader, conservative numeric-context detector covering factual quantity/value terms such as:
 
-This is an engineering performance candidate, not yet an accepted Telegraph candidate.
+`amount, value, loss, profit, revenue, cost, price, fee, number, total, volume, rate, percentage, percent, worth, valuation, supply, balance, quantity`
 
-## Historical regressions
+Explicit equivalence is only considered when all of the following hold:
 
-- #1809: whitespace-only answer must be exactly `0`.
-- #1818: historical 14/15 ordering loss against incumbent.
-- #1821: historical 14/15 ordering loss against incumbent.
+1. the question contains a numeric-context term;
+2. the ground truth contains an extractable numeric fact;
+3. the miner answer contains an explicit equivalence phrase;
+4. the answer does not contain explicit contradiction/difference markers.
 
-## Current verification workflow
+The branch deliberately avoids an unconditional `equivalent -> high score` rule.
 
-The Track 2 final workflow now:
+## Performance path
 
-1. builds the fast neural candidate;
-2. validates WASM structure/size/imports;
-3. runs primary preflight and tournament;
-4. runs contract-security preflight/tournament;
-5. builds one pinned Wazero checker binary and reuses it;
-6. runs strict hard.json;
-7. runs adversarial mutation;
-8. runs strict full Wazero compatibility;
-9. records SHA-256 and uploads the exact artifact only after all gates pass.
+The candidate uses a bounded fast neural path:
 
-The CI job timeout is **60 minutes**, because the public checker itself can be expensive. This CI timeout is not the Telegraph 10-minute module evaluation budget; the candidate must satisfy both.
+- `MAX_SEQ_LEN = 64`;
+- maximum transformer layers executed = `5`;
+- real MiniLM/BM25 semantic foundation from the pinned MIT baseline;
+- Veridex factual-integrity wrapper remains deterministic and zero-import.
 
-## Registration policy
+This is a performance hypothesis that still requires live proof. The Telegraph registration #2084 failure establishes that local success is insufficient if the live fixture gate exceeds its hard time budget.
+
+## Required release evidence
+
+A release candidate must have all of the following for the exact same source/binary:
+
+- build success;
+- valid WASM;
+- required exports;
+- zero imports / no WASI;
+- empty/whitespace answer exactly `0`;
+- exact normalized answer exactly `1`;
+- finite scores in `[0,1]`;
+- deterministic repeated and fresh-instance execution;
+- long/UTF-8/CJK/emoji/accent/NUL safety;
+- zero local ordering inversions;
+- contract-security ordering gates pass;
+- adversarial mutation suite pass;
+- strict public Wazero checker pass;
+- performance/memory checks pass;
+- exact SHA-256 recorded;
+- exact artifact preserved.
+
+Only after these pass should a fresh Telegraph registration be created.
+
+## Release discipline
 
 **No green gate → no registration.**
 
-A registration binds the exact submitted bytes/hash. Any change to source or binary requires a new build, new hash and fresh registration. Pending is not acceptance.
+A registration binds the exact submitted bytes/hash. Any source or binary change requires a new build, new hash, and fresh registration. `pending` is not acceptance.
 
 ## Evidence classification
 
-- IMPLEMENTED LOCALLY: source changes on this branch.
-- VALIDATED LOCALLY: only after the exact command has run successfully.
-- CI VALIDATED: only after a successful GitHub Actions run for the exact commit.
-- PUBLIC CHECKER PASSED: only after the public Wazero checker has passed.
-- REGISTERED: only after on-chain registration exists.
-- ACCEPTED BY TELEGRAPH: only after Telegraph accepts it.
-- COMPETITIVE ON LIVE EVALUATION: only after Telegraph live evaluation provides evidence.
-- OFFICIALLY SUBMITTED: only after the exact accepted artifact is used in the hackathon submission.
+- IMPLEMENTED: source change exists in the branch.
+- CI VALIDATED: the exact commit has a successful workflow run.
+- PUBLIC CHECKER PASSED: strict public Wazero checker passed for the exact artifact.
+- REGISTERED: a fresh on-chain registration exists for that exact artifact.
+- ACCEPTED BY TELEGRAPH: the registration is accepted/active.
+- COMPETITIVE ON LIVE EVALUATION: live Stage-2 evidence exists.
+- OFFICIALLY SUBMITTED: the exact accepted artifact/registration is used in the submission form.
 
-## Current status
+## Current decision
 
-**Fast V10 candidate: UNVERIFIED — CI run pending.**
+**DO NOT REGISTER the preflight-3-inversion artifact.**
 
-Do not use any previously registered artifact for Track 2 submission. The next registration must use the exact artifact produced by the first complete green CI run of the fast path.
+The current source change must first clear the primary preflight, then the complete release pipeline. No conclusion about #1 is valid until Telegraph's independent live evaluation provides it.
