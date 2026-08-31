@@ -1,11 +1,5 @@
 #!/usr/bin/env python3
-"""Release wrapper for the bounded-performance Track 2 builder.
-
-This wrapper intentionally delegates numeric/equivalence enforcement to the
-current fast builder. It only replaces semantic contradiction handling and the
-final monotonic calibration layer. Keeping those responsibilities separate
-prevents brittle string-patching when the fast scorer evolves.
-"""
+"""Release wrapper for the bounded-performance Track 2 builder."""
 from __future__ import annotations
 
 import build_candidate
@@ -31,13 +25,7 @@ _RELEASE_CONFLICT = r'''fn vr_release_predicate_polarity(text:&[u8])->Option<boo
     match(p,n){(true,false)=>Some(true),(false,true)=>Some(false),_=>None}
 }
 
-// A yes/no answer must be interpreted relative to the polarity of the
-// proposition being asked. Ground truth is often only "yes"/"no", so comparing
-// GT predicate polarity with answer predicate polarity is insufficient.
-// Examples:
-//   Q: "Was transfer denied?" + "No, it was approved."   => consistent
-//   Q: "Was transfer denied?" + "No, it was rejected."   => contradictory
-//   Q: "Was transfer unauthorized?" + "Yes, it was unauthorized." => consistent
+// Interpret yes/no relative to the proposition in the question.
 fn vr_question_predicate_conflict(q:&[u8],_gt:&[u8],ans:&[u8])->bool{
     if !vr_question_is_binary(q){return false;}
     match(vr_release_predicate_polarity(q),vr_release_predicate_polarity(ans),vr_first_binary_polarity(ans)){
@@ -65,27 +53,22 @@ fn vr_release_numeric_equivalent(q:&[u8],gt:&[u8],ans:&[u8])->bool{
       (Some((g,gp)),Some((a,ap)))=>gp==ap&&(g-a).abs()<=g.abs().max(a.abs()).max(1.0)*1e-9,
       _=>false
     }
-}'''
+}
 
-// Treat only genuinely incomplete deictic fragments as undercomplete. A full
-// answer such as "No, it was approved." is four words and must not receive the
-// same penalty as the two-word mutant "No, it".
-_RELEASE_BINARY_FRAGMENT = r'''fn vr_release_binary_fragment(ans:&[u8])->bool{
+fn vr_release_binary_fragment(ans:&[u8])->bool{
     let mut words=0usize;let mut saw_binary=false;let mut saw_deictic=false;let mut i=0usize;
     while i<ans.len(){
         while i<ans.len()&&!ans[i].is_ascii_alphanumeric(){i+=1;}
         let s=i;while i<ans.len()&&ans[i].is_ascii_alphanumeric(){i+=1;}
         if s>=i{continue;}
         words+=1;if words>2{return false;}
-        let w=&ans[s..i];
         if vr_word_eq(ans,s,i,b"yes")||vr_word_eq(ans,s,i,b"no")||vr_word_eq(ans,s,i,b"true")||vr_word_eq(ans,s,i,b"false"){saw_binary=true;}
         if vr_word_eq(ans,s,i,b"it")||vr_word_eq(ans,s,i,b"this")||vr_word_eq(ans,s,i,b"that")||vr_word_eq(ans,s,i,b"they"){saw_deictic=true;}
-        let _=w;
     }
     saw_binary&&saw_deictic
-}'''
+}
 
-_RELEASE_NEGATION = r'''fn vr_release_negation_conflict(gt:&[u8],ans:&[u8])->bool{
+fn vr_release_negation_conflict(gt:&[u8],ans:&[u8])->bool{
     let ans_not=vr_has_word(ans,b"not")||vr_has_word(ans,b"never");
     let gt_not=vr_has_word(gt,b"not")||vr_has_word(gt,b"never");
     ans_not&&!gt_not
@@ -93,19 +76,11 @@ _RELEASE_NEGATION = r'''fn vr_release_negation_conflict(gt:&[u8],ans:&[u8])->boo
 
 _RELEASE_GUARD = r'''fn vr_question_guard(q:&[u8],gt:&[u8],ans:&[u8])->f32{
     let mut g=1.0f32;
-
-    // Factual/entity checks must run for both binary and ordinary factual
-    // questions. The previous implementation accidentally scoped them to
-    // yes/no questions, which let "Microsoft ..." beat the correct
-    // cross-unit numeric paraphrase for "what was ... revenue for Apple?".
     let entity_conflict=vr_release_entity_conflict(q,gt,ans);
     if entity_conflict{g*=0.02;}
 
     let numeric_equiv=vr_release_numeric_equivalent(q,gt,ans);
     if numeric_equiv&&!entity_conflict{
-        // Numeric equivalence is a factual confirmation, not a multiplier
-        // outside the scoring range. The fast scorer already performs the
-        // bounded high-score lift for verified numeric equivalence.
         g=1.0;
     }else if vr_numeric_context(q){
         match(vr_first_number(gt),vr_first_number(ans)){
@@ -148,44 +123,34 @@ def _replace_function(wrapper: str, marker: str, replacement: str) -> str:
                 if depth==0:
                     end=i+1;break
         i+=1
-    if end is None: raise SystemExit("release wrapper: function closing brace not found")
+    if end is None:
+        raise SystemExit("release wrapper: function closing brace not found")
     return wrapper[:start]+replacement+wrapper[end:]
 
 
 def patch_release_guards() -> None:
     _ORIGINAL_FAST_PATCH()
+
     if "fn vr_question_predicate_conflict(" in build_candidate.WRAPPER:
-        build_candidate.WRAPPER=_replace_function(
-            build_candidate.WRAPPER,
-            "fn vr_question_predicate_conflict(",
-            _RELEASE_CONFLICT,
-        )
+        build_candidate.WRAPPER=_replace_function(build_candidate.WRAPPER,"fn vr_question_predicate_conflict(",_RELEASE_CONFLICT)
     else:
-        build_candidate.WRAPPER=_RELEASE_CONFLICT+"\n"+build_candidate.WRAPPER
+        insert_at=build_candidate.WRAPPER.find("fn vr_question_guard(")
+        if insert_at<0:
+            raise SystemExit("release wrapper: question guard marker not found")
+        build_candidate.WRAPPER=build_candidate.WRAPPER[:insert_at]+_RELEASE_CONFLICT+"\n"+build_candidate.WRAPPER[insert_at:]
 
-    if "fn vr_release_binary_fragment(" not in build_candidate.WRAPPER:
-        marker="fn vr_question_guard("
-        pos=build_candidate.WRAPPER.find(marker)
-        if pos<0: raise SystemExit("release wrapper: question guard marker not found")
-        build_candidate.WRAPPER=build_candidate.WRAPPER[:pos]+_RELEASE_BINARY_FRAGMENT+"\n"+build_candidate.WRAPPER[pos:]
+    for marker,helper in (("fn vr_release_binary_fragment(",_RELEASE_CONFLICT),("fn vr_release_negation_conflict(",_RELEASE_CONFLICT)):
+        if marker not in build_candidate.WRAPPER:
+            raise SystemExit(f"release wrapper: helper missing after patch: {marker}")
 
-    if "fn vr_release_negation_conflict(" not in build_candidate.WRAPPER:
-        marker="fn vr_question_guard("
-        pos=build_candidate.WRAPPER.find(marker)
-        if pos<0: raise SystemExit("release wrapper: question guard marker not found")
-        build_candidate.WRAPPER=build_candidate.WRAPPER[:pos]+_RELEASE_NEGATION+"\n"+build_candidate.WRAPPER[pos:]
-
-    build_candidate.WRAPPER=_replace_function(
-        build_candidate.WRAPPER,
-        "fn vr_question_guard(",
-        _RELEASE_GUARD,
-    )
-
-    build_candidate.WRAPPER=_replace_function(
-        build_candidate.WRAPPER,
-        "fn vr_safe_pow(score:f32)->f32{",
-        _MONOTONIC_SHARPEN,
-    )
+    guard_marker="fn vr_question_guard("
+    guard_pos=build_candidate.WRAPPER.find(guard_marker)
+    if guard_pos<0:
+        raise SystemExit("release wrapper: question guard marker not found")
+    if "fn vr_release_entity_conflict(" not in build_candidate.WRAPPER:
+        build_candidate.WRAPPER=build_candidate.WRAPPER[:guard_pos]+_RELEASE_CONFLICT.split("fn vr_question_predicate_conflict",1)[0]+build_candidate.WRAPPER[guard_pos:]
+    build_candidate.WRAPPER=_replace_function(build_candidate.WRAPPER,guard_marker,_RELEASE_GUARD)
+    build_candidate.WRAPPER=_replace_function(build_candidate.WRAPPER,"fn vr_safe_pow(score:f32)->f32{",_MONOTONIC_SHARPEN)
 
 
 if __name__=="__main__":
