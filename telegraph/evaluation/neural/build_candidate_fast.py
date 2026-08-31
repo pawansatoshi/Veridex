@@ -80,7 +80,7 @@ fn vr_opposite(gt:&[u8],ans:&[u8])->bool{
     build_candidate.WRAPPER=build_candidate.WRAPPER.replace(marker,eq_helper+marker,1)
 
     score_marker="let gb=gt.as_bytes();let ab=a.as_bytes();let fg="
-    score_inject="let gb=gt.as_bytes();let ab=a.as_bytes();if vr_question_requires_number(q.as_bytes())&&vr_explicit_equivalence(ab){let final_score=vr_safe_pow(base);return(final_score,base,1.0,1.0);}let fg="
+    score_inject="let gb=gt.as_bytes();let ab=a.as_bytes();if vr_first_number(gt.as_bytes()).is_some()&&vr_explicit_equivalence(ab){let final_score=vr_safe_pow(base);return(final_score,base,1.0,1.0);}let fg="
     if score_marker not in build_candidate.WRAPPER:
         raise SystemExit("fast path: score guard insertion marker not found")
     build_candidate.WRAPPER=build_candidate.WRAPPER.replace(score_marker,score_inject,1)
