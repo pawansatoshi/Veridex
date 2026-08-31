@@ -35,53 +35,79 @@ fn vr_question_predicate_conflict(q:&[u8],gt:&[u8],ans:&[u8])->bool{
     }
 }'''
 
-_ODDS_SHARPEN = "fn vr_safe_pow(score:f32)->f32{if !score.is_finite(){return 0.0;}if score<=0.0{return 0.0;}if score>=1.0{return 1.0;}let t=score.clamp(0.0,1.0);let a=libm::powf(t,3.0);let b=libm::powf(1.0-t,3.0);let d=a+b;if !d.is_finite()||d<=0.0{return 0.0;}let y=a/d;if y.is_finite(){y.clamp(0.0,1.0)}else{0.0}}"
+_MILD_CALIBRATION = "fn vr_safe_pow(score:f32)->f32{if !score.is_finite(){return 0.0;}if score<=0.0{return 0.0;}if score>=1.0{return 1.0;}let t=score.clamp(0.0,1.0);let y=t+0.22*t*(1.0-t);if y.is_finite(){y.clamp(0.0,1.0)}else{0.0}}"
 
-def _replace_safe_pow(wrapper: str) -> str:
-    marker = "fn vr_safe_pow(score:f32)->f32{"
-    start = wrapper.find(marker)
-    if start < 0:
-        raise SystemExit("release wrapper: vr_safe_pow function not found")
-    depth = 0
-    in_string = False
-    escape = False
-    end = None
-    i = start
-    while i < len(wrapper):
-        ch = wrapper[i]
+_OLD_SAFE_EQ = (
+    "let safe_numeric_equiv=vr_safe_numeric_equiv(gb,ab)&&vr_numeric_context(q.as_bytes())"
+    "&&!vr_opposite(gb,ab)&&!vr_named_token_conflict(q.as_bytes(),gb,ab);"
+)
+_NEW_SAFE_EQ = (
+    "let safe_numeric_equiv=vr_safe_numeric_equiv(gb,ab)&&vr_numeric_context(q.as_bytes())"
+    "&&!vr_opposite(gb,ab)&&!vr_named_token_conflict(q.as_bytes(),gb,ab)"
+    "&&!vr_has_any(ab,&[b\"not\",b\"wrong\",b\"incorrect\",b\"different\",b\"opposite\",b\"never\",b\"rejected\",b\"denied\",b\"blocked\"]);"
+)
+
+_OLD_LIFT = "if safe_numeric_equiv{let lifted=vr_safe_pow(base.max(0.95));return(lifted,base,1.0,qg);}"
+_NEW_LIFT = "if safe_numeric_equiv{let lifted=(base+0.15*(1.0-base)).min(0.97);return(lifted,base,1.0,qg);}"
+
+
+def _replace_function(wrapper: str, function_marker: str, replacement: str) -> str:
+    start=wrapper.find(function_marker)
+    if start<0:
+        raise SystemExit("release wrapper: function marker not found")
+    depth=0
+    in_string=False
+    escape=False
+    i=start
+    end=None
+    while i<len(wrapper):
+        ch=wrapper[i]
         if in_string:
             if escape:
-                escape = False
-            elif ch == "\\":
-                escape = True
-            elif ch == '"':
-                in_string = False
+                escape=False
+            elif ch=="\\":
+                escape=True
+            elif ch=='"':
+                in_string=False
         else:
-            if ch == '"':
-                in_string = True
-            elif ch == '{':
-                depth += 1
-            elif ch == '}':
-                depth -= 1
-                if depth == 0:
-                    end = i + 1
+            if ch=='"':
+                in_string=True
+            elif ch=='{':
+                depth+=1
+            elif ch=='}':
+                depth-=1
+                if depth==0:
+                    end=i+1
                     break
-        i += 1
+        i+=1
     if end is None:
-        raise SystemExit("release wrapper: could not find vr_safe_pow closing brace")
-    return wrapper[:start] + _ODDS_SHARPEN + wrapper[end:]
+        raise SystemExit("release wrapper: function closing brace not found")
+    return wrapper[:start]+replacement+wrapper[end:]
 
 
 def patch_release_guards() -> None:
     _ORIGINAL_FAST_PATCH()
     if _ORIGINAL_CONFLICT not in build_candidate.WRAPPER:
         raise SystemExit("release wrapper: expected binary predicate guard marker not found")
-    build_candidate.WRAPPER = build_candidate.WRAPPER.replace(_ORIGINAL_CONFLICT, _GENERIC_CONFLICT, 1)
-    # Replace only the safe_pow function itself. Do not delete helper functions
-    # that the compatibility/fast patches deliberately place before veridex_score.
-    build_candidate.WRAPPER = _replace_safe_pow(build_candidate.WRAPPER)
+    build_candidate.WRAPPER=build_candidate.WRAPPER.replace(_ORIGINAL_CONFLICT,_GENERIC_CONFLICT,1)
+
+    safe_eq_hits=build_candidate.WRAPPER.count(_OLD_SAFE_EQ)
+    if safe_eq_hits!=1:
+        raise SystemExit(f"release wrapper: expected one numeric-equivalence expression, found {safe_eq_hits}")
+    build_candidate.WRAPPER=build_candidate.WRAPPER.replace(_OLD_SAFE_EQ,_NEW_SAFE_EQ,1)
+
+    lift_hits=build_candidate.WRAPPER.count(_OLD_LIFT)
+    if lift_hits!=1:
+        raise SystemExit(f"release wrapper: expected one numeric-equivalence lift, found {lift_hits}")
+    build_candidate.WRAPPER=build_candidate.WRAPPER.replace(_OLD_LIFT,_NEW_LIFT,1)
+
+    build_candidate.WRAPPER=_replace_function(
+        build_candidate.WRAPPER,
+        "fn vr_safe_pow(score:f32)->f32{",
+        _MILD_CALIBRATION,
+    )
 
 
-if __name__ == "__main__":
-    build_candidate_fast.patch_semantic_guards = patch_release_guards
+if __name__=="__main__":
+    build_candidate_fast.patch_semantic_guards=patch_release_guards
     build_candidate_fast.main()
