@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Release wrapper for the bounded-performance Track 2 builder.
 
-Runs the established fast builder, then applies the generic binary-question
+Runs the established fast builder, then applies a generic binary-question
 predicate-consistency guard before the baseline Rust source is written.
 """
 from __future__ import annotations
@@ -9,12 +9,7 @@ from __future__ import annotations
 import build_candidate
 import build_candidate_fast
 
-
-# Preserve the original fast-builder patcher before replacing the module
-# attribute. The previous implementation called the replaced attribute from
-# inside itself, causing infinite recursion during CI builds.
 _ORIGINAL_FAST_PATCH = build_candidate_fast.patch_semantic_guards
-
 _ORIGINAL_CONFLICT = (
     "fn vr_question_predicate_conflict(q:&[u8],gt:&[u8],ans:&[u8])->bool{"
     "if !vr_question_is_binary(q){return false;}"
@@ -22,14 +17,29 @@ _ORIGINAL_CONFLICT = (
     "{(Some(g),Some(a))=>g!=a,_=>false}}"
 )
 
-_GENERIC_CONFLICT = r'''fn vr_question_predicate_polarity(q:&[u8])->Option<bool>{let p=vr_predicate_polarity(q);match p{Some(v)=>{if vr_has_word(q,b"not"){Some(!v)}else{Some(v)}},None=>None}}
-fn vr_answer_predicate_polarity(ans:&[u8])->Option<bool>{let p=vr_predicate_polarity(ans);match p{Some(v)=>{if vr_has_word(ans,b"not"){Some(!v)}else{Some(v)}},None=>None}}
-fn vr_question_predicate_conflict(q:&[u8],_gt:&[u8],ans:&[u8])->bool{if !vr_question_is_binary(q){return false;}match(vr_question_predicate_polarity(q),vr_answer_predicate_polarity(ans),vr_first_binary_polarity(ans)){(Some(qp),Some(ap),Some(bp))=>{let expected=if bp{qp}else{!qp};ap!=expected},_=>false}}'''
+_GENERIC_CONFLICT = r'''fn vr_question_predicate_polarity(q:&[u8])->Option<bool>{
+    let p=vr_predicate_polarity(q);
+    match p{Some(v)=>{if vr_has_word(q,b"not"){Some(!v)}else{Some(v)}},None=>None}
+}
+fn vr_answer_predicate_polarity(ans:&[u8])->Option<bool>{
+    let p=vr_predicate_polarity(ans);
+    match p{Some(v)=>{if vr_has_word(ans,b"not"){Some(!v)}else{Some(v)}},None=>None}
+}
+fn vr_question_predicate_conflict(q:&[u8],gt:&[u8],ans:&[u8])->bool{
+    if !vr_question_is_binary(q){return false;}
+    let direct=match(vr_predicate_polarity(gt),vr_predicate_polarity(ans)){
+        (Some(g),Some(a))=>g!=a,
+        _=>false
+    };
+    if direct{return true;}
+    match(vr_question_predicate_polarity(q),vr_answer_predicate_polarity(ans),vr_first_binary_polarity(ans)){
+        (Some(qp),Some(ap),Some(bp))=>{let expected=if bp{qp}else{!qp};ap!=expected},
+        _=>false
+    }
+}'''
 
 
 def patch_predicate_logic() -> None:
-    # Run the original fast-builder patches exactly once, then add the
-    # release-specific generic predicate-consistency guard.
     _ORIGINAL_FAST_PATCH()
     if _ORIGINAL_CONFLICT not in build_candidate.WRAPPER:
         raise SystemExit("release wrapper: expected binary predicate guard marker not found")
