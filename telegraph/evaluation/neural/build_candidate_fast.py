@@ -79,7 +79,7 @@ fn vr_numeric_context(q:&[u8])->bool{const TERMS:&[&[u8]]=&[b"amount",b"value",b
     sharpen_marker="let qg=vr_question_guard(q.as_bytes(),gb,ab);let final_score=vr_safe_pow(base*fg*qg);(final_score,base,fg,qg)"
     sharpen_replacement=(
         "let qg=vr_question_guard(q.as_bytes(),gb,ab);"
-        "let adjusted_base=if safe_numeric_equiv{base.max(0.40)}else{base};"
+        "let adjusted_base=if safe_numeric_equiv{base.max(0.85)}else{base};"
         "let final_score=vr_safe_pow(adjusted_base*fg*qg);(final_score,base,fg,qg)"
     )
     if sharpen_marker not in build_candidate.WRAPPER:
@@ -134,7 +134,7 @@ def main() -> None:
         print(f"upstream commit: {BASELINE_COMMIT}")
         print("fast path: MAX_SEQ_LEN=64, max transformer layers=5")
         print("semantic guards: directional polarity + word-unit numeric parsing + context-aware, factual equivalence")
-        print("numeric equivalence: equal normalized numeric value across unit variants is treated as a safe semantic equivalence only in numeric-context questions")
+        print("numeric equivalence: exact normalized numeric equality is lifted only in numeric-context questions, after contradiction/entity guards")
         print(f"output: {out}")
         print(f"bytes: {out.stat().st_size}")
 
