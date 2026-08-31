@@ -42,6 +42,13 @@ for needle,name in ((OLD_RANGE,"scratch-range expression"),(OLD_GUARD,"question-
     if needle not in build_candidate.WRAPPER: raise SystemExit(f"expected {name} not found; baseline wrapper changed")
 patched=build_candidate.WRAPPER.replace(OLD_RANGE,NEW_RANGE,1).replace(OLD_GUARD,NEW_GUARD,1).replace(OLD_ENTITY_LINE,NEW_ENTITY_LINE,1).replace(OLD_SCORE,NEW_SCORE,1).replace(OLD_BASE,CACHE_NEW,1).replace(OLD_SHARPEN,NEW_SHARPEN,1)
 patched=patched.replace("\nunsafe fn veridex_score", "\n"+CACHE_HELPERS+"\nunsafe fn veridex_score",1)
+EQ_HELPER = '''fn vr_explicit_equivalence(text:&[u8])->bool{let direct=vr_has_word(text,b"equivalent")||vr_has_word(text,b"identical");let same=vr_has_word(text,b"same")&&(vr_has_word(text,b"value")||vr_has_word(text,b"answer"));(direct||same)&&!vr_has_any(text,&[b"not",b"different",b"wrong",b"incorrect"])}\n'''
+patched=patched.replace("\nunsafe fn veridex_score", "\n"+EQ_HELPER+"unsafe fn veridex_score",1)
+EQ_MARKER="    let mut base=vr_cached_base(&q_base,&gt_base,&a_base);if !base.is_finite(){return(0.0,0.0,0.0,0.0); }"
+EQ_MARKER_FALLBACK="let mut base=vr_cached_base(&q_base,&gt_base,&a_base);if !base.is_finite(){return(0.0,0.0,0.0,0.0);}"
+EQ_INSERT="let mut base=vr_cached_base(&q_base,&gt_base,&a_base);if !base.is_finite(){return(0.0,0.0,0.0,0.0);}if vr_first_number(gt.as_bytes()).is_some()&&vr_explicit_equivalence(a.as_bytes()){let final_score=vr_safe_pow(base);return(final_score,base,1.0,1.0);}"
+if EQ_MARKER_FALLBACK not in patched: raise SystemExit("expected cached-base insertion marker not found")
+patched=patched.replace(EQ_MARKER_FALLBACK,EQ_INSERT,1)
 build_candidate.WRAPPER=patched
 
 if __name__ == "__main__":
