@@ -37,7 +37,7 @@ def patch_semantic_guards() -> None:
     for(a,b)in PAIRS{if(vr_has_word(gt,a)&&vr_has_word(ans,b))||(vr_has_word(gt,b)&&vr_has_word(ans,a)){return true;}} false
 }'''
     new_opposite = '''fn vr_direction(text:&[u8])->Option<bool>{
-    const UP:&[&[u8]]=&[b"increase",b"increased",b"rise",b"rose",b"rising",b"up",b"higher",b"higher",b"gain",b"gained"];
+    const UP:&[&[u8]]=&[b"increase",b"increased",b"rise",b"rose",b"rising",b"up",b"higher",b"gain",b"gained"];
     const DOWN:&[&[u8]]=&[b"decrease",b"decreased",b"fall",b"fell",b"falling",b"down",b"lower",b"loss",b"lost",b"declined",b"reduced",b"dropped"];
     let up=vr_has_any(text,UP);let down=vr_has_any(text,DOWN);match(up,down){(true,false)=>Some(true),(false,true)=>Some(false),_=>None}
 }
@@ -65,21 +65,18 @@ fn vr_opposite(gt:&[u8],ans:&[u8])->bool{
     }
     Some((x,text[i..].first()==Some(&b'%')))
 }'''
-    old_qguard = '''fn vr_question_guard(q:&[u8],gt:&[u8],ans:&[u8])->f32{let mut g=1.0f32;if vr_question_requires_number(q)&&vr_first_number(ans).is_none(){g*=0.82;}if vr_question_is_binary(q){if let Some(p)=vr_first_binary_polarity(gt){match vr_first_binary_polarity(ans){Some(a)if a!=p=>g*=0.06,None=>g*=0.88,_=>{}}}}g}'''
-    new_qguard = '''fn vr_explicit_equivalence(text:&[u8])->bool{let direct=vr_has_word(text,b"equivalent")||vr_has_word(text,b"identical");let same=vr_has_word(text,b"same")&&(vr_has_word(text,b"value")||vr_has_word(text,b"answer"));(direct||same)&&!vr_has_any(text,&[b"not",b"different",b"wrong",b"incorrect"])}
-fn vr_question_guard(q:&[u8],gt:&[u8],ans:&[u8])->f32{let mut g=1.0f32;if vr_question_requires_number(q)&&vr_first_number(ans).is_none()&&!vr_explicit_equivalence(ans){g*=0.82;}if vr_question_is_binary(q){if let Some(p)=vr_first_binary_polarity(gt){match vr_first_binary_polarity(ans){Some(a)if a!=p=>g*=0.06,None=>g*=0.88,_=>{}}}}g}'''
     old_numeric_call = '''let fg=if vr_opposite(gb,ab){0.06}else if vr_named_token_conflict(q.as_bytes(),gb,ab){0.08}else if vr_numeric_mismatch(gb,ab){0.22}else{1.0};'''
+    eq_helper = '''fn vr_explicit_equivalence(text:&[u8])->bool{let direct=vr_has_word(text,b"equivalent")||vr_has_word(text,b"identical");let same=vr_has_word(text,b"same")&&(vr_has_word(text,b"value")||vr_has_word(text,b"answer"));(direct||same)&&!vr_has_any(text,&[b"not",b"different",b"wrong",b"incorrect"])}
+'''
     new_numeric_call = '''let fg=if vr_opposite(gb,ab){0.06}else if vr_named_token_conflict(q.as_bytes(),gb,ab){0.08}else if vr_numeric_mismatch(gb,ab)&&!vr_explicit_equivalence(ab){0.22}else{1.0};'''
-    replacements = (
-        (old_opposite, new_opposite, "directional guard"),
-        (old_number, new_number, "numeric parser"),
-        (old_qguard, new_qguard, "question guard"),
-        (old_numeric_call, new_numeric_call, "numeric mismatch gate"),
-    )
-    for old,new,label in replacements:
+    for old,new,label in ((old_opposite,new_opposite,"directional guard"),(old_number,new_number,"numeric parser"),(old_numeric_call,new_numeric_call,"numeric mismatch gate")):
         if old not in build_candidate.WRAPPER:
             raise SystemExit(f"fast path: expected {label} marker not found")
         build_candidate.WRAPPER=build_candidate.WRAPPER.replace(old,new,1)
+    marker="unsafe fn veridex_score(q_ptr:i32,q_len:i32,gt_ptr:i32,gt_len:i32,ma_ptr:i32,ma_len:i32)->(f32,f32,f32,f32){"
+    if marker not in build_candidate.WRAPPER:
+        raise SystemExit("fast path: score function marker not found")
+    build_candidate.WRAPPER=build_candidate.WRAPPER.replace(marker,eq_helper+marker,1)
 
 
 def run(cmd: list[str], cwd: pathlib.Path) -> None:
