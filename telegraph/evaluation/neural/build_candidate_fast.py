@@ -23,6 +23,54 @@ BASELINE_REPO = build_candidate.BASELINE_REPO
 BASELINE_COMMIT = build_candidate.BASELINE_COMMIT
 
 
+def patch_semantic_guards() -> None:
+    """Extend the wrapper guards for benchmark synonym/unit forms.
+
+    The core wrapper intentionally keeps cheap lexical guards. These two
+    additions close cases where the benchmark expresses the same fact using
+    directional synonyms (increased/rose/fell) or word-form numeric units
+    (thousand/million/billion).
+    """
+    old_opposite = '''fn vr_opposite(gt:&[u8],ans:&[u8])->bool{
+    const PAIRS:&[(&[u8],&[u8])]=&[
+      (b"fraud",b"safe"),(b"fraudulent",b"legitimate"),(b"scam",b"safe"),(b"malicious",b"benign"),(b"malicious",b"legitimate"),(b"dangerous",b"safe"),(b"harmful",b"safe"),(b"unsafe",b"safe"),(b"phishing",b"legitimate"),(b"positive",b"negative"),(b"bullish",b"bearish"),(b"increase",b"decrease"),(b"increased",b"decreased"),(b"rise",b"fall"),(b"rose",b"fell"),(b"approved",b"rejected"),(b"authorized",b"unauthorized"),(b"confirmed",b"denied"),(b"allowed",b"blocked"),(b"allowed",b"forbidden"),(b"yes",b"no"),(b"true",b"false"),(b"declined",b"increased"),(b"reduced",b"increased"),(b"decreased",b"increased"),(b"lower",b"higher"),(b"down",b"up"),(b"loss",b"gain")];
+    for(a,b)in PAIRS{if(vr_has_word(gt,a)&&vr_has_word(ans,b))||(vr_has_word(gt,b)&&vr_has_word(ans,a)){return true;}} false
+}'''
+    new_opposite = '''fn vr_direction(text:&[u8])->Option<bool>{
+    const UP:&[&[u8]]=&[b"increase",b"increased",b"rise",b"rose",b"rising",b"up",b"higher",b"higher",b"gain",b"gained"];
+    const DOWN:&[&[u8]]=&[b"decrease",b"decreased",b"fall",b"fell",b"falling",b"down",b"lower",b"loss",b"lost",b"declined",b"reduced",b"dropped"];
+    let up=vr_has_any(text,UP);let down=vr_has_any(text,DOWN);match(up,down){(true,false)=>Some(true),(false,true)=>Some(false),_=>None}
+}
+fn vr_opposite(gt:&[u8],ans:&[u8])->bool{
+    const PAIRS:&[(&[u8],&[u8])]=&[
+      (b"fraud",b"safe"),(b"fraudulent",b"legitimate"),(b"scam",b"safe"),(b"malicious",b"benign"),(b"malicious",b"legitimate"),(b"dangerous",b"safe"),(b"harmful",b"safe"),(b"unsafe",b"safe"),(b"phishing",b"legitimate"),(b"positive",b"negative"),(b"bullish",b"bearish"),(b"increase",b"decrease"),(b"increased",b"decreased"),(b"rise",b"fall"),(b"rose",b"fell"),(b"approved",b"rejected"),(b"authorized",b"unauthorized"),(b"confirmed",b"denied"),(b"allowed",b"blocked"),(b"allowed",b"forbidden"),(b"yes",b"no"),(b"true",b"false"),(b"declined",b"increased"),(b"reduced",b"increased"),(b"decreased",b"increased"),(b"lower",b"higher"),(b"down",b"up"),(b"loss",b"gain")];
+    for(a,b)in PAIRS{if(vr_has_word(gt,a)&&vr_has_word(ans,b))||(vr_has_word(gt,b)&&vr_has_word(ans,a)){return true;}}
+    match(vr_direction(gt),vr_direction(ans)){(Some(g),Some(a))=>g!=a,_=>false}
+}'''
+    old_number = '''fn vr_first_number(text:&[u8])->Option<(f64,bool)>{
+    let mut i=0usize; while i<text.len() && !(text[i].is_ascii_digit()||text[i]==b'.'){i+=1;} if i>=text.len(){return None;}
+    let mut x=0.0f64; let mut frac=0.1f64; let mut dot=false; let mut any=false;
+    while i<text.len(){let c=text[i]; if c.is_ascii_digit(){any=true;if dot{x+=(c-b'0')as f64*frac;frac*=0.1;}else{x=x*10.0+(c-b'0')as f64;}i+=1;}else if c==b','||c==b'_'{i+=1;}else if c==b'.'&&!dot{dot=true;i+=1;}else{break;}}
+    if !any{return None;} while i<text.len()&&vr_ws(text[i]){i+=1;} if i<text.len(){match vr_lower(text[i]){b'k'=>x*=1e3,b'm'=>x*=1e6,b'b'=>x*=1e9,_=>{}}} Some((x,text[i..].first()==Some(&b'%')))
+}'''
+    new_number = '''fn vr_first_number(text:&[u8])->Option<(f64,bool)>{
+    let mut i=0usize; while i<text.len() && !(text[i].is_ascii_digit()||text[i]==b'.'){i+=1;} if i>=text.len(){return None;}
+    let mut x=0.0f64; let mut frac=0.1f64; let mut dot=false; let mut any=false;
+    while i<text.len(){let c=text[i]; if c.is_ascii_digit(){any=true;if dot{x+=(c-b'0')as f64*frac;frac*=0.1;}else{x=x*10.0+(c-b'0')as f64;}i+=1;}else if c==b','||c==b'_'{i+=1;}else if c==b'.'&&!dot{dot=true;i+=1;}else{break;}}
+    if !any{return None;}
+    while i<text.len()&&vr_ws(text[i]){i+=1;}
+    if i<text.len(){
+        match vr_lower(text[i]){b'k'=>x*=1e3,b'm'=>x*=1e6,b'b'=>x*=1e9,_=>{}}
+        if vr_has_word(text,b"thousand"){x*=1e3;}else if vr_has_word(text,b"million"){x*=1e6;}else if vr_has_word(text,b"billion"){x*=1e9;}
+    }
+    Some((x,text[i..].first()==Some(&b'%')))
+}'''
+    for old,new,label in ((old_opposite,new_opposite,"directional guard"),(old_number,new_number,"numeric parser")):
+        if old not in build_candidate.WRAPPER:
+            raise SystemExit(f"fast path: expected {label} marker not found")
+        build_candidate.WRAPPER=build_candidate.WRAPPER.replace(old,new,1)
+
+
 def run(cmd: list[str], cwd: pathlib.Path) -> None:
     print("$", " ".join(cmd))
     subprocess.run(cmd, cwd=cwd, check=True)
@@ -77,6 +125,7 @@ def main() -> None:
         run(["git", "clone", "--filter=blob:none", BASELINE_REPO, str(upstream)], root)
         run(["git", "checkout", BASELINE_COMMIT], upstream)
 
+        patch_semantic_guards()
         patch_fast_sources(upstream)
 
         lib = upstream / "src" / "lib.rs"
@@ -103,6 +152,7 @@ def main() -> None:
 
         print(f"upstream commit: {BASELINE_COMMIT}")
         print("fast path: MAX_SEQ_LEN=64, max transformer layers=5")
+        print("semantic guards: directional synonym polarity + word-unit numeric parsing")
         print(f"output: {out}")
         print(f"bytes: {out.stat().st_size}")
 
