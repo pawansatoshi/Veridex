@@ -31,13 +31,13 @@ _RELEASE_CONFLICT = r'''fn vr_release_predicate_polarity(text:&[u8])->Option<boo
     match(p,n){(true,false)=>Some(true),(false,true)=>Some(false),_=>None}
 }
 
-// A yes/no answer must be interpreted relative to the polarity of the
-// proposition being asked. Ground truth is often only "yes"/"no", so comparing
-// GT predicate polarity with answer predicate polarity is insufficient.
-// Examples:
-//   Q: "Was transfer denied?" + "No, it was approved."   => consistent
-//   Q: "Was transfer denied?" + "No, it was rejected."   => contradictory
-//   Q: "Was transfer unauthorized?" + "Yes, it was unauthorized." => consistent
+# A yes/no answer must be interpreted relative to the polarity of the
+# proposition being asked. Ground truth is often only "yes"/"no", so comparing
+# GT predicate polarity with answer predicate polarity is insufficient.
+# Examples:
+#   Q: "Was transfer denied?" + "No, it was approved."   => consistent
+#   Q: "Was transfer denied?" + "No, it was rejected."   => contradictory
+#   Q: "Was transfer unauthorized?" + "Yes, it was unauthorized." => consistent
 fn vr_question_predicate_conflict(q:&[u8],_gt:&[u8],ans:&[u8])->bool{
     if !vr_question_is_binary(q){return false;}
     match(vr_release_predicate_polarity(q),vr_release_predicate_polarity(ans),vr_first_binary_polarity(ans)){
@@ -67,9 +67,9 @@ fn vr_release_numeric_equivalent(q:&[u8],gt:&[u8],ans:&[u8])->bool{
     }
 }'''
 
-// Treat only genuinely incomplete deictic fragments as undercomplete. A full
-// answer such as "No, it was approved." is four words and must not receive the
-// same penalty as the two-word mutant "No, it".
+# Treat only genuinely incomplete deictic fragments as undercomplete. A full
+# answer such as "No, it was approved." is four words and must not receive the
+# same penalty as the two-word mutant "No, it".
 _RELEASE_BINARY_FRAGMENT = r'''fn vr_release_binary_fragment(ans:&[u8])->bool{
     let mut words=0usize;let mut saw_binary=false;let mut saw_deictic=false;let mut i=0usize;
     while i<ans.len(){
