@@ -31,13 +31,13 @@ _RELEASE_CONFLICT = r'''fn vr_release_predicate_polarity(text:&[u8])->Option<boo
     match(p,n){(true,false)=>Some(true),(false,true)=>Some(false),_=>None}
 }
 
-# A yes/no answer must be interpreted relative to the polarity of the
-# proposition being asked. Ground truth is often only "yes"/"no", so comparing
-# GT predicate polarity with answer predicate polarity is insufficient.
-# Examples:
-#   Q: "Was transfer denied?" + "No, it was approved."   => consistent
-#   Q: "Was transfer denied?" + "No, it was rejected."   => contradictory
-#   Q: "Was transfer unauthorized?" + "Yes, it was unauthorized." => consistent
+// A yes/no answer must be interpreted relative to the polarity of the
+// proposition being asked. Ground truth is often only "yes"/"no", so comparing
+// GT predicate polarity with answer predicate polarity is insufficient.
+// Examples:
+//   Q: "Was transfer denied?" + "No, it was approved."   => consistent
+//   Q: "Was transfer denied?" + "No, it was rejected."   => contradictory
+//   Q: "Was transfer unauthorized?" + "Yes, it was unauthorized." => consistent
 fn vr_question_predicate_conflict(q:&[u8],_gt:&[u8],ans:&[u8])->bool{
     if !vr_question_is_binary(q){return false;}
     match(vr_release_predicate_polarity(q),vr_release_predicate_polarity(ans),vr_first_binary_polarity(ans)){
@@ -67,9 +67,9 @@ fn vr_release_numeric_equivalent(q:&[u8],gt:&[u8],ans:&[u8])->bool{
     }
 }'''
 
-# Treat only genuinely incomplete deictic fragments as undercomplete. A full
-# answer such as "No, it was approved." is four words and must not receive the
-# same penalty as the two-word mutant "No, it".
+// Treat only genuinely incomplete deictic fragments as undercomplete. A full
+// answer such as "No, it was approved." is four words and must not receive the
+// same penalty as the two-word mutant "No, it".
 _RELEASE_BINARY_FRAGMENT = r'''fn vr_release_binary_fragment(ans:&[u8])->bool{
     let mut words=0usize;let mut saw_binary=false;let mut saw_deictic=false;let mut i=0usize;
     while i<ans.len(){
@@ -93,19 +93,10 @@ _RELEASE_NEGATION = r'''fn vr_release_negation_conflict(gt:&[u8],ans:&[u8])->boo
 
 _RELEASE_GUARD = r'''fn vr_question_guard(q:&[u8],gt:&[u8],ans:&[u8])->f32{
     let mut g=1.0f32;
-
-    // Factual/entity checks must run for both binary and ordinary factual
-    // questions. The previous implementation accidentally scoped them to
-    // yes/no questions, which let "Microsoft ..." beat the correct
-    // cross-unit numeric paraphrase for "what was ... revenue for Apple?".
     let entity_conflict=vr_release_entity_conflict(q,gt,ans);
     if entity_conflict{g*=0.02;}
-
     let numeric_equiv=vr_release_numeric_equivalent(q,gt,ans);
     if numeric_equiv&&!entity_conflict{
-        // Numeric equivalence is a factual confirmation, not a multiplier
-        // outside the scoring range. The fast scorer already performs the
-        // bounded high-score lift for verified numeric equivalence.
         g=1.0;
     }else if vr_numeric_context(q){
         match(vr_first_number(gt),vr_first_number(ans)){
@@ -114,7 +105,6 @@ _RELEASE_GUARD = r'''fn vr_question_guard(q:&[u8],gt:&[u8],ans:&[u8])->f32{
             _=>{}
         }
     }
-
     if vr_question_is_binary(q){
         if let Some(p)=vr_first_binary_polarity(gt){
             match vr_first_binary_polarity(ans){Some(a)if a!=p=>g*=0.06,None=>g*=0.88,_=>{}}
