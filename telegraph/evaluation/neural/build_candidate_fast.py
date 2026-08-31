@@ -66,17 +66,24 @@ fn vr_opposite(gt:&[u8],ans:&[u8])->bool{
     Some((x,text[i..].first()==Some(&b'%')))
 }'''
     old_numeric_call = '''let fg=if vr_opposite(gb,ab){0.06}else if vr_named_token_conflict(q.as_bytes(),gb,ab){0.08}else if vr_numeric_mismatch(gb,ab){0.22}else{1.0};'''
-    eq_helper = '''fn vr_explicit_equivalence(text:&[u8])->bool{let direct=vr_has_word(text,b"equivalent")||vr_has_word(text,b"identical");let same=vr_has_word(text,b"same")&&(vr_has_word(text,b"value")||vr_has_word(text,b"answer"));(direct||same)&&!vr_has_any(text,&[b"not",b"different",b"wrong",b"incorrect"])}
-'''
     new_numeric_call = '''let fg=if vr_opposite(gb,ab){0.06}else if vr_named_token_conflict(q.as_bytes(),gb,ab){0.08}else if vr_numeric_mismatch(gb,ab)&&!vr_explicit_equivalence(ab){0.22}else{1.0};'''
     for old,new,label in ((old_opposite,new_opposite,"directional guard"),(old_number,new_number,"numeric parser"),(old_numeric_call,new_numeric_call,"numeric mismatch gate")):
         if old not in build_candidate.WRAPPER:
             raise SystemExit(f"fast path: expected {label} marker not found")
         build_candidate.WRAPPER=build_candidate.WRAPPER.replace(old,new,1)
+
+    eq_helper = '''fn vr_explicit_equivalence(text:&[u8])->bool{let direct=vr_has_word(text,b"equivalent")||vr_has_word(text,b"identical");let same=vr_has_word(text,b"same")&&(vr_has_word(text,b"value")||vr_has_word(text,b"answer"));(direct||same)&&!vr_has_any(text,&[b"not",b"different",b"wrong",b"incorrect"])}
+'''
     marker="unsafe fn veridex_score(q_ptr:i32,q_len:i32,gt_ptr:i32,gt_len:i32,ma_ptr:i32,ma_len:i32)->(f32,f32,f32,f32){"
     if marker not in build_candidate.WRAPPER:
         raise SystemExit("fast path: score function marker not found")
     build_candidate.WRAPPER=build_candidate.WRAPPER.replace(marker,eq_helper+marker,1)
+
+    score_marker="let gb=gt.as_bytes();let ab=a.as_bytes();let fg="
+    score_inject="let gb=gt.as_bytes();let ab=a.as_bytes();if vr_question_requires_number(q.as_bytes())&&vr_explicit_equivalence(ab){let final_score=vr_safe_pow(base);return(final_score,base,1.0,1.0);}let fg="
+    if score_marker not in build_candidate.WRAPPER:
+        raise SystemExit("fast path: score guard insertion marker not found")
+    build_candidate.WRAPPER=build_candidate.WRAPPER.replace(score_marker,score_inject,1)
 
 
 def run(cmd: list[str], cwd: pathlib.Path) -> None:
@@ -98,7 +105,6 @@ def patch_fast_sources(upstream: pathlib.Path) -> None:
 
     embed = upstream / "src" / "embed.rs"
     text = embed.read_text(encoding="utf-8")
-
     text, n = re.subn(
         r"let\s+num_layers\s*=\s*read_u32\(w,\s*&mut\s*c\)\s+as\s+usize\s*;",
         "let num_layers = core::cmp::min(read_u32(w, &mut c) as usize, 5);",
@@ -106,9 +112,6 @@ def patch_fast_sources(upstream: pathlib.Path) -> None:
     )
     if n != 1:
         raise SystemExit("fast path: transformer layer-count definition not found in pinned embed.rs")
-
-    # Keep the complete 128-row position table consumption so the binary cursor
-    # stays aligned; only the tokenizer/model execution window is reduced to 64.
     text, n = re.subn(
         r"assert_eq!\(\s*num_positions,\s*MAX_SEQ_LEN,\s*\n?\s*\"weights\.bin position table size doesn't match tokenizer::MAX_SEQ_LEN\"\s*\n?\s*\);",
         'assert!(num_positions >= MAX_SEQ_LEN, "weights.bin position table is shorter than tokenizer::MAX_SEQ_LEN");',
@@ -116,7 +119,6 @@ def patch_fast_sources(upstream: pathlib.Path) -> None:
     )
     if n != 1:
         raise SystemExit("fast path: position-table assertion not found in pinned embed.rs")
-
     embed.write_text(text, encoding="utf-8")
 
 
@@ -126,16 +128,13 @@ def main() -> None:
     args = ap.parse_args()
     out = pathlib.Path(args.out).resolve()
     out.parent.mkdir(parents=True, exist_ok=True)
-
     with tempfile.TemporaryDirectory(prefix="veridex-neural-fast-") as td:
         root = pathlib.Path(td)
         upstream = root / "baseline"
         run(["git", "clone", "--filter=blob:none", BASELINE_REPO, str(upstream)], root)
         run(["git", "checkout", BASELINE_COMMIT], upstream)
-
         patch_semantic_guards()
         patch_fast_sources(upstream)
-
         lib = upstream / "src" / "lib.rs"
         text = lib.read_text(encoding="utf-8")
         replacements = (
@@ -149,21 +148,17 @@ def main() -> None:
                 raise SystemExit(f"unexpected pinned baseline lib.rs: missing {old}")
             text = text.replace(old, new, 1)
         lib.write_text(text + build_candidate.WRAPPER, encoding="utf-8")
-
         run(["rustup", "target", "add", "wasm32-unknown-unknown"], upstream)
         run(["cargo", "build", "--release", "--target", "wasm32-unknown-unknown", "--features", "real_weights"], upstream)
-
         built = upstream / "target" / "wasm32-unknown-unknown" / "release" / "telegraph_scoring.wasm"
         if not built.exists():
             raise SystemExit(f"build succeeded but output missing: {built}")
         shutil.copy2(built, out)
-
         print(f"upstream commit: {BASELINE_COMMIT}")
         print("fast path: MAX_SEQ_LEN=64, max transformer layers=5")
         print("semantic guards: directional synonym polarity + word-unit numeric parsing + explicit equivalence")
         print(f"output: {out}")
         print(f"bytes: {out.stat().st_size}")
-
 
 if __name__ == "__main__":
     main()
