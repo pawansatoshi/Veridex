@@ -131,10 +131,11 @@ def patch_release_guards() -> None:
         raise SystemExit(f"release wrapper: expected one numeric-equivalence lift, found {lift_hits}")
     build_candidate.WRAPPER=build_candidate.WRAPPER.replace(_OLD_LIFT,_NEW_LIFT,1)
 
-    marker="fn vr_question_guard(q:&[u8],gt:&[u8],ans:&[u8])->f32{"
-    if marker not in build_candidate.WRAPPER:
-        raise SystemExit("release wrapper: question guard marker not found")
-    build_candidate.WRAPPER=build_candidate.WRAPPER.replace(marker,_NEGATION_HELPERS+"\n"+_NEW_QUESTION_GUARD,1)
+    marker="fn vr_question_guard(q:&[u8],gt:&[u8],ans:&[u8]) -> f32{" 
+    marker_compact="fn vr_question_guard(q:&[u8],gt:&[u8],ans:&[u8])->f32{"
+    marker = marker if marker in build_candidate.WRAPPER else marker_compact
+    replacement=_NEGATION_HELPERS+"\n"+_NEW_QUESTION_GUARD
+    build_candidate.WRAPPER=_replace_function(build_candidate.WRAPPER,marker,replacement)
 
     build_candidate.WRAPPER=_replace_function(
         build_candidate.WRAPPER,
