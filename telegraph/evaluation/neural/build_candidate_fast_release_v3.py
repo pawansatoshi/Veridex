@@ -45,6 +45,36 @@ def _replace_function(src: str, marker: str, replacement: str) -> str:
     raise RuntimeError(f"v3 patch: unmatched braces: {marker}")
 
 
+EXPANDED_OPPOSITE = r'''fn vr_opposite(gt:&[u8],ans:&[u8])->bool{
+    const PAIRS:&[(&[u8],&[u8])]=&[
+      (b"fraud",b"safe"),(b"fraudulent",b"legitimate"),(b"scam",b"safe"),
+      (b"malicious",b"benign"),(b"malicious",b"legitimate"),(b"trusted",b"malicious"),
+      (b"dangerous",b"safe"),(b"harmful",b"safe"),(b"unsafe",b"safe"),
+      (b"compromised",b"secure"),(b"phishing",b"legitimate"),
+      (b"genuine",b"counterfeit"),(b"positive",b"negative"),(b"bullish",b"bearish"),
+      (b"increase",b"decrease"),(b"increased",b"decreased"),(b"rise",b"fall"),
+      (b"rose",b"fell"),(b"rising",b"falling"),(b"higher",b"lower"),
+      (b"up",b"down"),(b"gain",b"loss"),(b"gained",b"lost"),
+      (b"approved",b"rejected"),(b"authorized",b"unauthorized"),(b"authorised",b"unauthorised"),
+      (b"confirmed",b"denied"),(b"allowed",b"blocked"),(b"allowed",b"forbidden"),
+      (b"yes",b"no"),(b"true",b"false"),(b"declined",b"increased"),
+      (b"reduced",b"increased"),(b"decreased",b"increased"),
+      (b"lower",b"higher"),(b"down",b"up"),(b"loss",b"gain"),
+      (b"prevented",b"caused"),(b"caused",b"prevented"),
+      (b"succeeded",b"failed"),(b"success",b"failure"),
+      (b"processed",b"received"),(b"received",b"processed"),
+      (b"sent",b"received"),(b"received",b"sent"),
+      (b"blocked",b"allowed"),(b"allowed",b"blocked"),
+      (b"reported",b"denied"),(b"denied",b"reported"),
+      (b"requested",b"approved"),(b"approved",b"requested"),
+      (b"owns",b"uses"),(b"uses",b"owns"),(b"controls",b"owns"),(b"owns",b"controls"),
+      (b"bought",b"sold"),(b"sold",b"bought"),
+    ];
+    for(a,b)in PAIRS{if(vr_has_word(gt,a)&&vr_has_word(ans,b))||(vr_has_word(gt,b)&&vr_has_word(ans,a)){return true;}}
+    match(vr_direction(gt),vr_direction(ans)){(Some(g),Some(a))=>g!=a,_=>false}
+}
+'''
+
 MATERIAL = r'''const VR_MATERIAL_FACTOR:f32=0.04;
 const VR_MATERIAL_CAP:f32=0.20;
 fn vr_material_conflict_factor(q:&[u8],gt:&[u8],ans:&[u8])->f32{
@@ -99,6 +129,7 @@ fn vr_material_conflict_factor(q:&[u8],gt:&[u8],ans:&[u8])->f32{
 def patch() -> None:
     base.robust_patch()
     w = build_candidate.WRAPPER
+    w = _replace_function(w, "fn vr_opposite(", EXPANDED_OPPOSITE)
     marker = "unsafe fn veridex_score("
     pos = w.find(marker)
     if pos < 0:
