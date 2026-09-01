@@ -1,27 +1,23 @@
 #!/usr/bin/env python3
-"""Track-2 release doctor v10 wrapper.
+"""Track-2 release doctor v10.
 
-Keeps v9's candidate tournament, but makes the expensive deep stage genuinely
-self-healing: when the selected candidate fails the deep deterministic lab,
-diagnose the report, apply only the existing allow-listed semantic repair
-recipes from doctor v3, rebuild, and re-run the deep lab until GREEN or the
-bounded repair budget is exhausted. Fast-candidate scoring is left untouched.
+Wraps v9's bounded candidate tournament with a safe deep-lab recovery loop.
+The wrapper never monkey-patches its own deep runner recursively: the original
+v9 lab function is passed explicitly to the self-healing loop.
 """
 from __future__ import annotations
 
-import json
-import sys
 from pathlib import Path
 
 import track2_release_doctor_v9 as v9
 
 
-def deep_lab_self_heal(wasm: Path, corpus: Path) -> dict:
+def deep_lab_self_heal(wasm: Path, corpus: Path, base_lab) -> dict:
     """Run deep lab and consume only approved semantic repair recipes."""
     max_repairs = 4
     attempts = []
     for attempt in range(1, max_repairs + 1):
-        report = v9.lab_once(wasm, corpus)
+        report = base_lab(wasm, corpus)
         verdict = report.get("verdict")
         row = {
             "attempt": attempt,
@@ -46,9 +42,6 @@ def deep_lab_self_heal(wasm: Path, corpus: Path) -> dict:
         if not fixed:
             break
 
-        # Every repair is rebuilt and structurally validated before the next
-        # deep execution. No benchmark/checker thresholds or corpus data are
-        # modified by this path.
         v9.build_candidate(wasm)
         v9.d.structural(wasm)
 
@@ -57,19 +50,18 @@ def deep_lab_self_heal(wasm: Path, corpus: Path) -> dict:
 
 
 def main() -> int:
-    original = v9.lab_once
-    try:
-        # v9.main invokes lab_once for both fast and deep corpora. Preserve the
-        # fast tournament exactly; intercept only the deep corpus.
-        def patched_lab_once(wasm: Path, corpus: Path) -> dict:
-            if corpus == v9.DEEP_CORPUS:
-                return deep_lab_self_heal(wasm, corpus)
-            return original(wasm, corpus)
+    original_lab = v9.lab_once
 
-        v9.lab_once = patched_lab_once
+    def patched_lab_once(wasm: Path, corpus: Path) -> dict:
+        if corpus == v9.DEEP_CORPUS:
+            return deep_lab_self_heal(wasm, corpus, original_lab)
+        return original_lab(wasm, corpus)
+
+    v9.lab_once = patched_lab_once
+    try:
         return v9.main()
     finally:
-        v9.lab_once = original
+        v9.lab_once = original_lab
 
 
 if __name__ == "__main__":
