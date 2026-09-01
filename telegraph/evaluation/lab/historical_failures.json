@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "cases": [
+    {"question":"Was the transfer denied?","ground_truth":"no","good":"No, it was approved.","bad":"No, it was rejected.","kind":"direction-flip","critical":true,"source":"run-200"},
+    {"question":"Was the transfer denied?","ground_truth":"no","good":"No, it was approved.","bad":"No, it","kind":"undercomplete","critical":true,"source":"run-200"},
+    {"question":"Was the approval rejected?","ground_truth":"no","good":"No, it was approved.","bad":"No, it was rejected.","kind":"direction-flip","critical":true,"source":"run-200"},
+    {"question":"Was the approval rejected?","ground_truth":"no","good":"No, it was approved.","bad":"No, it","kind":"undercomplete","critical":true,"source":"run-200"},
+    {"question":"Was the transfer unauthorized?","ground_truth":"yes","good":"Yes, it was unauthorized.","bad":"Yes, it","kind":"undercomplete","critical":true,"source":"run-200"},
+    {"question":"Is the wallet compromised or secure?","ground_truth":"compromised","good":"The wallet appears breached.","bad":"secure","kind":"compound-polarity","critical":true,"source":"run-213"},
+    {"question":"What was Q3 revenue for Apple?","ground_truth":"Apple reported Q3 revenue of $3.42 billion.","good":"Q3 revenue came in at 3,420 million dollars.","bad":"Microsoft reported Q3 revenue of $3.42 billion.","kind":"wrong-entity","critical":true,"source":"run-209"},
+    {"question":"Summarise the paper's finding.","ground_truth":"The treatment reduced mortality by 30% relative to placebo.","good":"Mortality fell 30% versus placebo under the treatment.","bad":"The treatment increased mortality by 30% relative to placebo.","kind":"contradiction","critical":true,"source":"run-209"},
+    {"question":"Is the contract owner trusted?","ground_truth":"safe","good":"secure","bad":"dangerous","kind":"opposite","critical":true,"source":"run-209"},
+    {"question":"Is the website fraudulent?","ground_truth":"yes","good":"true","bad":"false","kind":"binary","critical":true,"source":"run-209"},
+    {"question":"What was the loss?","ground_truth":"$2.5 million","good":"2,500,000 dollars","bad":"2,500,000","kind":"numeric-completeness","critical":false,"source":"run-200"},
+    {"question":"What was the transaction value?","ground_truth":"$1.25 billion","good":"1,250 million dollars","bad":"1,250 million","kind":"numeric-completeness","critical":false,"source":"run-200"},
+    {"question":"What was the reported amount?","ground_truth":"$750,000","good":"750 thousand dollars","bad":"750 thousand","kind":"numeric-completeness","critical":false,"source":"run-200"}
+  ]
+}
