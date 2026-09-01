@@ -56,7 +56,6 @@ def diagnose(report: dict, text: str = "") -> list[str]:
 
 
 def semantic_repair(reasons):
-    # Prioritize the highest-signal family observed in the failing cases.
     ordered = []
     if "numeric" in reasons:
         ordered.append("numeric")
@@ -65,7 +64,6 @@ def semantic_repair(reasons):
     if "polarity" in reasons:
         ordered.append("polarity")
     if "entity" in reasons:
-        # Entity mismatch has no dedicated source recipe yet; do not guess.
         pass
     if ordered:
         ok, detail = BASE_SEMANTIC_REPAIR(ordered[:1])
@@ -75,10 +73,11 @@ def semantic_repair(reasons):
 
 
 def main() -> int:
+    # Neural WASM is expensive: use a 64-pair stratified fast set for every
+    # repair iteration. The deep stage remains mandatory before official gates.
+    v5.FAST_LIMIT = 64
     d.diagnose = diagnose
     d.semantic_repair = semantic_repair
-    # v5 remains responsible for fast iterative sampling, full deep lab and
-    # the complete authoritative Telegraph/Wazero lifecycle.
     return v5.main()
 
 
