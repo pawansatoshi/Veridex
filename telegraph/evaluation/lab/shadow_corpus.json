@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "cases": [
+    {"question":"What was the reported loss?","ground_truth":"The reported loss was $4.2 million.","good":"The reported loss was $4,200,000.","bad":"The reported loss was $5.2 million.","kind":"numeric","critical":true},
+    {"question":"Which company issued the warning?","ground_truth":"Coinbase issued the warning.","good":"The warning was issued by Coinbase.","bad":"The warning was issued by Binance.","kind":"entity","critical":true},
+    {"question":"Was the transfer approved?","ground_truth":"approved","good":"The transfer was authorized.","bad":"The transfer was rejected.","kind":"polarity","critical":true},
+    {"question":"Did incidents decrease?","ground_truth":"The incident count decreased by 30%.","good":"Incidents fell by 30 percent.","bad":"Incidents increased by 30 percent.","kind":"direction","critical":true},
+    {"question":"Is the domain genuine?","ground_truth":"genuine","good":"The domain is authentic.","bad":"The domain is counterfeit.","kind":"polarity","critical":true},
+    {"question":"Was the account compromised?","ground_truth":"compromised","good":"The account was breached.","bad":"The account was secure.","kind":"polarity","critical":true},
+    {"question":"Is the payment link dangerous?","ground_truth":"dangerous","good":"The payment link is harmful and unsafe.","bad":"The payment link is safe.","kind":"polarity","critical":true},
+    {"question":"Did the security team block the account?","ground_truth":"yes","good":"Yes, the security team blocked it.","bad":"No, the security team allowed it.","kind":"binary","critical":true},
+    {"question":"Was the transfer unauthorized?","ground_truth":"yes","good":"Yes, it was unauthorized.","bad":"No, it was authorized.","kind":"binary","critical":true},
+    {"question":"Was the approval rejected?","ground_truth":"no","good":"No, it was approved.","bad":"Yes, it was rejected.","kind":"binary","critical":true},
+    {"question":"What was Q3 revenue for Apple?","ground_truth":"Apple reported Q3 revenue of $3.42 billion.","good":"Apple reported 3,420 million dollars in Q3 revenue.","bad":"Microsoft reported Q3 revenue of $3.42 billion.","kind":"entity-numeric","critical":true},
+    {"question":"Which network processed the transfer?","ground_truth":"Ethereum processed the transfer.","good":"The transfer was processed on Ethereum.","bad":"The transfer was processed on Solana.","kind":"entity","critical":false},
+    {"question":"What was the transaction value?","ground_truth":"$1.25 billion","good":"The transaction value was 1,250 million dollars.","bad":"The transaction value was $1.75 billion.","kind":"numeric","critical":false},
+    {"question":"How many victims were affected?","ground_truth":"42 victims were affected.","good":"The incident affected 42 victims.","bad":"The incident affected 84 victims.","kind":"numeric","critical":false},
+    {"question":"When did the incident occur?","ground_truth":"August 12, 2026.","good":"It occurred on August 12, 2026.","bad":"It occurred on August 13, 2026.","kind":"date","critical":false},
+    {"question":"What happened to revenue?","ground_truth":"Revenue increased by 15%.","good":"Revenue rose by 15 percent.","bad":"Revenue fell by 15 percent.","kind":"direction","critical":false},
+    {"question":"What happened to losses?","ground_truth":"Losses decreased by 20%.","good":"Losses dropped by 20 percent.","bad":"Losses increased by 20 percent.","kind":"direction","critical":false},
+    {"question":"Is the merchant legitimate?","ground_truth":"legitimate","good":"The merchant is genuine.","bad":"The merchant is fraudulent.","kind":"polarity","critical":false},
+    {"question":"Is this URL safe to visit?","ground_truth":"scam","good":"The URL is fraudulent.","bad":"The URL is safe.","kind":"polarity","critical":false},
+    {"question":"Is the service trustworthy?","ground_truth":"trusted","good":"The service is trustworthy.","bad":"The service is malicious.","kind":"polarity","critical":false}
+  ],
+  "mutation_seed_kinds": ["late-negation","wrong-entity","wrong-number","wrong-direction","incomplete","distractor","double-mutation"]
+}
