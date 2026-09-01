@@ -21,6 +21,7 @@ on:
       - 'telegraph/evaluation/track2-benchmark-contract-v1.json'
       - 'telegraph/evaluation/track2-preflight.js'
       - 'telegraph/evaluation/track2-tournament.js'
+      - 'telegraph/evaluation/track2-mutation-suite.mjs'
       - 'telegraph/evaluation/track2-live-risk-stress.mjs'
       - '.github/workflows/track2-final-verify.yml'
   workflow_dispatch:
@@ -57,33 +58,83 @@ jobs:
       - name: Prepare evidence directory
         run: mkdir -p telegraph/evaluation/ci-evidence
 
-      - name: Run autonomous Track 2 release doctor v10
+      - name: Build Veridex fast neural-hybrid candidate
         env:
           RUSTFLAGS: -Aunsafe-op-in-unsafe-fn
-          PYTHONUNBUFFERED: '1'
         run: |
           set -euo pipefail
-          python3 -m py_compile telegraph/evaluation/lab/generate_shadow_corpus_v2.py
-          python3 -m py_compile telegraph/evaluation/lab/presubmit_lab_v2.py
-          python3 -m py_compile telegraph/evaluation/lab/sample_shadow_corpus.py
-          python3 -m py_compile telegraph/evaluation/lab/track2_release_doctor_v3.py
-          python3 -m py_compile telegraph/evaluation/lab/track2_release_doctor_v9.py
-          python3 -m py_compile telegraph/evaluation/lab/track2_release_doctor_v10.py
-          python3 -m py_compile telegraph/evaluation/neural/build_candidate_fast_release_v2.py
-          python3 -m py_compile telegraph/evaluation/neural/build_candidate_fast_release_v3.py
-          python3 -m py_compile telegraph/evaluation/neural/build_candidate_fast_release_lab.py
-          python3 telegraph/evaluation/lab/track2_release_doctor_v10.py \
-            --wasm telegraph/evaluation/veridex-track2-final.wasm \
-            --fast-limit 128 \
-            --json | tee telegraph/evaluation/ci-evidence/release-doctor.json
+          python3 telegraph/evaluation/neural/build_candidate_fast_release_v3.py \
+            --out telegraph/evaluation/veridex-track2-final.wasm
 
-      - name: Assert doctor produced exact release evidence
+      - name: Structural validation
         run: |
           set -euo pipefail
-          test -s telegraph/evaluation/veridex-track2-final.wasm
-          test -s telegraph/evaluation/VERIDEX_TRACK2_FINAL_SHA256.txt
-          test -s telegraph/evaluation/ci-evidence/release-doctor-final.json
-          test -s telegraph/evaluation/ci-evidence/deep-lab-final.json
+          wasm-validate telegraph/evaluation/veridex-track2-final.wasm
+          SIZE=$(stat -c%s telegraph/evaluation/veridex-track2-final.wasm)
+          test "$SIZE" -le 33554432
+          IMPORTS=$(wasm-objdump -x telegraph/evaluation/veridex-track2-final.wasm | grep -c '^ *import' || true)
+          test "$IMPORTS" -eq 0
+          wasm-objdump -x telegraph/evaluation/veridex-track2-final.wasm > telegraph/evaluation/ci-evidence/wasm-objdump.txt
+          printf 'size=%s\nimports=%s\n' "$SIZE" "$IMPORTS" | tee telegraph/evaluation/ci-evidence/structural.txt
+
+      - name: Run primary preflight edge and determinism gates
+        run: |
+          set -euo pipefail
+          node telegraph/evaluation/track2-preflight.js telegraph/evaluation/veridex-track2-final.wasm telegraph/evaluation/track2-benchmark-v2.json | tee telegraph/evaluation/ci-evidence/preflight.json
+
+      - name: Run primary ordering tournament
+        run: |
+          set -euo pipefail
+          node telegraph/evaluation/track2-tournament.js telegraph/evaluation/veridex-track2-final.wasm telegraph/evaluation/track2-benchmark-v2.json | tee telegraph/evaluation/ci-evidence/tournament.json
+
+      - name: Run supplemental contract-security preflight
+        run: |
+          set -euo pipefail
+          node telegraph/evaluation/track2-preflight.js telegraph/evaluation/veridex-track2-final.wasm telegraph/evaluation/track2-benchmark-contract-v1.json | tee telegraph/evaluation/ci-evidence/contract-preflight.json
+
+      - name: Run supplemental contract-security tournament
+        run: |
+          set -euo pipefail
+          node telegraph/evaluation/track2-tournament.js telegraph/evaluation/veridex-track2-final.wasm telegraph/evaluation/track2-benchmark-contract-v1.json | tee telegraph/evaluation/ci-evidence/contract-tournament.json
+
+      - name: Prepare pinned public Wazero checker
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/telegraph-wasm-check
+          git clone --filter=blob:none https://github.com/neromtoobad/telegraph-wasm-check /tmp/telegraph-wasm-check
+          git -C /tmp/telegraph-wasm-check checkout --detach f537c7c085e9d3366c5615fe1ad1f98a0abeff7c
+          cd /tmp/telegraph-wasm-check
+          go build -trimpath -o /tmp/telegraph-wasm-check-bin .
+          /tmp/telegraph-wasm-check-bin --version
+
+      - name: Run public blind-spot hard.json gate
+        run: |
+          set -euo pipefail
+          /tmp/telegraph-wasm-check-bin "$GITHUB_WORKSPACE/telegraph/evaluation/veridex-track2-final.wasm" --cases /tmp/telegraph-wasm-check/examples/hard.json --strict --json | tee "$GITHUB_WORKSPACE/telegraph/evaluation/ci-evidence/public-hard-json.json"
+
+      - name: Run adversarial mutation suite
+        run: |
+          set -euo pipefail
+          node telegraph/evaluation/track2-mutation-suite.mjs telegraph/evaluation/veridex-track2-final.wasm telegraph/evaluation/track2-benchmark-v2.json | tee telegraph/evaluation/ci-evidence/mutation-suite.json
+
+      - name: Run live-risk margin stress gate
+        run: |
+          set -euo pipefail
+          node telegraph/evaluation/track2-live-risk-stress.mjs telegraph/evaluation/veridex-track2-final.wasm telegraph/evaluation/track2-benchmark-v2.json | tee telegraph/evaluation/ci-evidence/live-risk-stress.json
+
+      - name: Run public Wazero compatibility checker
+        run: |
+          set -euo pipefail
+          /tmp/telegraph-wasm-check-bin "$GITHUB_WORKSPACE/telegraph/evaluation/veridex-track2-final.wasm" --cases "$GITHUB_WORKSPACE/telegraph/evaluation/track2-benchmark-v2.json" --strict --json | tee "$GITHUB_WORKSPACE/telegraph/evaluation/ci-evidence/wazero-checker.json"
+
+      - name: Record immutable hash
+        run: |
+          set -euo pipefail
+          sha256sum telegraph/evaluation/veridex-track2-final.wasm | tee telegraph/evaluation/VERIDEX_TRACK2_FINAL_SHA256.txt
+          echo "source baseline commit: dfa0cf7fda72789267811ba2190f61a8eaacedf6" >> telegraph/evaluation/VERIDEX_TRACK2_FINAL_SHA256.txt
+          echo "build: Veridex neural-hybrid wrapper + real MiniLM baseline + fast v3 factual hardening" >> telegraph/evaluation/VERIDEX_TRACK2_FINAL_SHA256.txt
+          echo "checker commit: f537c7c085e9d3366c5615fe1ad1f98a0abeff7c" >> telegraph/evaluation/VERIDEX_TRACK2_FINAL_SHA256.txt
+          echo "source commit: $GITHUB_SHA" >> telegraph/evaluation/VERIDEX_TRACK2_FINAL_SHA256.txt
 
       - name: Upload exact verified artifact and evidence
         uses: actions/upload-artifact@v4
