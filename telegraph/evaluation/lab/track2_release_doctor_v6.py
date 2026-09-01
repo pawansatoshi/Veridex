@@ -1,20 +1,24 @@
 #!/usr/bin/env python3
-"""Track-2 release doctor v6.
+"""Canonical Track-2 release doctor v6.
 
-Adds evidence-aware semantic diagnosis on top of the v5 fast/deep lifecycle.
-Repairs are still restricted to existing allow-listed generalized recipes;
-no benchmark/checker thresholds or cases are changed.
+Uses the anchor-robust release builder and keeps the v5 fast/deep lifecycle.
+Repairs remain allow-listed and fail-closed; evaluator thresholds/cases are
+never modified.
 """
 from __future__ import annotations
 
 import json
 import re
-import sys
 from pathlib import Path
 
 import track2_release_doctor_v5 as v5
 import track2_release_doctor_v4 as v4
 import track2_release_doctor_v3 as d
+
+ROOT = Path(__file__).resolve().parents[3]
+# Critical fix: v3's build() must use the robust function-boundary builder,
+# not the brittle exact-anchor release wrapper.
+d.RELEASE = ROOT / "telegraph/evaluation/neural/build_candidate_fast_release_v2.py"
 
 ORIGINAL_DIAGNOSE = d.diagnose
 BASE_SEMANTIC_REPAIR = v4.semantic_repair
@@ -56,15 +60,7 @@ def diagnose(report: dict, text: str = "") -> list[str]:
 
 
 def semantic_repair(reasons):
-    ordered = []
-    if "numeric" in reasons:
-        ordered.append("numeric")
-    if "completeness" in reasons:
-        ordered.append("completeness")
-    if "polarity" in reasons:
-        ordered.append("polarity")
-    if "entity" in reasons:
-        pass
+    ordered = [x for x in ("numeric", "completeness", "polarity") if x in reasons]
     if ordered:
         ok, detail = BASE_SEMANTIC_REPAIR(ordered[:1])
         if ok:
@@ -73,8 +69,8 @@ def semantic_repair(reasons):
 
 
 def main() -> int:
-    # Neural WASM is expensive: use a 64-pair stratified fast set for every
-    # repair iteration. The deep stage remains mandatory before official gates.
+    # Small stratified repair loop; v5 performs the mandatory deep corpus pass
+    # before handing the candidate to authoritative Telegraph gates.
     v5.FAST_LIMIT = 64
     d.diagnose = diagnose
     d.semantic_repair = semantic_repair
