@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Robust Track-2 fast release builder.
 
-Replaces brittle multi-line text anchors with function-boundary patching. The
-pinned Telegraph baseline and fast tokenizer/layer constraints remain owned by
-the existing fast builder; only wrapper patching is made drift-tolerant.
+Uses function-boundary replacement instead of brittle multi-line source
+anchors. Existing vetted release guards are inserted/replaced one function at
+a time, so duplicate definitions and unsafe-prefix corruption cannot occur.
 """
 from __future__ import annotations
 
@@ -14,14 +14,12 @@ import build_candidate_fast
 import build_candidate_fast_release as base
 
 
-def _replace_fn(src: str, name: str, replacement: str) -> str:
-    marker = f"fn {name}("
-    start = src.find(marker)
-    if start < 0:
-        raise RuntimeError(f"robust release patch: function not found: {name}")
-    if start >= 7 and src[start - 7:start] == "unsafe ":
-        start -= 7
-    brace = src.find("{", start)
+def _find_function(src: str, name: str) -> tuple[int, int] | None:
+    pat = re.compile(r"(?m)^(?P<prefix>\s*)(?P<attrs>(?:(?:pub)\s+)?(?:(?:unsafe)\s+)?fn\s+)" + re.escape(name) + r"\s*\(")
+    m = pat.search(src)
+    if not m:
+        return None
+    brace = src.find("{", m.start())
     if brace < 0:
         raise RuntimeError(f"robust release patch: opening brace not found: {name}")
     depth = 0
@@ -38,23 +36,36 @@ def _replace_fn(src: str, name: str, replacement: str) -> str:
             elif ch == quote:
                 quote = None
         else:
-            if ch in ('"', "'"):
-                quote = ch
+            if ch == '"':
+                quote = '"'
             elif ch == "{":
                 depth += 1
             elif ch == "}":
                 depth -= 1
                 if depth == 0:
-                    return src[:start] + replacement + src[i + 1 :]
+                    return m.start(), i + 1
         i += 1
     raise RuntimeError(f"robust release patch: unmatched braces: {name}")
 
 
-def _insert_before_guard(src: str, block: str) -> str:
-    pos = src.find("fn vr_question_guard(")
+def _extract_function(block: str, name: str) -> str:
+    found = _find_function(block, name)
+    if not found:
+        raise RuntimeError(f"release helper missing: {name}")
+    start, end = found
+    return block[start:end].strip()
+
+
+def _upsert_function(src: str, name: str, replacement: str) -> str:
+    found = _find_function(src, name)
+    if found:
+        start, end = found
+        return src[:start] + replacement + src[end:]
+    guard = "fn vr_question_guard("
+    pos = src.find(guard)
     if pos < 0:
         raise RuntimeError("robust release patch: question guard insertion point missing")
-    return src[:pos] + block + "\n" + src[pos:]
+    return src[:pos] + replacement + "\n" + src[pos:]
 
 
 DIRECTION = r'''fn vr_direction(text:&[u8])->Option<bool>{
@@ -81,72 +92,47 @@ NUMBER = r'''fn vr_first_number(text:&[u8])->Option<(f64,bool)>{
     Some((x,vr_has_word(text,b"percent")||vr_has_word(text,b"percentage")||text[i..].first()==Some(&b'%')))
 }'''
 
-NUMERIC_CONTEXT = r'''fn vr_numeric_context(q:&[u8])->bool{const TERMS:&[&[u8]]=&[b"amount",b"value",b"loss",b"profit",b"revenue",b"cost",b"price",b"fee",b"number",b"total",b"volume",b"rate",b"percentage",b"percent",b"worth",b"valuation",b"supply",b"balance",b"quantity"];vr_has_any(q,TERMS)}'''
-
-
-# Split the vetted release conflict bundle into its individual functions so
-# existing functions are replaced, not duplicated.
-def _functions(block: str) -> list[tuple[str, str]]:
-    names = re.findall(r"(?:unsafe\s+)?fn\s+([A-Za-z0-9_]+)\(", block)
-    out: list[tuple[str, str]] = []
-    for name in names:
-        marker = f"fn {name}("
-        start = block.find(marker)
-        if start >= 7 and block[start - 7:start] == "unsafe ":
-            start -= 7
-        brace = block.find("{", start)
-        depth = 0
-        quote = None
-        esc = False
-        i = brace
-        while i < len(block):
-            ch = block[i]
-            if quote:
-                if esc: esc = False
-                elif ch == "\\": esc = True
-                elif ch == quote: quote = None
-            else:
-                if ch in ('"', "'"): quote = ch
-                elif ch == "{": depth += 1
-                elif ch == "}":
-                    depth -= 1
-                    if depth == 0:
-                        out.append((name, block[start:i+1]))
-                        break
-            i += 1
-    return out
+NUMERIC_CONTEXT = r'''fn vr_numeric_context(q:&[u8])->bool{
+    const TERMS:&[&[u8]]=&[b"amount",b"value",b"loss",b"profit",b"revenue",b"cost",b"price",b"fee",b"number",b"total",b"volume",b"rate",b"percentage",b"percent",b"worth",b"valuation",b"supply",b"balance",b"quantity"];
+    vr_has_any(q,TERMS)
+}'''
 
 
 def robust_patch() -> None:
     w = build_candidate.WRAPPER
-
     if "fn vr_direction(" not in w:
-        w = _insert_before_guard(w, DIRECTION)
-    w = _replace_fn(w, "vr_opposite", OPPOSITE)
-    w = _replace_fn(w, "vr_first_number", NUMBER)
-
-    for name, fn in _functions(base._RELEASE_CONFLICT):
-        if f"fn {name}(" in w:
-            w = _replace_fn(w, name, fn)
-        else:
-            w = _insert_before_guard(w, fn)
-
+        pos = w.find("fn vr_opposite(")
+        if pos < 0:
+            raise RuntimeError("robust release patch: opposite insertion point missing")
+        w = w[:pos] + DIRECTION + "\n" + w[pos:]
+    w = _upsert_function(w, "vr_opposite", OPPOSITE)
+    w = _upsert_function(w, "vr_first_number", NUMBER)
     if "fn vr_numeric_context(" not in w:
-        w = _insert_before_guard(w, NUMERIC_CONTEXT)
+        w = _upsert_function(w, "vr_numeric_context", NUMERIC_CONTEXT)
 
-    for name, fn in (
+    # Merge the vetted release helper bundle one function at a time. This
+    # avoids injecting a multi-function block over an existing function.
+    release_names = [
+        "vr_release_predicate_polarity",
+        "vr_question_predicate_conflict",
+        "vr_release_entity_conflict",
+        "vr_release_numeric_equivalent",
+        "vr_release_has_currency",
+        "vr_release_unit_completeness",
+    ]
+    for name in release_names:
+        w = _upsert_function(w, name, _extract_function(base._RELEASE_CONFLICT, name))
+
+    for name, block in (
         ("vr_release_binary_fragment", base._RELEASE_BINARY_FRAGMENT),
         ("vr_release_negation_conflict", base._RELEASE_NEGATION),
         ("vr_release_tail_contamination", base._RELEASE_TAIL),
     ):
-        if f"fn {name}(" in w:
-            w = _replace_fn(w, name, fn)
-        else:
-            w = _insert_before_guard(w, fn)
+        w = _upsert_function(w, name, _extract_function(block, name))
 
-    w = _replace_fn(w, "vr_question_guard", base._RELEASE_GUARD)
-    w = _replace_fn(w, "veridex_score", base._RELEASE_SCORE)
-    w = _replace_fn(w, "vr_safe_pow", base._MONOTONIC_SHARPEN)
+    w = _upsert_function(w, "vr_question_guard", base._RELEASE_GUARD)
+    w = _upsert_function(w, "veridex_score", base._RELEASE_SCORE)
+    w = _upsert_function(w, "vr_safe_pow", base._MONOTONIC_SHARPEN)
     build_candidate.WRAPPER = w
 
 
