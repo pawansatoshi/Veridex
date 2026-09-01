@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Release wrapper for the bounded-performance Track 2 builder.
 
-This wrapper intentionally delegates numeric/equivalence enforcement to the
-current fast builder. It only replaces semantic contradiction handling and the
-final monotonic calibration layer. Keeping those responsibilities separate
-prevents brittle string-patching when the fast scorer evolves.
+This wrapper delegates semantic inference to the current fast builder, then
+adds deterministic contradiction/factual guards and bounded calibration.
+Numeric value equivalence is separate from answer completeness: when the
+reference carries a currency or percentage unit, a bare numerically-equal
+answer is not allowed to receive the same full equivalence lift.
 """
 from __future__ import annotations
 
@@ -38,7 +39,7 @@ fn vr_question_predicate_conflict(q:&[u8],gt:&[u8],ans:&[u8])->bool{
     let gp=vr_release_predicate_polarity(gt);
     match(qp,ap,vr_first_binary_polarity(ans),gp){
       (Some(qp),Some(ap),Some(bin),_)=>if bin{ap!=qp}else{ap==qp},
-      (Some(_qp),None,Some(_bin),_)=>false,
+      (Some(_),None,Some(_),_)=>false,
       (None,Some(ap),_,Some(gp))=>ap!=gp,
       _=>false
     }
@@ -63,7 +64,26 @@ fn vr_release_numeric_equivalent(q:&[u8],gt:&[u8],ans:&[u8])->bool{
       (Some((g,gp)),Some((a,ap)))=>gp==ap&&(g-a).abs()<=g.abs().max(a.abs()).max(1.0)*1e-9,
       _=>false
     }
-}'''
+}
+
+fn vr_release_has_currency(text:&[u8])->bool{
+    vr_has_any(text,&[
+      b"usd",b"dollar",b"dollars",b"eur",b"euro",b"euros",b"gbp",b"pound",b"pounds",
+      b"inr",b"rupee",b"rupees",b"jpy",b"yen"
+    ]) || text.iter().any(|b|*b==b'$'||*b==b'€'||*b==b'£'||*b==b'₹')
+}
+
+fn vr_release_unit_completeness(q:&[u8],gt:&[u8],ans:&[u8])->bool{
+    if !vr_numeric_context(q){return true;}
+    let gt_percent=vr_has_any(gt,&[b"percent",b"percentage"]) || gt.iter().any(|b|*b==b'%');
+    let ans_percent=vr_has_any(ans,&[b"percent",b"percentage"]) || ans.iter().any(|b|*b==b'%');
+    if gt_percent&&!ans_percent{return false;}
+    let gt_currency=vr_release_has_currency(gt);
+    let ans_currency=vr_release_has_currency(ans);
+    if gt_currency&&!ans_currency{return false;}
+    true
+}
+'''
 
 _RELEASE_BINARY_FRAGMENT = r'''fn vr_release_binary_fragment(ans:&[u8])->bool{
     let mut words=0usize;let mut saw_binary=false;let mut saw_deictic=false;let mut i=0usize;
@@ -72,10 +92,8 @@ _RELEASE_BINARY_FRAGMENT = r'''fn vr_release_binary_fragment(ans:&[u8])->bool{
         let s=i;while i<ans.len()&&ans[i].is_ascii_alphanumeric(){i+=1;}
         if s>=i{continue;}
         words+=1;if words>2{return false;}
-        let w=&ans[s..i];
         if vr_word_eq(ans,s,i,b"yes")||vr_word_eq(ans,s,i,b"no")||vr_word_eq(ans,s,i,b"true")||vr_word_eq(ans,s,i,b"false"){saw_binary=true;}
         if vr_word_eq(ans,s,i,b"it")||vr_word_eq(ans,s,i,b"this")||vr_word_eq(ans,s,i,b"that")||vr_word_eq(ans,s,i,b"they"){saw_deictic=true;}
-        let _=w;
     }
     saw_binary&&saw_deictic
 }'''
@@ -104,7 +122,10 @@ _RELEASE_GUARD = r'''fn vr_question_guard(q:&[u8],gt:&[u8],ans:&[u8])->f32{
     let entity_conflict=vr_release_entity_conflict(q,gt,ans);
     if entity_conflict{g*=0.02;}
     let numeric_equiv=vr_release_numeric_equivalent(q,gt,ans);
-    if numeric_equiv&&!entity_conflict{g=1.0;}else if vr_numeric_context(q){
+    let complete_numeric=vr_release_unit_completeness(q,gt,ans);
+    if numeric_equiv&&!entity_conflict&&complete_numeric{g=1.0;}
+    else if numeric_equiv&&!complete_numeric{g*=0.62;}
+    else if vr_numeric_context(q){
         match(vr_first_number(gt),vr_first_number(ans)){
             (Some(_),Some(_))=>g*=0.05,(Some(_),None)=>g*=0.65,_=>{}
         }
@@ -133,28 +154,28 @@ _RELEASE_SCORE = r'''unsafe fn veridex_score(q_ptr:i32,q_len:i32,gt_ptr:i32,gt_l
     base=base.clamp(0.0,1.0);
     let gb=gt.as_bytes();let ab=a.as_bytes();
     let numeric_pair=(vr_first_number(gb),vr_first_number(ab));
-    let safe_numeric_equiv=match numeric_pair{
+    let numeric_equivalent=match numeric_pair{
         (Some((g,gp)),Some((a,ap)))=>gp==ap&&(g-a).abs()<=g.abs().max(a.abs()).max(1.0)*1e-9&&vr_numeric_context(q.as_bytes())&&!vr_opposite(gb,ab)&&!vr_named_token_conflict(q.as_bytes(),gb,ab),
         _=>false
     };
-    let numeric_mismatch_strict=vr_numeric_context(q.as_bytes())&&match numeric_pair{(Some(_),Some(_))=>!safe_numeric_equiv,_=>false};
+    let numeric_complete=vr_release_unit_completeness(q.as_bytes(),gb,ab);
+    let safe_numeric_equiv=numeric_equivalent&&numeric_complete;
+    let incomplete_numeric_equiv=numeric_equivalent&&!numeric_complete;
+    let numeric_mismatch_strict=vr_numeric_context(q.as_bytes())&&match numeric_pair{(Some(_),Some(_))=>!numeric_equivalent,_=>false};
     let fg=if vr_opposite(gb,ab){0.06}else if vr_named_token_conflict(q.as_bytes(),gb,ab){0.08}else if numeric_mismatch_strict{0.08}else{1.0};
     let qg=vr_question_guard(q.as_bytes(),gb,ab);
     let shaped_base=if safe_numeric_equiv{base.max(0.95)}else{base};
     let mut final_score=vr_safe_pow(shaped_base*fg*qg);
+    if incomplete_numeric_equiv{final_score=final_score.min(0.74);}
     if numeric_mismatch_strict{final_score=final_score.min(0.30);}
     (final_score,base,fg,qg)
 }'''
 
-# Smoothstep contrast is monotone on [0,1] with derivative 6t(1-t)>=0.
-# It expands the mid-range, where live hidden cases can otherwise bunch near
-# the decision boundary, while preserving endpoints and never reversing order.
 _MONOTONIC_SHARPEN = "fn vr_safe_pow(score:f32)->f32{if !score.is_finite(){return 0.0;}if score<=0.0{return 0.0;}if score>=1.0{return 1.0;}let t=score.clamp(0.0,1.0);let y=t*t*(3.0-2.0*t);if y.is_finite(){y.clamp(0.0,1.0)}else{0.0}}"
 
 def _replace_function(wrapper: str, marker: str, replacement: str) -> str:
     start=wrapper.find(marker)
-    if start<0:
-        raise SystemExit(f"release wrapper: function marker not found: {marker}")
+    if start<0: raise SystemExit(f"release wrapper: function marker not found: {marker}")
     depth=0;in_string=False;escape=False;i=start;end=None
     while i<len(wrapper):
         ch=wrapper[i]
@@ -167,8 +188,7 @@ def _replace_function(wrapper: str, marker: str, replacement: str) -> str:
             elif ch=='{': depth+=1
             elif ch=='}':
                 depth-=1
-                if depth==0:
-                    end=i+1;break
+                if depth==0: end=i+1; break
         i+=1
     if end is None: raise SystemExit("release wrapper: function closing brace not found")
     return wrapper[:start]+replacement+wrapper[end:]
