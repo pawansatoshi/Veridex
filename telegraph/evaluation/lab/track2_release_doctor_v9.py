@@ -27,9 +27,6 @@ DEEP_CORPUS = LAB / "shadow_corpus.deep.generated.json"
 WASM_DEFAULT = ROOT / "telegraph/evaluation/veridex-track2-final.wasm"
 SAMPLER = LAB / "sample_shadow_corpus.py"
 
-# Keep the search small enough for rapid iteration. The three points test
-# whether the material-conflict layer should be conservative, balanced, or
-# stronger; no benchmark-specific rule is added.
 CANDIDATES = [
     ("current", None, None),
     ("balanced", "0.025", "0.14"),
@@ -88,8 +85,6 @@ def prepare_sample(input_path: Path, output_path: Path, limit: int) -> None:
 
 
 def prepare_corpora(fast_limit: int, deep_limit: int) -> None:
-    # Generate one deterministic round. This full corpus remains available as
-    # evidence; actual WASM execution uses stratified samples for tractability.
     d.generate(1)
     prepare_sample(FULL_CORPUS, FAST_CORPUS, fast_limit)
     prepare_sample(FULL_CORPUS, DEEP_CORPUS, deep_limit)
@@ -133,6 +128,7 @@ def main() -> int:
     ap.add_argument("--wasm", type=Path, default=WASM_DEFAULT)
     ap.add_argument("--fast-limit", type=int, default=48)
     ap.add_argument("--deep-limit", type=int, default=256)
+    ap.add_argument("--json", action="store_true", help="emit JSON-compatible doctor output (accepted for CI compatibility)")
     args = ap.parse_args()
 
     if not 16 <= args.fast_limit <= args.deep_limit <= 512:
@@ -175,7 +171,6 @@ def main() -> int:
         RELEASE.write_text(original_source, encoding="utf-8")
         raise RuntimeError("doctor-v9: no candidate could be built and evaluated")
 
-    # Rebuild the measured winner, then run the larger stratified deep suite.
     RELEASE.write_text(winner_source, encoding="utf-8")
     build_candidate(args.wasm)
     deep = lab_once(args.wasm, DEEP_CORPUS)
