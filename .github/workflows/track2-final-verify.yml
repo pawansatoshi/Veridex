@@ -63,7 +63,7 @@ jobs:
           RUSTFLAGS: -Aunsafe-op-in-unsafe-fn
         run: |
           set -euo pipefail
-          python3 telegraph/evaluation/neural/build_candidate_fast_release_v3.py \
+          python3 telegraph/evaluation/neural/build_candidate_fast_release_v4.py \
             --out telegraph/evaluation/veridex-track2-final.wasm
 
       - name: Structural validation
@@ -132,7 +132,7 @@ jobs:
           set -euo pipefail
           sha256sum telegraph/evaluation/veridex-track2-final.wasm | tee telegraph/evaluation/VERIDEX_TRACK2_FINAL_SHA256.txt
           echo "source baseline commit: dfa0cf7fda72789267811ba2190f61a8eaacedf6" >> telegraph/evaluation/VERIDEX_TRACK2_FINAL_SHA256.txt
-          echo "build: Veridex neural-hybrid wrapper + real MiniLM baseline + fast v3 factual hardening" >> telegraph/evaluation/VERIDEX_TRACK2_FINAL_SHA256.txt
+          echo "build: Veridex neural-hybrid wrapper + real MiniLM baseline + fast v4 factual hardening" >> telegraph/evaluation/VERIDEX_TRACK2_FINAL_SHA256.txt
           echo "checker commit: f537c7c085e9d3366c5615fe1ad1f98a0abeff7c" >> telegraph/evaluation/VERIDEX_TRACK2_FINAL_SHA256.txt
           echo "source commit: $GITHUB_SHA" >> telegraph/evaluation/VERIDEX_TRACK2_FINAL_SHA256.txt
 
