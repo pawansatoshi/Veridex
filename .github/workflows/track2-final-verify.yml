@@ -21,7 +21,6 @@ on:
       - 'telegraph/evaluation/track2-benchmark-contract-v1.json'
       - 'telegraph/evaluation/track2-preflight.js'
       - 'telegraph/evaluation/track2-tournament.js'
-      - 'telegraph/evaluation/track2-mutation-suite.mjs'
       - 'telegraph/evaluation/track2-live-risk-stress.mjs'
       - '.github/workflows/track2-final-verify.yml'
   workflow_dispatch:
@@ -67,11 +66,14 @@ jobs:
           TRACK2_LAB_MAX_ITERATIONS: '3'
         run: |
           set -euo pipefail
+          python3 -m py_compile telegraph/evaluation/lab/generate_shadow_corpus_v2.py
+          python3 -m py_compile telegraph/evaluation/lab/presubmit_lab_v2.py
           python3 -m py_compile telegraph/evaluation/lab/track2_release_doctor_v3.py
           python3 -m py_compile telegraph/evaluation/lab/track2_release_doctor_v4.py
           python3 -m py_compile telegraph/evaluation/lab/track2_release_doctor_v5.py
           python3 -m py_compile telegraph/evaluation/lab/track2_release_doctor_v6.py
           python3 -m py_compile telegraph/evaluation/lab/track2_release_doctor_v7.py
+          python3 -m py_compile telegraph/evaluation/neural/build_candidate_fast_release_v2.py
           python3 telegraph/evaluation/lab/track2_release_doctor_v7.py \
             --wasm telegraph/evaluation/veridex-track2-final.wasm \
             --rounds "${TRACK2_LAB_ROUNDS}" \
