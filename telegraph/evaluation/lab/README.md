@@ -8,41 +8,43 @@ This lab is an engineering safety net for Track 2 candidate WASMs. It does not r
 bash telegraph/evaluation/lab/run_presubmit.sh /path/to/veridex-track2-final.wasm
 ```
 
-This first generates the scaled shadow corpus from the independent seed set plus the repository's current official benchmark as a separate source slice, then scores the candidate through its actual WASM exports and writes `presubmit-report.json`.
+The command generates the v2 shadow corpus from three visible slices—seed, independent-v2, and the official benchmark—then scores the exact generated GOOD/BAD pairs through the candidate WASM and writes `presubmit-report.json`.
 
-Direct modes:
+## Direct modes
 
 ```bash
-python3 telegraph/evaluation/lab/generate_shadow_corpus.py --rounds 12
-python3 telegraph/evaluation/lab/presubmit_lab.py --strict --json --out presubmit-report.json /path/to/veridex-track2-final.wasm
+python3 telegraph/evaluation/lab/generate_shadow_corpus_v2.py --rounds 16 --out telegraph/evaluation/lab/shadow_corpus.generated.json
+python3 telegraph/evaluation/lab/presubmit_lab_v2.py --strict --json --corpus telegraph/evaluation/lab/shadow_corpus.generated.json --out presubmit-report.json /path/to/veridex-track2-final.wasm
 ```
 
-## What it checks
+## What the lab checks
 
-- WASM size/import/export surface and ABI smoke checks.
-- Actual candidate scoring through Node/WebAssembly, not a Python reimplementation.
-- Thousands of deterministic shadow pairs made from official benchmark pairs plus independent seeds.
-- Semantic mutations: polarity/direction, number, entity, relation, incompleteness, late contradiction, distractor and composite mutations.
-- Surface diversity: answer/context wrappers and long-form variants.
-- Historical replay of previously observed Veridex failures.
-- Semantic invariance on harmless case/punctuation/context variants.
-- Score distribution: mean/median/P5/P10/worst margin and near-ties.
-- RED/YELLOW/GREEN pre-registration risk verdict.
+- WASM structural/ABI smoke checks and zero imports.
+- Actual candidate scoring through Node/WebAssembly, never a Python reimplementation.
+- Expanded deterministic pairwise corpus with official, independent, and historical slices.
+- Polarity/direction, binary, numeric, entity, relation, incompleteness, late contradiction, distractor, hedging, qualifier and composite mutations.
+- Surface/context and longer-form variants.
+- Historical replay of concrete failures observed in previous Veridex runs.
+- Margin distribution: mean, median, P5, P10, worst and near-ties.
+- Candidate SHA-256 and immutable artifact identity.
+- RED/YELLOW/GREEN pre-registration verdict.
 
 ## Internal release policy
 
-Use zero inversions as mandatory. Use mean margin >= 0.20 and P10 margin >= 0.05 as internal safety targets. These are deliberately stricter than the observed 0.15 on-chain rejection floor and are not claimed to be Telegraph's hidden thresholds.
+Mandatory: zero inversions in shadow and historical replay.
 
-A GREEN result means the candidate has lower locally observable registration risk. It does not guarantee hidden Stage-2 acceptance. Telegraph's hidden benchmark remains independent.
+Preferred safety targets: mean margin >= 0.20 and P10 margin >= 0.05.
+
+These are internal engineering thresholds, deliberately stricter than the observed 0.15 live rejection floor. They are not Telegraph's hidden thresholds and cannot guarantee hidden Stage-2 acceptance.
 
 ## Historical corpus
 
-`historical_failures.json` records concrete failure classes and examples from earlier runs, including polarity flips, incomplete binary answers, compound polarity, wrong entities, contradiction and numeric-completeness cases. Add every new production failure here before starting another tuning cycle.
+`historical_failures.json` preserves failure examples and classes from prior runs. Add every new production failure before another tuning cycle so future candidates are replayed against it automatically.
 
 ## Model arena
 
-`model_arena.py` is an offline research tool for comparing embedding backbones on the same Track-2 corpus. It can compare MiniLM, BGE-small-v1.5, E5-small-v2, or any other Sentence-Transformers model available in the environment. This arena does not automatically change the production WASM. Model selection must still satisfy WASM size, determinism, runtime and factual-guard constraints.
+`model_arena.py` is an offline research tool. Compare `all-MiniLM-L6-v2`, `BAAI/bge-small-en-v1.5`, `intfloat/e5-small-v2`, or other candidate backbones on the same generated corpus. A better generic embedding model is not automatically a better Track-2 scorer; final selection still requires WASM size, determinism, factual/semantic guard compatibility, and official verification.
 
-## Important boundary
+## Release principle
 
-The lab is designed to be harder than the public probe set without gaming it. Never delete or edit official benchmark cases to make a candidate pass. Keep official, historical and independent shadow slices visible separately in reports.
+The lab is a pre-registration risk filter, not a hidden-benchmark oracle. Never weaken official gates, edit official cases to obtain green, hard-code visible benchmark questions, or claim a hidden result that has not been observed live.
