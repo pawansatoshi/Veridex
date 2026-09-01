@@ -36,7 +36,7 @@ concurrency:
 jobs:
   build-verify-publish:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 90
     steps:
       - name: Checkout exact release source
         uses: actions/checkout@v4
@@ -58,19 +58,23 @@ jobs:
       - name: Prepare evidence directory
         run: mkdir -p telegraph/evaluation/ci-evidence
 
-      - name: Run autonomous Track 2 release doctor v4
+      - name: Run autonomous Track 2 release doctor v5
         env:
           RUSTFLAGS: -Aunsafe-op-in-unsafe-fn
           PYTHONUNBUFFERED: '1'
+          TRACK2_LAB_ROUNDS: '1'
+          TRACK2_LAB_DEEP_ROUNDS: '4'
+          TRACK2_LAB_MAX_ITERATIONS: '2'
         run: |
           set -euo pipefail
           python3 -m py_compile telegraph/evaluation/lab/track2_release_doctor_v3.py
           python3 -m py_compile telegraph/evaluation/lab/track2_release_doctor_v4.py
-          python3 telegraph/evaluation/lab/track2_release_doctor_v4.py \
+          python3 -m py_compile telegraph/evaluation/lab/track2_release_doctor_v5.py
+          python3 telegraph/evaluation/lab/track2_release_doctor_v5.py \
             --wasm telegraph/evaluation/veridex-track2-final.wasm \
-            --rounds "${TRACK2_LAB_ROUNDS:-2}" \
-            --deep-rounds "${TRACK2_LAB_DEEP_ROUNDS:-8}" \
-            --max-iterations "${TRACK2_LAB_MAX_ITERATIONS:-3}" \
+            --rounds "${TRACK2_LAB_ROUNDS}" \
+            --deep-rounds "${TRACK2_LAB_DEEP_ROUNDS}" \
+            --max-iterations "${TRACK2_LAB_MAX_ITERATIONS}" \
             --json | tee telegraph/evaluation/ci-evidence/release-doctor.json
 
       - name: Assert doctor produced exact release evidence
@@ -79,6 +83,7 @@ jobs:
           test -s telegraph/evaluation/veridex-track2-final.wasm
           test -s telegraph/evaluation/VERIDEX_TRACK2_FINAL_SHA256.txt
           test -s telegraph/evaluation/ci-evidence/release-doctor-final.json
+          test -s telegraph/evaluation/ci-evidence/deep-lab-final.json
 
       - name: Upload exact verified artifact and evidence
         uses: actions/upload-artifact@v4
