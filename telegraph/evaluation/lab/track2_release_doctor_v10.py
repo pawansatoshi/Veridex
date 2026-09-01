@@ -9,6 +9,7 @@ GREEN. No benchmark/checker thresholds or corpus data are modified.
 from __future__ import annotations
 
 import json
+import py_compile
 from pathlib import Path
 
 import track2_release_doctor_v9 as v9
@@ -59,6 +60,10 @@ def _require_api() -> None:
         raise RuntimeError("doctor-v10 API contract missing: " + ", ".join(missing))
     if not LAB_RELEASE.is_file():
         raise RuntimeError("doctor-v10 canonical hardened release overlay missing: " + str(LAB_RELEASE))
+    try:
+        py_compile.compile(str(LAB_RELEASE), doraise=True)
+    except py_compile.PyCompileError as exc:
+        raise RuntimeError("doctor-v10 canonical hardened overlay syntax invalid: " + str(exc)) from exc
 
 
 def _emit_deep_failure(attempts: list[dict], reasons: list[str]) -> None:
@@ -102,15 +107,11 @@ def deep_lab_self_heal(wasm: Path, corpus: Path, base_lab) -> dict:
         return None
 
     try:
-        # Candidate 1: normal v9 tournament winner.
         report = evaluate("v9-selected")
         accepted = accept(report)
         if accepted is not None:
             return accepted
 
-        # Candidate 2: the repository's independently hardened release overlay.
-        # It is tested as a complete build, not imported into v9, so API drift
-        # cannot create another wrapper-level failure.
         v9.RELEASE = LAB_RELEASE
         v9.d.RELEASE = LAB_RELEASE
         v9.build_candidate(wasm)
@@ -120,13 +121,10 @@ def deep_lab_self_heal(wasm: Path, corpus: Path, base_lab) -> dict:
         if accepted is not None:
             return accepted
 
-        # Restore the normal release family before applying source-level repair
-        # recipes. This keeps every repair reproducible against the same base.
         v9.RELEASE = original_release_path
         v9.d.RELEASE = original_d_release
         reasons = diagnose(report)
 
-        # Apply each existing allow-listed semantic recipe at most once.
         for repair_round in range(1, 4):
             fixed, detail = v9.d.semantic_repair(reasons)
             v9.emit(f"doctor-v10-deep-repair-{repair_round}.json", {
