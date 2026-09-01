@@ -9,6 +9,6 @@ fi
 
 LAB_DIR="$(cd "$(dirname "$0")" && pwd)"
 python3 "$LAB_DIR/generate_shadow_corpus_v2.py" --rounds 16 --out "$LAB_DIR/shadow_corpus.generated.json"
-exec python3 "$LAB_DIR/presubmit_lab.py" --strict --json --rounds 1 \
+exec python3 "$LAB_DIR/presubmit_lab_v2.py" --strict --json \
   --corpus "$LAB_DIR/shadow_corpus.generated.json" \
   --out "presubmit-report.json" "$WASM"
