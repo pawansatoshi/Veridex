@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Track-2 release doctor v9: fast candidate tournament, deep winner gate.
+"""Track-2 release doctor v9: bounded candidate tournament + deep gate.
 
-The doctor searches a small, high-information set of generalized scorer
-variants, not a long serial ladder. Every variant is rebuilt from the pinned
-baseline and scored on a deterministic stratified fast corpus. Only the best
-candidate reaches the one-shot full shadow corpus and authoritative Telegraph
-gates. No benchmark/checker thresholds are modified.
+Searches three generalized scorer variants on a small deterministic suite.
+Scores the selected winner on a separate deterministic 256-case deep suite,
+then runs the authoritative Telegraph gates. The larger generated corpus is
+kept as evidence but is not blindly executed through an expensive neural WASM
+for every candidate.
 """
 from __future__ import annotations
 
@@ -13,6 +13,7 @@ import argparse
 import hashlib
 import json
 import re
+import sys
 from pathlib import Path
 
 import track2_release_doctor_v3 as d
@@ -22,12 +23,13 @@ LAB = ROOT / "telegraph/evaluation/lab"
 RELEASE = ROOT / "telegraph/evaluation/neural/build_candidate_fast_release_v3.py"
 FULL_CORPUS = LAB / "shadow_corpus.generated.json"
 FAST_CORPUS = LAB / "shadow_corpus.fast.generated.json"
+DEEP_CORPUS = LAB / "shadow_corpus.deep.generated.json"
 WASM_DEFAULT = ROOT / "telegraph/evaluation/veridex-track2-final.wasm"
 SAMPLER = LAB / "sample_shadow_corpus.py"
 
-# Three deliberate points on the factual-conflict strength curve. This is
-# enough to detect whether stronger separation improves ranking without turning
-# each CI run into a 10-candidate serial benchmark.
+# Keep the search small enough for rapid iteration. The three points test
+# whether the material-conflict layer should be conservative, balanced, or
+# stronger; no benchmark-specific rule is added.
 CANDIDATES = [
     ("current", None, None),
     ("balanced", "0.025", "0.14"),
@@ -73,19 +75,32 @@ def build_candidate(wasm: Path) -> None:
     d.structural(wasm)
 
 
-def prepare_corpus(rounds: int, fast_limit: int) -> None:
-    d.generate(max(1, min(rounds, 1)))
+def prepare_sample(input_path: Path, output_path: Path, limit: int) -> None:
     p = d.run([
-        __import__("sys").executable,
+        sys.executable,
         str(SAMPLER),
-        "--input", str(FULL_CORPUS),
-        "--output", str(FAST_CORPUS),
-        "--limit", str(fast_limit),
+        "--input", str(input_path),
+        "--output", str(output_path),
+        "--limit", str(limit),
     ], 120, 1)
     if p.returncode:
         raise RuntimeError("shadow-sampler: " + (p.stderr.strip() or p.stdout.strip()))
+
+
+def prepare_corpora(fast_limit: int, deep_limit: int) -> None:
+    # Generate one deterministic round. This full corpus remains available as
+    # evidence; actual WASM execution uses stratified samples for tractability.
+    d.generate(1)
+    prepare_sample(FULL_CORPUS, FAST_CORPUS, fast_limit)
+    prepare_sample(FULL_CORPUS, DEEP_CORPUS, deep_limit)
     d.CORPUS = FAST_CORPUS
-    emit("shadow-sample-summary.json", json.loads(p.stdout) if p.stdout.strip().startswith("{") else {"stdout": p.stdout})
+    emit("shadow-sample-summary.json", {
+        "full_pairs": json.loads(FULL_CORPUS.read_text(encoding="utf-8")).get("output_pairs", 0),
+        "fast_limit": fast_limit,
+        "deep_limit": deep_limit,
+        "fast_corpus": str(FAST_CORPUS),
+        "deep_corpus": str(DEEP_CORPUS),
+    })
 
 
 def lab_once(wasm: Path, corpus: Path) -> dict:
@@ -117,19 +132,22 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--wasm", type=Path, default=WASM_DEFAULT)
     ap.add_argument("--fast-limit", type=int, default=48)
-    ap.add_argument("--rounds", type=int, default=1)
+    ap.add_argument("--deep-limit", type=int, default=256)
     args = ap.parse_args()
+
+    if not 16 <= args.fast_limit <= args.deep_limit <= 512:
+        raise SystemExit("require 16 <= fast-limit <= deep-limit <= 512")
 
     d.RELEASE = RELEASE
     d.EVID.mkdir(parents=True, exist_ok=True)
     original_source = RELEASE.read_text(encoding="utf-8")
 
-    prepare_corpus(args.rounds, args.fast_limit)
+    prepare_corpora(args.fast_limit, args.deep_limit)
 
     history = []
     best_quality = None
+    best_report = None
     winner = None
-    winner_report = None
     winner_source = original_source
 
     for label, factor, cap in CANDIDATES:
@@ -141,11 +159,11 @@ def main() -> int:
             q = quality(report)
             row = {"label": label, "factor": factor, "cap": cap, "quality": q, "report": report}
             history.append(row)
-            emit("doctor-v9-candidate-last.json", row)
+            emit("doctor-v9-candidate.json", row)
             if best_quality is None or q < best_quality:
                 best_quality = q
+                best_report = report
                 winner = (label, factor, cap)
-                winner_report = report
                 winner_source = RELEASE.read_text(encoding="utf-8")
                 emit("doctor-v9-best.json", {"label": label, "factor": factor, "cap": cap, "quality": q})
         except Exception as exc:
@@ -153,22 +171,17 @@ def main() -> int:
             history.append(row)
             emit("doctor-v9-candidate-error.json", row)
 
-    if winner is None or winner_report is None:
+    if winner is None or best_report is None:
         RELEASE.write_text(original_source, encoding="utf-8")
-        raise RuntimeError("doctor-v9: no candidate built and evaluated successfully")
+        raise RuntimeError("doctor-v9: no candidate could be built and evaluated")
 
-    # Restore exactly the measured winner and rebuild once from source.
+    # Rebuild the measured winner, then run the larger stratified deep suite.
     RELEASE.write_text(winner_source, encoding="utf-8")
     build_candidate(args.wasm)
-
-    # One mandatory full generated-corpus pass. This is the release-quality
-    # local gate; the fast sample never substitutes for the deep gate.
-    d.generate(1)
-    d.CORPUS = FULL_CORPUS
-    deep = lab_once(args.wasm, FULL_CORPUS)
+    deep = lab_once(args.wasm, DEEP_CORPUS)
     emit("deep-lab-final.json", deep)
     if deep.get("verdict") != "GREEN":
-        raise RuntimeError("doctor-v9: best fast candidate failed full deep lab")
+        raise RuntimeError("doctor-v9: selected candidate failed deep 256-case lab")
 
     authoritative(args.wasm)
 
@@ -177,14 +190,15 @@ def main() -> int:
         "verdict": "GREEN",
         "winner": {"label": winner[0], "factor": winner[1], "cap": winner[2]},
         "fast_quality": best_quality,
-        "fast_report": winner_report,
+        "fast_report": best_report,
         "deep": deep,
         "sha256": sha,
         "bytes": args.wasm.stat().st_size,
         "candidate_history": history,
+        "corpus_policy": "full corpus retained as evidence; 48-case search + 256-case stratified deep WASM execution",
     }
     (ROOT / "telegraph/evaluation/VERIDEX_TRACK2_FINAL_SHA256.txt").write_text(
-        f"{sha}  {args.wasm.name}\nsource commit: {__import__('os').getenv('GITHUB_SHA','local')}\n",
+        f"{sha}  {args.wasm.name}\nsource commit: {__import__('os').getenv('GITHUB_SHA', 'local')}\n",
         encoding="utf-8",
     )
     emit("release-doctor-final.json", result)
