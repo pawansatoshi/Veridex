@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Track-2 release doctor v10.
 
-Wraps v9's bounded candidate tournament with a safe deep-lab recovery loop.
-The wrapper owns its diagnostic contract and never relies on undeclared v9
-helpers. The original v9 lab function is passed explicitly, preventing
-recursive monkey-patching.
+Owns the deep self-healing layer around v9.  It fails fast on API drift,
+tries approved semantic repairs, then tries the repository's canonical hardened
+release overlay as a separate candidate.  A candidate is accepted only after
+the same deep corpus is GREEN.  No benchmark/checker thresholds or corpus data
+are modified.
 """
 from __future__ import annotations
 
@@ -12,6 +13,9 @@ import json
 from pathlib import Path
 
 import track2_release_doctor_v9 as v9
+
+ROOT = Path(__file__).resolve().parents[3]
+LAB_RELEASE = ROOT / "telegraph/evaluation/neural/build_candidate_fast_release_lab.py"
 
 
 def diagnose(report: dict, text: str = "") -> list[str]:
@@ -42,7 +46,7 @@ def diagnose(report: dict, text: str = "") -> list[str]:
 
 
 def _require_api() -> None:
-    """Fail fast before any expensive WASM execution if dependencies drift."""
+    """Fail before expensive WASM execution if doctor dependencies drift."""
     required = {
         "lab_once": getattr(v9, "lab_once", None),
         "quality": getattr(v9, "quality", None),
@@ -54,46 +58,99 @@ def _require_api() -> None:
     missing = [name for name, value in required.items() if not callable(value)]
     if missing:
         raise RuntimeError("doctor-v10 API contract missing: " + ", ".join(missing))
+    if not LAB_RELEASE.is_file():
+        raise RuntimeError("doctor-v10 canonical hardened release overlay missing: " + str(LAB_RELEASE))
+
+
+def _emit_deep_failure(attempts: list[dict], reasons: list[str]) -> None:
+    last = attempts[-1] if attempts else {}
+    v9.emit("doctor-v10-deep-failure.json", {
+        "verdict": "RED",
+        "attempts": attempts,
+        "last_reasons": reasons,
+        "last_shadow": last.get("shadow", {}),
+        "last_critical": last.get("critical", {}),
+        "last_historical_replay": last.get("historical_replay", {}),
+        "worst_pairs": last.get("worst_pairs", []),
+    })
 
 
 def deep_lab_self_heal(wasm: Path, corpus: Path, base_lab) -> dict:
-    """Run deep lab and consume only approved semantic repair recipes."""
-    max_repairs = 4
-    attempts = []
-    for attempt in range(1, max_repairs + 1):
+    """Search approved candidate families until the deep lab is GREEN."""
+    attempts: list[dict] = []
+    original_release_path = v9.RELEASE
+    original_d_release = v9.d.RELEASE
+
+    def evaluate(label: str) -> dict:
         report = base_lab(wasm, corpus)
-        verdict = report.get("verdict")
         row = {
-            "attempt": attempt,
-            "verdict": verdict,
+            "candidate": label,
+            "verdict": report.get("verdict"),
             "quality": v9.quality(report),
             "shadow": report.get("shadow", {}),
             "critical": report.get("critical", {}),
             "historical_replay": report.get("historical_replay", {}),
+            "worst_pairs": report.get("worst_pairs", [])[:10],
         }
         attempts.append(row)
         v9.emit("doctor-v10-deep-attempt.json", row)
-        if verdict == "GREEN":
+        return report
+
+    try:
+        # First evaluate the selected v9 winner exactly as produced by the
+        # normal candidate tournament.
+        report = evaluate("v9-selected")
+        if report.get("verdict") == "GREEN":
             v9.emit("doctor-v10-deep-history.json", {"attempts": attempts, "verdict": "GREEN"})
             return report
 
         reasons = diagnose(report)
-        fixed, detail = v9.d.semantic_repair(reasons)
-        v9.emit(
-            f"doctor-v10-deep-repair-{attempt}.json",
-            {"reasons": reasons, "repaired": fixed, "detail": detail},
-        )
-        if not fixed:
-            break
 
-        # Every repair is rebuilt and structurally validated before the next
-        # deep execution. No benchmark/checker thresholds or corpus data are
-        # modified by this path.
+        # Apply each existing, allow-listed semantic recipe at most once.
+        # Every successful mutation is rebuilt and structurally validated.
+        for repair_round in range(1, 4):
+            fixed, detail = v9.d.semantic_repair(reasons)
+            v9.emit(f"doctor-v10-deep-repair-{repair_round}.json", {
+                "reasons": reasons,
+                "repaired": fixed,
+                "detail": detail,
+            })
+            if not fixed:
+                break
+            v9.build_candidate(wasm)
+            v9.d.structural(wasm)
+            report = evaluate(f"v9-repair-{repair_round}")
+            if report.get("verdict") == "GREEN":
+                v9.emit("doctor-v10-deep-history.json", {"attempts": attempts, "verdict": "GREEN"})
+                return report
+            reasons = diagnose(report)
+
+        # The repository already contains a separately hardened release
+        # overlay.  Treat it as a real candidate rather than importing its
+        # helpers into v9: this prevents another wrapper/API drift failure.
+        v9.RELEASE = LAB_RELEASE
+        v9.d.RELEASE = LAB_RELEASE
         v9.build_candidate(wasm)
         v9.d.structural(wasm)
+        report = evaluate("canonical-hardened-overlay")
+        if report.get("verdict") == "GREEN":
+            v9.emit("doctor-v10-deep-history.json", {"attempts": attempts, "verdict": "GREEN"})
+            return report
 
-    v9.emit("doctor-v10-deep-history.json", {"attempts": attempts, "verdict": "RED"})
-    raise RuntimeError("doctor-v10: deep lab remained non-GREEN after bounded self-healing")
+        reasons = diagnose(report)
+        _emit_deep_failure(attempts, reasons)
+        v9.emit("doctor-v10-deep-history.json", {"attempts": attempts, "verdict": "RED"})
+        raise RuntimeError(
+            "doctor-v10: deep lab remained non-GREEN after candidate ladder; "
+            + (",".join(reasons) if reasons else "no-classifiable-failure")
+        )
+    finally:
+        # Keep the lab overlay only when its candidate was accepted.  On a RED
+        # result restore v9's original release path so the outer doctor cannot
+        # accidentally mix source families.
+        if not attempts or attempts[-1].get("verdict") != "GREEN":
+            v9.RELEASE = original_release_path
+            v9.d.RELEASE = original_d_release
 
 
 def main() -> int:
