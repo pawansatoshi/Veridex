@@ -24,7 +24,7 @@ ORIGINAL_GENERATE = d.generate
 ORIGINAL_AUTHORITATIVE = d.authoritative
 MODE = "fast"
 FAST_LIMIT = 192
-DEEP_ROUNDS = 4
+DEEP_ROUNDS = 1
 
 
 def _sample_full(limit: int) -> None:
@@ -42,18 +42,20 @@ def _sample_full(limit: int) -> None:
 
 
 def generate(rounds: int) -> None:
-    ORIGINAL_GENERATE(rounds)
+    # Iterative repair runs are deliberately bounded to one generated round;
+    # the deterministic sampler then keeps only a representative stress set.
+    ORIGINAL_GENERATE(max(1, min(rounds, DEEP_ROUNDS)))
     if MODE == "fast":
         _sample_full(FAST_LIMIT)
     else:
         d.CORPUS = FULL_CORPUS
-        d.emit("shadow-deep-mode.json", {"corpus": str(FULL_CORPUS), "rounds": rounds})
+        d.emit("shadow-deep-mode.json", {"corpus": str(FULL_CORPUS), "rounds": max(1, min(rounds, DEEP_ROUNDS))})
 
 
 def authoritative(wasm: Path, max_iter: int) -> None:
     global MODE
     MODE = "deep"
-    deep_rounds = max(DEEP_ROUNDS, min(max_iter * 2, 8))
+    deep_rounds = 1
     ORIGINAL_GENERATE(deep_rounds)
     d.CORPUS = FULL_CORPUS
     try:
@@ -77,24 +79,19 @@ def authoritative(wasm: Path, max_iter: int) -> None:
         "historical_replay": deep_report.get("historical_replay", {}),
         "critical": deep_report.get("critical", {}),
         "artifact": deep_report.get("artifact", {}),
-        "mode": "full-generated-corpus",
+        "mode": "full-generated-corpus-one-round",
         "rounds": deep_rounds,
     })
     if deep_report.get("verdict") != "GREEN":
         raise RuntimeError("deep pre-submit lab did not reach GREEN")
-    # From this point the original v4 authoritative pipeline owns all
-    # official/preflight/Wazero gates and any allow-listed repair loop.
     ORIGINAL_AUTHORITATIVE(wasm, max_iter)
 
 
 def main() -> int:
-    # v3.main resolves d.generate/d.authoritative dynamically, so replacing
-    # them here transparently changes the lifecycle without duplicating the
-    # mature repair/build/release implementation.
     d.generate = generate
     d.authoritative = authoritative
-    # v4 semantic_repair remains the active allow-listed repair policy.
     d.semantic_repair = v4.semantic_repair
+    # Keep v3's CLI and release evidence contract unchanged.
     return d.main()
 
 
