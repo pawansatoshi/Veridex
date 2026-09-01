@@ -1,0 +1,91 @@
+name: Track 2 final WASM verify
+
+on:
+  push:
+    branches: [main, track2-v10-hardening]
+    paths:
+      - 'telegraph/evaluation/neural/**'
+      - 'telegraph/evaluation/lab/**'
+      - 'telegraph/evaluation/track2-benchmark-v2.json'
+      - 'telegraph/evaluation/track2-benchmark-contract-v1.json'
+      - 'telegraph/evaluation/track2-preflight.js'
+      - 'telegraph/evaluation/track2-tournament.js'
+      - 'telegraph/evaluation/track2-mutation-suite.mjs'
+      - 'telegraph/evaluation/track2-live-risk-stress.mjs'
+      - '.github/workflows/track2-final-verify.yml'
+  pull_request:
+    paths:
+      - 'telegraph/evaluation/neural/**'
+      - 'telegraph/evaluation/lab/**'
+      - 'telegraph/evaluation/track2-benchmark-v2.json'
+      - 'telegraph/evaluation/track2-benchmark-contract-v1.json'
+      - 'telegraph/evaluation/track2-preflight.js'
+      - 'telegraph/evaluation/track2-tournament.js'
+      - 'telegraph/evaluation/track2-mutation-suite.mjs'
+      - 'telegraph/evaluation/track2-live-risk-stress.mjs'
+      - '.github/workflows/track2-final-verify.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: track2-final-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-verify-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout exact release source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Install system tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wabt golang-go python3 clang lld
+
+      - name: Install Rust target
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+          rustup target add wasm32-unknown-unknown
+
+      - name: Prepare evidence directory
+        run: mkdir -p telegraph/evaluation/ci-evidence
+
+      - name: Run autonomous Track 2 release doctor v2
+        env:
+          RUSTFLAGS: -Aunsafe-op-in-unsafe-fn
+          PYTHONUNBUFFERED: '1'
+        run: |
+          set -euo pipefail
+          python3 -m py_compile telegraph/evaluation/lab/track2_release_doctor_v2.py
+          python3 telegraph/evaluation/lab/track2_release_doctor_v2.py \
+            --wasm telegraph/evaluation/veridex-track2-final.wasm \
+            --rounds "${TRACK2_LAB_ROUNDS:-2}" \
+            --deep-rounds "${TRACK2_LAB_DEEP_ROUNDS:-8}" \
+            --max-iterations "${TRACK2_LAB_MAX_ITERATIONS:-3}" \
+            --json | tee telegraph/evaluation/ci-evidence/release-doctor.json
+
+      - name: Assert doctor produced exact release evidence
+        run: |
+          set -euo pipefail
+          test -s telegraph/evaluation/veridex-track2-final.wasm
+          test -s telegraph/evaluation/VERIDEX_TRACK2_FINAL_SHA256.txt
+          test -s telegraph/evaluation/ci-evidence/release-doctor-final.json
+
+      - name: Upload exact verified artifact and evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: veridex-track2-final-${{ github.sha }}
+          if-no-files-found: error
+          retention-days: 30
+          path: |
+            telegraph/evaluation/veridex-track2-final.wasm
+            telegraph/evaluation/VERIDEX_TRACK2_FINAL_SHA256.txt
+            telegraph/evaluation/ci-evidence/
