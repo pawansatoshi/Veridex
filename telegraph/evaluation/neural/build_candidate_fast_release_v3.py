@@ -45,7 +45,9 @@ def _replace_function(src: str, marker: str, replacement: str) -> str:
     raise RuntimeError(f"v3 patch: unmatched braces: {marker}")
 
 
-MATERIAL = r'''fn vr_material_conflict_factor(q:&[u8],gt:&[u8],ans:&[u8])->f32{
+MATERIAL = r'''const VR_MATERIAL_FACTOR:f32=0.04;
+const VR_MATERIAL_CAP:f32=0.20;
+fn vr_material_conflict_factor(q:&[u8],gt:&[u8],ans:&[u8])->f32{
     let unsupported_entity=(vr_has_word(ans,b"different")&&vr_has_word(ans,b"entity")||vr_has_word(ans,b"another")&&vr_has_word(ans,b"entity"))
         &&!(vr_has_word(gt,b"different")&&vr_has_word(gt,b"entity")||vr_has_word(gt,b"another")&&vr_has_word(gt,b"entity"));
     let unsupported_relation=(vr_has_word(ans,b"different")&&(vr_has_word(ans,b"relationship")||vr_has_word(ans,b"relation")))
@@ -63,7 +65,7 @@ MATERIAL = r'''fn vr_material_conflict_factor(q:&[u8],gt:&[u8],ans:&[u8])->f32{
         ||(vr_has_word(gt,b"received")&&vr_has_word(ans,b"sent"))
         ||(vr_has_word(gt,b"bought")&&vr_has_word(ans,b"sold"))
         ||(vr_has_word(gt,b"sold")&&vr_has_word(ans,b"bought"));
-    if unsupported_entity||unsupported_relation||unsupported_period||explicit_opposite||unsupported_unrelated||relation_reverse{0.04}else{1.0}
+    if unsupported_entity||unsupported_relation||unsupported_period||explicit_opposite||unsupported_unrelated||relation_reverse{VR_MATERIAL_FACTOR}else{1.0}
 }
 '''
 
@@ -119,16 +121,14 @@ def patch() -> None:
         needle + "let material=vr_material_conflict_factor(q.as_bytes(),gb,ab);",
         1,
     )
-
     score = score.replace(
         "let mut final_score=vr_safe_pow(shaped_base*fg*qg);",
         "let mut final_score=vr_safe_pow(shaped_base*fg*qg*material);",
         1,
     )
-
     score = score.replace(
         "if numeric_mismatch_strict{final_score=final_score.min(0.30);}",
-        "if numeric_mismatch_strict{final_score=final_score.min(0.30);}if material<1.0{final_score=final_score.min(0.20);}",
+        "if numeric_mismatch_strict{final_score=final_score.min(0.30);}if material<1.0{final_score=final_score.min(VR_MATERIAL_CAP);}",
         1,
     )
     w = w[:start] + score + w[end:]
