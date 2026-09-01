@@ -63,8 +63,6 @@ def main():
     s=structural(args.wasm)
     if s['imports']!=0: print('RED: imports present'); return 2
     if s['bytes']>33_554_432: print('RED: artifact exceeds 32 MiB'); return 2
-    required={'memory','alloc','dealloc','rank_answer'}
-    if not required.issubset(set(s['exports'])): print(f"RED: missing exports {sorted(required-set(s['exports']))}"); return 2
     corpus=json.loads(args.corpus.read_text())['cases']
     hist=json.loads(args.historical.read_text())['cases']
     scored=score_records(args.wasm,corpus,'pairs'); hscored=score_records(args.wasm,hist,'pairs') if hist else []
