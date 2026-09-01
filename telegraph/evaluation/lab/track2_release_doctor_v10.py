@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 """Track-2 release doctor v10.
 
-Owns the deep self-healing layer around v9.  It fails fast on API drift,
-tries approved semantic repairs, then tries the repository's canonical hardened
-release overlay as a separate candidate.  A candidate is accepted only after
-the same deep corpus is GREEN.  No benchmark/checker thresholds or corpus data
-are modified.
+Owns the deep self-healing layer around v9. It fails fast on API drift, tests
+an independently hardened release candidate early, then tries approved
+semantic repairs. A candidate is accepted only after the same deep corpus is
+GREEN. No benchmark/checker thresholds or corpus data are modified.
 """
 from __future__ import annotations
 
@@ -96,18 +95,38 @@ def deep_lab_self_heal(wasm: Path, corpus: Path, base_lab) -> dict:
         v9.emit("doctor-v10-deep-attempt.json", row)
         return report
 
-    try:
-        # First evaluate the selected v9 winner exactly as produced by the
-        # normal candidate tournament.
-        report = evaluate("v9-selected")
+    def accept(report: dict) -> dict | None:
         if report.get("verdict") == "GREEN":
             v9.emit("doctor-v10-deep-history.json", {"attempts": attempts, "verdict": "GREEN"})
             return report
+        return None
 
+    try:
+        # Candidate 1: normal v9 tournament winner.
+        report = evaluate("v9-selected")
+        accepted = accept(report)
+        if accepted is not None:
+            return accepted
+
+        # Candidate 2: the repository's independently hardened release overlay.
+        # It is tested as a complete build, not imported into v9, so API drift
+        # cannot create another wrapper-level failure.
+        v9.RELEASE = LAB_RELEASE
+        v9.d.RELEASE = LAB_RELEASE
+        v9.build_candidate(wasm)
+        v9.d.structural(wasm)
+        report = evaluate("canonical-hardened-overlay")
+        accepted = accept(report)
+        if accepted is not None:
+            return accepted
+
+        # Restore the normal release family before applying source-level repair
+        # recipes. This keeps every repair reproducible against the same base.
+        v9.RELEASE = original_release_path
+        v9.d.RELEASE = original_d_release
         reasons = diagnose(report)
 
-        # Apply each existing, allow-listed semantic recipe at most once.
-        # Every successful mutation is rebuilt and structurally validated.
+        # Apply each existing allow-listed semantic recipe at most once.
         for repair_round in range(1, 4):
             fixed, detail = v9.d.semantic_repair(reasons)
             v9.emit(f"doctor-v10-deep-repair-{repair_round}.json", {
@@ -120,24 +139,11 @@ def deep_lab_self_heal(wasm: Path, corpus: Path, base_lab) -> dict:
             v9.build_candidate(wasm)
             v9.d.structural(wasm)
             report = evaluate(f"v9-repair-{repair_round}")
-            if report.get("verdict") == "GREEN":
-                v9.emit("doctor-v10-deep-history.json", {"attempts": attempts, "verdict": "GREEN"})
-                return report
+            accepted = accept(report)
+            if accepted is not None:
+                return accepted
             reasons = diagnose(report)
 
-        # The repository already contains a separately hardened release
-        # overlay.  Treat it as a real candidate rather than importing its
-        # helpers into v9: this prevents another wrapper/API drift failure.
-        v9.RELEASE = LAB_RELEASE
-        v9.d.RELEASE = LAB_RELEASE
-        v9.build_candidate(wasm)
-        v9.d.structural(wasm)
-        report = evaluate("canonical-hardened-overlay")
-        if report.get("verdict") == "GREEN":
-            v9.emit("doctor-v10-deep-history.json", {"attempts": attempts, "verdict": "GREEN"})
-            return report
-
-        reasons = diagnose(report)
         _emit_deep_failure(attempts, reasons)
         v9.emit("doctor-v10-deep-history.json", {"attempts": attempts, "verdict": "RED"})
         raise RuntimeError(
@@ -145,9 +151,6 @@ def deep_lab_self_heal(wasm: Path, corpus: Path, base_lab) -> dict:
             + (",".join(reasons) if reasons else "no-classifiable-failure")
         )
     finally:
-        # Keep the lab overlay only when its candidate was accepted.  On a RED
-        # result restore v9's original release path so the outer doctor cannot
-        # accidentally mix source families.
         if not attempts or attempts[-1].get("verdict") != "GREEN":
             v9.RELEASE = original_release_path
             v9.d.RELEASE = original_d_release
