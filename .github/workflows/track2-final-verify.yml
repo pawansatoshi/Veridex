@@ -57,7 +57,7 @@ jobs:
       - name: Prepare evidence directory
         run: mkdir -p telegraph/evaluation/ci-evidence
 
-      - name: Run autonomous Track 2 release doctor v9
+      - name: Run autonomous Track 2 release doctor v10
         env:
           RUSTFLAGS: -Aunsafe-op-in-unsafe-fn
           PYTHONUNBUFFERED: '1'
@@ -66,10 +66,12 @@ jobs:
           python3 -m py_compile telegraph/evaluation/lab/generate_shadow_corpus_v2.py
           python3 -m py_compile telegraph/evaluation/lab/presubmit_lab_v2.py
           python3 -m py_compile telegraph/evaluation/lab/sample_shadow_corpus.py
+          python3 -m py_compile telegraph/evaluation/lab/track2_release_doctor_v3.py
           python3 -m py_compile telegraph/evaluation/lab/track2_release_doctor_v9.py
+          python3 -m py_compile telegraph/evaluation/lab/track2_release_doctor_v10.py
           python3 -m py_compile telegraph/evaluation/neural/build_candidate_fast_release_v2.py
           python3 -m py_compile telegraph/evaluation/neural/build_candidate_fast_release_v3.py
-          python3 telegraph/evaluation/lab/track2_release_doctor_v9.py \
+          python3 telegraph/evaluation/lab/track2_release_doctor_v10.py \
             --wasm telegraph/evaluation/veridex-track2-final.wasm \
             --fast-limit 128 \
             --json | tee telegraph/evaluation/ci-evidence/release-doctor.json
