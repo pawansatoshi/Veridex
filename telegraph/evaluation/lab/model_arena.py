@@ -1,17 +1,8 @@
 #!/usr/bin/env python3
 """Offline Track-2 model arena.
 
-Optional research tool only. It never changes the production WASM scorer.
-It compares embedding models on the independent shadow corpus using the same
-GOOD-vs-BAD and invariance objectives used by pre_submit_lab.py.
-
-Requires sentence-transformers for actual model evaluation:
-  python3 -m pip install sentence-transformers
-
-Example:
-  python3 telegraph/evaluation/lab/model_arena.py --models \
-      sentence-transformers/all-MiniLM-L6-v2 \
-      BAAI/bge-small-en-v1.5 intfloat/e5-small-v2
+Compares embedding backbones on the same generated/independent corpus. This
+is a research gate only; it never modifies the production WASM automatically.
 """
 from __future__ import annotations
 
@@ -23,7 +14,8 @@ import sys
 from pathlib import Path
 
 LAB = Path(__file__).resolve().parent
-CORPUS = LAB / "shadow_corpus.json"
+SEED_CORPUS = LAB / "shadow_corpus.json"
+GENERATED_CORPUS = LAB / "shadow_corpus.generated.json"
 
 
 def cosine(a, b):
@@ -32,10 +24,9 @@ def cosine(a, b):
     return dot / (na * nb) if na and nb else 0.0
 
 
-def load_cases():
-    data = json.loads(CORPUS.read_text(encoding="utf-8"))
-    cases = data["cases"]
-    return cases
+def load_cases(path: Path) -> list[dict]:
+    data = json.loads(path.read_text(encoding="utf-8"))
+    return data.get("cases", [])
 
 
 def embed(model, texts):
@@ -43,49 +34,44 @@ def embed(model, texts):
 
 
 def evaluate(name, model, cases):
-    # Embed question+ground-truth context with the answer. This is an offline
-    # diagnostic, not a claim that embedding similarity alone is sufficient.
-    good_texts = [f"Question: {c['question']}\nGround truth: {c['ground_truth']}\nAnswer: {c['good']}" for c in cases]
-    bad_texts = [f"Question: {c['question']}\nGround truth: {c['ground_truth']}\nAnswer: {c['bad']}" for c in cases]
-    good_vec = embed(model, good_texts)
-    bad_vec = embed(model, bad_texts)
-    margins = [cosine(g, [0.0] * len(g)) for g in []]  # keep static analyzers quiet
-    margins = []
-    for g, b in zip(good_vec, bad_vec):
-        # Anchor both answers against the ground-truth/question representation.
-        # Re-encode only the anchor; the corpus is intentionally small.
-        margins.append((g, b))
-    anchor_texts = [f"Question: {c['question']}\nGround truth: {c['ground_truth']}" for c in cases]
-    anchors = embed(model, anchor_texts)
-    scores = [cosine(a, g) - cosine(a, b) for a, g, b in zip(anchors, good_vec, bad_vec)]
+    anchors = embed(model, [f"Question: {c['question']}\nGround truth: {c['ground_truth']}" for c in cases])
+    goods = embed(model, [f"Question: {c['question']}\nGround truth: {c['ground_truth']}\nAnswer: {c['good']}" for c in cases])
+    bads = embed(model, [f"Question: {c['question']}\nGround truth: {c['ground_truth']}\nAnswer: {c['bad']}" for c in cases])
+    margins = [cosine(a, g) - cosine(a, b) for a, g, b in zip(anchors, goods, bads)]
+    ordered = sorted(margins)
+    n = len(ordered)
     return {
-        "model": name,
-        "pairs": len(scores),
-        "inversions": sum(x <= 0 for x in scores),
-        "pairwise_accuracy": sum(x > 0 for x in scores) / len(scores) if scores else 0.0,
-        "mean_margin": statistics.fmean(scores) if scores else 0.0,
-        "p10_margin": sorted(scores)[max(0, math.floor(len(scores) * .10))] if scores else 0.0,
-        "worst_margin": min(scores, default=0.0),
+        "model": name, "pairs": n,
+        "inversions": sum(x <= 0 for x in ordered),
+        "pairwise_accuracy": sum(x > 0 for x in ordered) / n if n else 0.0,
+        "mean_margin": statistics.fmean(ordered) if ordered else 0.0,
+        "p10_margin": ordered[max(0, math.floor(n * .10))] if n else 0.0,
+        "p5_margin": ordered[max(0, math.floor(n * .05))] if n else 0.0,
+        "worst_margin": ordered[0] if ordered else 0.0,
     }
 
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--models", nargs="+", required=True)
+    ap.add_argument("--corpus", type=Path, default=None)
     args = ap.parse_args()
+    corpus = args.corpus or (GENERATED_CORPUS if GENERATED_CORPUS.exists() else SEED_CORPUS)
     try:
         from sentence_transformers import SentenceTransformer
     except ImportError:
         print("sentence-transformers is not installed; this is an optional offline research tool.", file=sys.stderr)
         return 2
-    cases = load_cases()
+    cases = load_cases(corpus)
+    if not cases:
+        print("corpus is empty", file=sys.stderr); return 2
     results = []
     for name in args.models:
         print(f"Loading {name}...", file=sys.stderr)
-        model = SentenceTransformer(name)
-        results.append(evaluate(name, model, cases))
+        results.append(evaluate(name, SentenceTransformer(name), cases))
     results.sort(key=lambda r: (r["inversions"], -r["mean_margin"]))
-    print(json.dumps({"models": results, "note": "Embedding ranking is diagnostic; final selection must use Track-2 WASM constraints and factual/polarity guards."}, indent=2))
+    print(json.dumps({"corpus": str(corpus), "cases": len(cases), "models": results,
+                      "note": "Diagnostic embedding comparison only; final production selection must pass WASM constraints and factual/polarity regression gates."}, indent=2))
     return 0
 
 
