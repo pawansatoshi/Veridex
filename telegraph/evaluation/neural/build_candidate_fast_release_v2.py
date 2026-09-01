@@ -1,94 +1,116 @@
 #!/usr/bin/env python3
-"""Track-2 release builder v2 compatibility layer.
+"""Robust Track-2 fast release builder.
 
-Reuses the proven release builder and adds a conservative, generalized
-material-conflict layer for explicit qualifier/relation/late-contradiction
-patterns. It does not alter evaluator gates or hard-code benchmark questions.
+The prior release wrapper depended on exact multi-line text anchors. This
+version patches semantic functions by name/balanced braces, then reuses the
+already-vetted release guard bodies. No evaluator/checker thresholds change.
 """
 from __future__ import annotations
 
+import build_candidate
+import build_candidate_fast
 import build_candidate_fast_release as base
 
-MATERIAL_CONFLICT = r'''fn vr_release_material_conflict(q:&[u8],gt:&[u8],ans:&[u8])->bool{
-    // Explicit discourse-level contradiction/qualification markers.
-    if vr_has_word(ans,b"opposite") && (vr_has_word(ans,b"conclusion")||vr_has_word(ans,b"result")||vr_has_word(ans,b"final")){return true;}
-    if vr_has_word(ans,b"different") && (vr_has_word(ans,b"entity")||vr_has_word(ans,b"relationship")||vr_has_word(ans,b"period")||vr_has_word(ans,b"time")){return true;}
-    // Common relation reversals: same topic/entity, opposite relationship.
-    if vr_has_word(gt,b"issued") && vr_has_word(ans,b"received"){return true;}
-    if vr_has_word(gt,b"received") && vr_has_word(ans,b"issued"){return true;}
-    if vr_has_word(gt,b"caused") && vr_has_word(ans,b"prevented"){return true;}
-    if vr_has_word(gt,b"prevented") && vr_has_word(ans,b"caused"){return true;}
-    if vr_has_word(gt,b"increased") && vr_has_word(ans,b"decreased"){return true;}
-    if vr_has_word(gt,b"decreased") && vr_has_word(ans,b"increased"){return true;}
-    if vr_has_word(gt,b"rose") && vr_has_word(ans,b"fell"){return true;}
-    if vr_has_word(gt,b"fell") && vr_has_word(ans,b"rose"){return true;}
-    if vr_has_word(gt,b"approved") && vr_has_word(ans,b"rejected"){return true;}
-    if vr_has_word(gt,b"rejected") && vr_has_word(ans,b"approved"){return true;}
-    false
+
+def _replace_fn(src: str, name: str, replacement: str) -> str:
+    marker = f"fn {name}("
+    start = src.find(marker)
+    if start < 0:
+        raise RuntimeError(f"robust release patch: function not found: {name}")
+    brace = src.find("{", start)
+    if brace < 0:
+        raise RuntimeError(f"robust release patch: opening brace not found: {name}")
+    depth = 0
+    quote = None
+    esc = False
+    i = brace
+    while i < len(src):
+        ch = src[i]
+        if quote:
+            if esc:
+                esc = False
+            elif ch == "\\":
+                esc = True
+            elif ch == quote:
+                quote = None
+        else:
+            if ch in ('"', "'"):
+                quote = ch
+            elif ch == "{":
+                depth += 1
+            elif ch == "}":
+                depth -= 1
+                if depth == 0:
+                    return src[:start] + replacement + src[i + 1 :]
+        i += 1
+    raise RuntimeError(f"robust release patch: unmatched braces: {name}")
+
+
+DIRECTION = r'''fn vr_direction(text:&[u8])->Option<bool>{
+    const UP:&[&[u8]]=&[b"increase",b"increased",b"rise",b"rose",b"rising",b"up",b"higher",b"gain",b"gained"];
+    const DOWN:&[&[u8]]=&[b"decrease",b"decreased",b"fall",b"fell",b"falling",b"down",b"lower",b"loss",b"lost",b"declined",b"reduced",b"dropped"];
+    let up=vr_has_any(text,UP);let down=vr_has_any(text,DOWN);match(up,down){(true,false)=>Some(true),(false,true)=>Some(false),_=>None}
 }'''
 
-GUARD = r'''fn vr_question_guard(q:&[u8],gt:&[u8],ans:&[u8])->f32{
-    let mut g=1.0f32;
-    let material_conflict=vr_release_material_conflict(q,gt,ans); if material_conflict{g*=0.05;}
-    let entity_conflict=vr_release_entity_conflict(q,gt,ans); if entity_conflict{g*=0.02;}
-    let numeric_equiv=vr_release_numeric_equivalent(q,gt,ans); let complete_numeric=vr_release_unit_completeness(q,gt,ans);
-    if numeric_equiv&&!entity_conflict&&complete_numeric{g=1.0;} else if numeric_equiv&&!complete_numeric{g*=0.62;} else if vr_numeric_context(q){
-        match(vr_first_number(gt),vr_first_number(ans)){(Some(_),Some(_))=>g*=0.05,(Some(_),None)=>g*=0.65,_=>{}}
-    } else {
-        // Mildly discount unsupported numeric additions in non-numeric factual answers.
-        let gt_has_num=vr_first_number(gt).is_some(); let ans_has_num=vr_first_number(ans).is_some();
-        if !gt_has_num&&ans_has_num{g*=0.90;}
-    }
-    if vr_question_is_binary(q){
-        if let Some(p)=vr_first_binary_polarity(gt){match vr_first_binary_polarity(ans){Some(a)if a!=p=>g*=0.06,None=>g*=0.88,_=>{}}}
-        if vr_question_predicate_conflict(q,gt,ans){g*=0.06;}
-        if vr_release_binary_fragment(ans){g*=0.20;}
-    }
-    if vr_release_negation_conflict(gt,ans){g*=0.05;}
-    if vr_release_tail_contamination(ans){g*=0.05;}
-    g
+OPPOSITE = r'''fn vr_opposite(gt:&[u8],ans:&[u8])->bool{
+    const PAIRS:&[(&[u8],&[u8])]=&[
+      (b"fraud",b"safe"),(b"fraudulent",b"legitimate"),(b"scam",b"safe"),(b"malicious",b"benign"),(b"malicious",b"legitimate"),(b"dangerous",b"safe"),(b"harmful",b"safe"),(b"unsafe",b"safe"),(b"phishing",b"legitimate"),(b"positive",b"negative"),(b"bullish",b"bearish"),(b"increase",b"decrease"),(b"increased",b"decreased"),(b"rise",b"fall"),(b"rose",b"fell"),(b"approved",b"rejected"),(b"authorized",b"unauthorized"),(b"confirmed",b"denied"),(b"allowed",b"blocked"),(b"allowed",b"forbidden"),(b"yes",b"no"),(b"true",b"false"),(b"declined",b"increased"),(b"reduced",b"increased"),(b"decreased",b"increased"),(b"lower",b"higher"),(b"down",b"up"),(b"loss",b"gain")];
+    for(a,b)in PAIRS{if(vr_has_word(gt,a)&&vr_has_word(ans,b))||(vr_has_word(gt,b)&&vr_has_word(ans,a)){return true;}}
+    match(vr_direction(gt),vr_direction(ans)){(Some(g),Some(a))=>g!=a,_=>false}
 }'''
 
-SCORE = r'''unsafe fn veridex_score(q_ptr:i32,q_len:i32,gt_ptr:i32,gt_len:i32,ma_ptr:i32,ma_len:i32)->(f32,f32,f32,f32){
-    let q=read_str(q_ptr,q_len);let gt=read_str(gt_ptr,gt_len);let a=read_str(ma_ptr,ma_len);
-    if gt.trim().is_empty()||a.trim().is_empty(){return(0.0,0.0,0.0,0.0);}
-    let mut gn=alloc::string::String::new();let mut an=alloc::string::String::new();
-    for b in gt.as_bytes(){if b.is_ascii_alphanumeric(){gn.push(vr_lower(*b)as char);}}
-    for b in a.as_bytes(){if b.is_ascii_alphanumeric(){an.push(vr_lower(*b)as char);}}
-    if !gn.is_empty()&&gn==an{return(1.0,1.0,1.0,1.0);}
-    let mut base=rank_answer_base(q_ptr,q_len,gt_ptr,gt_len,ma_ptr,ma_len); if !base.is_finite(){return(0.0,0.0,0.0,0.0);}
-    base=base.clamp(0.0,1.0); let gb=gt.as_bytes();let ab=a.as_bytes();
-    let numeric_pair=(vr_first_number(gb),vr_first_number(ab));
-    let numeric_equivalent=match numeric_pair{(Some((g,gp)),Some((a,ap)))=>gp==ap&&(g-a).abs()<=g.abs().max(a.abs()).max(1.0)*1e-9&&vr_numeric_context(q.as_bytes())&&!vr_opposite(gb,ab)&&!vr_named_token_conflict(q.as_bytes(),gb,ab),_=>false};
-    let numeric_complete=vr_release_unit_completeness(q.as_bytes(),gb,ab);
-    let safe_numeric_equiv=numeric_equivalent&&numeric_complete;
-    let incomplete_numeric_equiv=numeric_equivalent&&!numeric_complete;
-    let numeric_mismatch_strict=vr_numeric_context(q.as_bytes())&&match numeric_pair{(Some(_),Some(_))=>!numeric_equivalent,_=>false};
-    let material_conflict=vr_release_material_conflict(q.as_bytes(),gb,ab);
-    let fg=if material_conflict{0.05}else if vr_opposite(gb,ab){0.06}else if vr_named_token_conflict(q.as_bytes(),gb,ab){0.08}else if numeric_mismatch_strict{0.08}else{1.0};
-    let qg=vr_question_guard(q.as_bytes(),gb,ab); let shaped_base=if safe_numeric_equiv{base.max(0.95)}else{base};
-    let mut final_score=vr_safe_pow(shaped_base*fg*qg);
-    if incomplete_numeric_equiv{final_score=final_score.min(0.74);} if numeric_mismatch_strict{final_score=final_score.min(0.30);}
-    (final_score,base,fg,qg)
+NUMBER = r'''fn vr_first_number(text:&[u8])->Option<(f64,bool)>{
+    let mut i=0usize; while i<text.len() && !text[i].is_ascii_digit(){i+=1;} if i>=text.len(){return None;}
+    let mut x=0.0f64; let mut frac=0.1f64; let mut dot=false; let mut any=false;
+    while i<text.len(){let c=text[i]; if c.is_ascii_digit(){any=true;if dot{x+=(c-b'0')as f64*frac;frac*=0.1;}else{x=x*10.0+(c-b'0')as f64;}i+=1;}else if c==b','||c==b'_'{i+=1;}else if c==b'.'&&!dot&&i+1<text.len()&&text[i+1].is_ascii_digit(){dot=true;i+=1;}else{break;}}
+    if !any{return None;} while i<text.len()&&vr_ws(text[i]){i+=1;}
+    let mut scaled=false;
+    if i<text.len(){match vr_lower(text[i]){b'k'|b'm'|b'b' if i+1==text.len()||!text[i+1].is_ascii_alphabetic()=>{match vr_lower(text[i]){b'k'=>x*=1e3,b'm'=>x*=1e6,b'b'=>x*=1e9,_=>{}}scaled=true;},_=>{}}}
+    if !scaled{if vr_has_word(text,b"thousand"){x*=1e3;}else if vr_has_word(text,b"million"){x*=1e6;}else if vr_has_word(text,b"billion"){x*=1e9;}}
+    Some((x,vr_has_word(text,b"percent")||vr_has_word(text,b"percentage")||text[i..].first()==Some(&b'%')))
 }'''
 
-EXTRA_FUNCTIONS = MATERIAL_CONFLICT
 
-
-def main() -> None:
-    # First apply the proven release patch set unchanged.
-    base.patch_release_guards()
-    wrapper = base.build_candidate.WRAPPER
-    if "fn vr_release_material_conflict(" not in wrapper:
-        pos = wrapper.find("fn vr_question_guard(")
+def robust_patch() -> None:
+    w = build_candidate.WRAPPER
+    if "fn vr_direction(" not in w:
+        pos = w.find("fn vr_opposite(")
         if pos < 0:
-            raise SystemExit("release v2: question guard marker not found")
-        wrapper = wrapper[:pos] + EXTRA_FUNCTIONS + "\n" + wrapper[pos:]
-    wrapper = base._replace_function(wrapper, "fn vr_question_guard(", GUARD)
-    wrapper = base._replace_function(wrapper, "unsafe fn veridix_score(", SCORE) if "unsafe fn veridix_score(" in wrapper else base._replace_function(wrapper, "unsafe fn veridex_score(", SCORE)
-    base.build_candidate.WRAPPER = wrapper
-    base.build_candidate_fast.main()
+            raise RuntimeError("robust release patch: opposite insertion point missing")
+        w = w[:pos] + DIRECTION + "\n" + w[pos:]
+    w = _replace_fn(w, "vr_opposite", OPPOSITE)
+    w = _replace_fn(w, "vr_first_number", NUMBER)
+
+    # Reuse the vetted release bodies, but add/replace by function boundary.
+    if "fn vr_release_material_conflict(" not in w:
+        pos = w.find("fn vr_question_guard(")
+        if pos < 0:
+            raise RuntimeError("robust release patch: question guard insertion point missing")
+        w = w[:pos] + base._RELEASE_CONFLICT + "\n" + w[pos:]
+    if "fn vr_release_binary_fragment(" not in w:
+        pos = w.find("fn vr_question_guard(")
+        if pos < 0:
+            raise RuntimeError("robust release patch: binary insertion point missing")
+        w = w[:pos] + base._RELEASE_BINARY_FRAGMENT + "\n" + w[pos:]
+    if "fn vr_release_negation_conflict(" not in w:
+        pos = w.find("fn vr_question_guard(")
+        if pos < 0:
+            raise RuntimeError("robust release patch: negation insertion point missing")
+        w = w[:pos] + base._RELEASE_NEGATION + "\n" + w[pos:]
+    if "fn vr_release_tail_contamination(" not in w:
+        pos = w.find("fn vr_question_guard(")
+        if pos < 0:
+            raise RuntimeError("robust release patch: tail insertion point missing")
+        w = w[:pos] + base._RELEASE_TAIL + "\n" + w[pos:]
+
+    w = _replace_fn(w, "vr_question_guard", base._RELEASE_GUARD)
+    w = _replace_fn(w, "veridex_score", base._RELEASE_SCORE)
+    w = _replace_fn(w, "vr_safe_pow", base._MONOTONIC_SHARPEN)
+    build_candidate.WRAPPER = w
 
 
 if __name__ == "__main__":
-    main()
+    # Replace only the semantic patch hook. The fast builder still owns the
+    # pinned checkout, tokenizer/layer caps and actual Rust/WASM build.
+    build_candidate_fast.patch_semantic_guards = robust_patch
+    build_candidate_fast.main()
