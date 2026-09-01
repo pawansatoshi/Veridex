@@ -8,6 +8,7 @@ if [[ -z "$WASM" ]]; then
 fi
 
 LAB_DIR="$(cd "$(dirname "$0")" && pwd)"
+export PYTHONUNBUFFERED=1
 exec python3 "$LAB_DIR/track2_doctor.py" \
   --existing-wasm \
   --wasm "$WASM" \
