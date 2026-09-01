@@ -22,6 +22,8 @@ def sha256(path):
 
 
 def structural(path):
+    p=run(['wasm-validate',str(path)],timeout=30)
+    if p.returncode!=0: raise RuntimeError(p.stderr.strip() or p.stdout.strip() or 'wasm-validate failed')
     p=run(['wasm-objdump','-x',str(path)],timeout=30)
     if p.returncode!=0: raise RuntimeError(p.stderr.strip() or p.stdout.strip() or 'wasm-objdump failed')
     t=p.stdout
@@ -34,17 +36,21 @@ def score_records(wasm, records, mode='pairs'):
     payload=json.dumps(records,ensure_ascii=False)
     js=r'''
 import fs from 'node:fs';
-const wasm=fs.readFileSync(process.argv[2]); const mode=process.argv[3]; const rows=JSON.parse(fs.readFileSync(0,'utf8'));
+// With node --input-type=module -e, process.argv[1] is the first user arg.
+const wasmPath=process.argv[1]; const mode=process.argv[2];
+if(!wasmPath || !mode) throw new Error(`invalid scorer argv: wasm=${wasmPath} mode=${mode}`);
+const wasm=fs.readFileSync(wasmPath); const rows=JSON.parse(fs.readFileSync(0,'utf8'));
 const {module,instance}=await WebAssembly.instantiate(wasm,{}); const e=instance.exports;
 for(const n of ['memory','alloc','dealloc','rank_answer']) if(!(n in e)) throw new Error(`missing export ${n}`);
 if(WebAssembly.Module.imports(module).length) throw new Error('imports present');
 const enc=new TextEncoder();
 function s(q,g,a){const qb=enc.encode(q),gb=enc.encode(g),ab=enc.encode(a);const qp=e.alloc(qb.length),gp=e.alloc(gb.length),ap=e.alloc(ab.length);try{const m=new Uint8Array(e.memory.buffer);for(const[p,b]of[[qp,qb],[gp,gb],[ap,ab]]){if(p<0||p>m.length||b.length>m.length-p)throw new Error('memory bounds');m.set(b,p);}const v=e.rank_answer(qp,qb.length,gp,gb.length,ap,ab.length);if(!Number.isFinite(v)||v<0||v>1)throw new Error(`invalid score ${v}`);return v}finally{e.dealloc(ap,ab.length);e.dealloc(gp,gb.length);e.dealloc(qp,qb.length)}}
-const out=[];for(const r of rows){if(mode==='pairs')out.push({...r,goodScore:s(r.question,r.ground_truth,r.good),badScore:s(r.question,r.ground_truth,r.bad)});else out.push({...r,referenceScore:s(r.question,r.ground_truth,r.reference),variantScore:s(r.question,r.ground_truth,r.variant)});}console.log(JSON.stringify(out));
+const out=[];for(const r of rows){if(mode==='pairs')out.push({...r,goodScore:s(r.question,r.ground_truth,r.good),badScore:s(r.question,r.ground_truth,r.bad)});else if(mode==='invariance')out.push({...r,referenceScore:s(r.question,r.ground_truth,r.reference),variantScore:s(r.question,r.ground_truth,r.variant)});else throw new Error(`unknown scoring mode: ${mode}`);}console.log(JSON.stringify(out));
 '''
     p=run(['node','--input-type=module','-e',js,str(wasm),mode],input_text=payload,timeout=1800)
     if p.returncode!=0: raise RuntimeError(p.stderr.strip() or p.stdout.strip() or 'candidate scorer failed')
-    return json.loads(p.stdout)
+    try: return json.loads(p.stdout)
+    except json.JSONDecodeError as e: raise RuntimeError(f'candidate scorer returned invalid JSON: {e}') from e
 
 
 def summary(rows):
@@ -56,6 +62,9 @@ def main():
     ap=argparse.ArgumentParser();ap.add_argument('wasm',type=Path);ap.add_argument('--corpus',type=Path,required=True);ap.add_argument('--historical',type=Path,default=Path(__file__).with_name('historical_failures.json'));ap.add_argument('--strict',action='store_true');ap.add_argument('--json',action='store_true');ap.add_argument('--out',type=Path);args=ap.parse_args()
     s=structural(args.wasm)
     if s['imports']!=0: print('RED: imports present'); return 2
+    if s['bytes']>33_554_432: print('RED: artifact exceeds 32 MiB'); return 2
+    required={'memory','alloc','dealloc','rank_answer'}
+    if not required.issubset(set(s['exports'])): print(f"RED: missing exports {sorted(required-set(s['exports']))}"); return 2
     corpus=json.loads(args.corpus.read_text())['cases']
     hist=json.loads(args.historical.read_text())['cases']
     scored=score_records(args.wasm,corpus,'pairs'); hscored=score_records(args.wasm,hist,'pairs') if hist else []
@@ -63,8 +72,7 @@ def main():
     critical=[r for r in scored if r.get('critical')]
     cs=summary(critical) if critical else {'pairs':0,'inversions':0,'mean_margin':0,'p10_margin':0,'worst_margin':0}
     inv_corpus=json.loads(args.corpus.read_text()).get('invariance',[])
-    inv=[]
-    if inv_corpus: inv=score_records(args.wasm,inv_corpus,'invariance')
+    inv=score_records(args.wasm,inv_corpus,'invariance') if inv_corpus else []
     invd=[abs(r['referenceScore']-r['variantScore']) for r in inv]
     invariant={'variants':len(invd),'mean_abs_delta':statistics.fmean(invd) if invd else 0.0,'max_abs_delta':max(invd,default=0.0),'severe_changes_gt_0_10':sum(x>.10 for x in invd)}
     verdict='GREEN'
