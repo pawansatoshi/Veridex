@@ -7,5 +7,8 @@ if [[ -z "$WASM" ]]; then
   exit 2
 fi
 
-python3 "$(dirname "$0")/generate_shadow_corpus.py" --rounds 12
-exec python3 "$(dirname "$0")/presubmit_lab.py" --strict --json --out presubmit-report.json "$WASM"
+LAB_DIR="$(cd "$(dirname "$0")" && pwd)"
+python3 "$LAB_DIR/generate_shadow_corpus.py" --rounds 12 --out "$LAB_DIR/shadow_corpus.generated.json"
+exec python3 "$LAB_DIR/presubmit_lab.py" --strict --json --rounds 1 \
+  --corpus "$LAB_DIR/shadow_corpus.generated.json" \
+  --out "presubmit-report.json" "$WASM"
