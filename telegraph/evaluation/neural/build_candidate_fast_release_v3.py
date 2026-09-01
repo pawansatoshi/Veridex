@@ -54,18 +54,44 @@ fn vr_material_conflict_factor(q:&[u8],gt:&[u8],ans:&[u8])->f32{
         &&!(vr_has_word(gt,b"different")&&(vr_has_word(gt,b"relationship")||vr_has_word(gt,b"relation")));
     let unsupported_period=(vr_has_word(ans,b"different")&&(vr_has_word(ans,b"period")||vr_has_word(ans,b"time")))
         &&!(vr_has_word(gt,b"different")&&(vr_has_word(gt,b"period")||vr_has_word(gt,b"time")));
-    let explicit_opposite=vr_has_word(ans,b"opposite")&&(vr_has_word(ans,b"conclusion")||vr_has_word(ans,b"final"))
-        &&!(vr_has_word(gt,b"opposite")&&(vr_has_word(gt,b"conclusion")||vr_has_word(gt,b"final")));
+    let explicit_opposite=vr_has_word(ans,b"opposite")&&(vr_has_word(ans,b"conclusion")||vr_has_word(ans,b"final")||vr_has_word(ans,b"result"))
+        &&!(vr_has_word(gt,b"opposite")&&(vr_has_word(gt,b"conclusion")||vr_has_word(gt,b"final")||vr_has_word(gt,b"result")));
     let unsupported_unrelated=vr_has_word(ans,b"unrelated")
-        &&(vr_has_word(ans,b"entity")||vr_has_word(ans,b"relationship")||vr_has_word(ans,b"topic"))
+        &&(vr_has_word(ans,b"entity")||vr_has_word(ans,b"relationship")||vr_has_word(ans,b"topic")||vr_has_word(ans,b"background"))
         &&!vr_has_word(gt,b"unrelated");
     let relation_reverse=(vr_has_word(gt,b"issued")&&vr_has_word(ans,b"received"))
         ||(vr_has_word(gt,b"received")&&vr_has_word(ans,b"issued"))
         ||(vr_has_word(gt,b"sent")&&vr_has_word(ans,b"received"))
         ||(vr_has_word(gt,b"received")&&vr_has_word(ans,b"sent"))
+        ||(vr_has_word(gt,b"processed")&&vr_has_word(ans,b"received"))
+        ||(vr_has_word(gt,b"received")&&vr_has_word(ans,b"processed"))
+        ||(vr_has_word(gt,b"blocked")&&vr_has_word(ans,b"allowed"))
+        ||(vr_has_word(gt,b"allowed")&&vr_has_word(ans,b"blocked"))
+        ||(vr_has_word(gt,b"reported")&&vr_has_word(ans,b"denied"))
+        ||(vr_has_word(gt,b"denied")&&vr_has_word(ans,b"reported"))
+        ||(vr_has_word(gt,b"prevented")&&vr_has_word(ans,b"caused"))
+        ||(vr_has_word(gt,b"caused")&&vr_has_word(ans,b"prevented"))
+        ||(vr_has_word(gt,b"approved")&&vr_has_word(ans,b"rejected"))
+        ||(vr_has_word(gt,b"rejected")&&vr_has_word(ans,b"approved"))
+        ||(vr_has_word(gt,b"approved")&&vr_has_word(ans,b"requested"))
+        ||(vr_has_word(gt,b"requested")&&vr_has_word(ans,b"approved"))
+        ||(vr_has_word(gt,b"owns")&&vr_has_word(ans,b"uses"))
+        ||(vr_has_word(gt,b"uses")&&vr_has_word(ans,b"owns"))
+        ||(vr_has_word(gt,b"controls")&&vr_has_word(ans,b"owns"))
+        ||(vr_has_word(gt,b"owns")&&vr_has_word(ans,b"controls"))
         ||(vr_has_word(gt,b"bought")&&vr_has_word(ans,b"sold"))
         ||(vr_has_word(gt,b"sold")&&vr_has_word(ans,b"bought"));
-    if unsupported_entity||unsupported_relation||unsupported_period||explicit_opposite||unsupported_unrelated||relation_reverse{VR_MATERIAL_FACTOR}else{1.0}
+    let polarity_reverse=(vr_has_word(gt,b"compromised")&&vr_has_word(ans,b"secure"))
+        ||(vr_has_word(gt,b"secure")&&vr_has_word(ans,b"compromised"))
+        ||(vr_has_word(gt,b"trusted")&&vr_has_word(ans,b"malicious"))
+        ||(vr_has_word(gt,b"malicious")&&vr_has_word(ans,b"trusted"))
+        ||(vr_has_word(gt,b"genuine")&&vr_has_word(ans,b"counterfeit"))
+        ||(vr_has_word(gt,b"counterfeit")&&vr_has_word(ans,b"genuine"))
+        ||(vr_has_word(gt,b"succeeded")&&vr_has_word(ans,b"failed"))
+        ||(vr_has_word(gt,b"failed")&&vr_has_word(ans,b"succeeded"))
+        ||(vr_has_word(gt,b"success")&&vr_has_word(ans,b"failure"))
+        ||(vr_has_word(gt,b"failure")&&vr_has_word(ans,b"success"));
+    if unsupported_entity||unsupported_relation||unsupported_period||explicit_opposite||unsupported_unrelated||relation_reverse||polarity_reverse{VR_MATERIAL_FACTOR}else{1.0}
 }
 '''
 
