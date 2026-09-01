@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 """Release wrapper for the bounded-performance Track 2 builder.
 
-This wrapper delegates semantic inference to the current fast builder, then
-adds deterministic contradiction/factual guards and bounded calibration.
-Numeric value equivalence is separate from answer completeness: when the
-reference carries a currency or percentage unit, a bare numerically-equal
-answer is not allowed to receive the same full equivalence lift.
+Numeric value equivalence is kept separate from answer completeness. The
+wrapper only emits ASCII-safe Rust literals so clean WASM builds are
+reproducible on Rust toolchains that reject non-ASCII byte literals.
 """
 from __future__ import annotations
 
@@ -70,7 +68,9 @@ fn vr_release_has_currency(text:&[u8])->bool{
     vr_has_any(text,&[
       b"usd",b"dollar",b"dollars",b"eur",b"euro",b"euros",b"gbp",b"pound",b"pounds",
       b"inr",b"rupee",b"rupees",b"jpy",b"yen"
-    ]) || text.iter().any(|b|*b==b'$'||*b==b'€'||*b==b'£'||*b==b'₹')
+    ]) || text.iter().any(|b|*b==b'$')
+    || text.windows(3).any(|w|w==b"\xE2\x82\xAC"||w==b"\xE2\x82\xB9")
+    || text.windows(2).any(|w|w==b"\xC2\xA3")
 }
 
 fn vr_release_unit_completeness(q:&[u8],gt:&[u8],ans:&[u8])->bool{
@@ -78,8 +78,7 @@ fn vr_release_unit_completeness(q:&[u8],gt:&[u8],ans:&[u8])->bool{
     let gt_percent=vr_has_any(gt,&[b"percent",b"percentage"]) || gt.iter().any(|b|*b==b'%');
     let ans_percent=vr_has_any(ans,&[b"percent",b"percentage"]) || ans.iter().any(|b|*b==b'%');
     if gt_percent&&!ans_percent{return false;}
-    let gt_currency=vr_release_has_currency(gt);
-    let ans_currency=vr_release_has_currency(ans);
+    let gt_currency=vr_release_has_currency(gt); let ans_currency=vr_release_has_currency(ans);
     if gt_currency&&!ans_currency{return false;}
     true
 }
@@ -119,21 +118,13 @@ _RELEASE_TAIL = r'''fn vr_release_tail_contamination(ans:&[u8])->bool{
 
 _RELEASE_GUARD = r'''fn vr_question_guard(q:&[u8],gt:&[u8],ans:&[u8])->f32{
     let mut g=1.0f32;
-    let entity_conflict=vr_release_entity_conflict(q,gt,ans);
-    if entity_conflict{g*=0.02;}
-    let numeric_equiv=vr_release_numeric_equivalent(q,gt,ans);
-    let complete_numeric=vr_release_unit_completeness(q,gt,ans);
-    if numeric_equiv&&!entity_conflict&&complete_numeric{g=1.0;}
-    else if numeric_equiv&&!complete_numeric{g*=0.62;}
-    else if vr_numeric_context(q){
-        match(vr_first_number(gt),vr_first_number(ans)){
-            (Some(_),Some(_))=>g*=0.05,(Some(_),None)=>g*=0.65,_=>{}
-        }
+    let entity_conflict=vr_release_entity_conflict(q,gt,ans); if entity_conflict{g*=0.02;}
+    let numeric_equiv=vr_release_numeric_equivalent(q,gt,ans); let complete_numeric=vr_release_unit_completeness(q,gt,ans);
+    if numeric_equiv&&!entity_conflict&&complete_numeric{g=1.0;} else if numeric_equiv&&!complete_numeric{g*=0.62;} else if vr_numeric_context(q){
+        match(vr_first_number(gt),vr_first_number(ans)){(Some(_),Some(_))=>g*=0.05,(Some(_),None)=>g*=0.65,_=>{}}
     }
     if vr_question_is_binary(q){
-        if let Some(p)=vr_first_binary_polarity(gt){
-            match vr_first_binary_polarity(ans){Some(a)if a!=p=>g*=0.06,None=>g*=0.88,_=>{}}
-        }
+        if let Some(p)=vr_first_binary_polarity(gt){match vr_first_binary_polarity(ans){Some(a)if a!=p=>g*=0.06,None=>g*=0.88,_=>{}}}
         if vr_question_predicate_conflict(q,gt,ans){g*=0.06;}
         if vr_release_binary_fragment(ans){g*=0.20;}
     }
@@ -149,25 +140,18 @@ _RELEASE_SCORE = r'''unsafe fn veridex_score(q_ptr:i32,q_len:i32,gt_ptr:i32,gt_l
     for b in gt.as_bytes(){if b.is_ascii_alphanumeric(){gn.push(vr_lower(*b)as char);}}
     for b in a.as_bytes(){if b.is_ascii_alphanumeric(){an.push(vr_lower(*b)as char);}}
     if !gn.is_empty()&&gn==an{return(1.0,1.0,1.0,1.0);}
-    let mut base=rank_answer_base(q_ptr,q_len,gt_ptr,gt_len,ma_ptr,ma_len);
-    if !base.is_finite(){return(0.0,0.0,0.0,0.0);}
-    base=base.clamp(0.0,1.0);
-    let gb=gt.as_bytes();let ab=a.as_bytes();
+    let mut base=rank_answer_base(q_ptr,q_len,gt_ptr,gt_len,ma_ptr,ma_len); if !base.is_finite(){return(0.0,0.0,0.0,0.0);}
+    base=base.clamp(0.0,1.0); let gb=gt.as_bytes();let ab=a.as_bytes();
     let numeric_pair=(vr_first_number(gb),vr_first_number(ab));
-    let numeric_equivalent=match numeric_pair{
-        (Some((g,gp)),Some((a,ap)))=>gp==ap&&(g-a).abs()<=g.abs().max(a.abs()).max(1.0)*1e-9&&vr_numeric_context(q.as_bytes())&&!vr_opposite(gb,ab)&&!vr_named_token_conflict(q.as_bytes(),gb,ab),
-        _=>false
-    };
+    let numeric_equivalent=match numeric_pair{(Some((g,gp)),Some((a,ap)))=>gp==ap&&(g-a).abs()<=g.abs().max(a.abs()).max(1.0)*1e-9&&vr_numeric_context(q.as_bytes())&&!vr_opposite(gb,ab)&&!vr_named_token_conflict(q.as_bytes(),gb,ab),_=>false};
     let numeric_complete=vr_release_unit_completeness(q.as_bytes(),gb,ab);
     let safe_numeric_equiv=numeric_equivalent&&numeric_complete;
     let incomplete_numeric_equiv=numeric_equivalent&&!numeric_complete;
     let numeric_mismatch_strict=vr_numeric_context(q.as_bytes())&&match numeric_pair{(Some(_),Some(_))=>!numeric_equivalent,_=>false};
     let fg=if vr_opposite(gb,ab){0.06}else if vr_named_token_conflict(q.as_bytes(),gb,ab){0.08}else if numeric_mismatch_strict{0.08}else{1.0};
-    let qg=vr_question_guard(q.as_bytes(),gb,ab);
-    let shaped_base=if safe_numeric_equiv{base.max(0.95)}else{base};
+    let qg=vr_question_guard(q.as_bytes(),gb,ab); let shaped_base=if safe_numeric_equiv{base.max(0.95)}else{base};
     let mut final_score=vr_safe_pow(shaped_base*fg*qg);
-    if incomplete_numeric_equiv{final_score=final_score.min(0.74);}
-    if numeric_mismatch_strict{final_score=final_score.min(0.30);}
+    if incomplete_numeric_equiv{final_score=final_score.min(0.74);} if numeric_mismatch_strict{final_score=final_score.min(0.30);}
     (final_score,base,fg,qg)
 }'''
 
@@ -195,21 +179,20 @@ def _replace_function(wrapper: str, marker: str, replacement: str) -> str:
 
 def patch_release_guards() -> None:
     _ORIGINAL_FAST_PATCH()
-    if "fn vr_question_predicate_conflict(" in build_candidate.WRAPPER:
-        build_candidate.WRAPPER=_replace_function(build_candidate.WRAPPER,"fn vr_question_predicate_conflict(",_RELEASE_CONFLICT)
+    if "fn vr_question_predicate_conflict(" in build_candidate.WRAPPER: build_candidate.WRAPPER=_replace_function(build_candidate.WRAPPER,"fn vr_question_predicate_conflict(",_RELEASE_CONFLICT)
     else: build_candidate.WRAPPER=_RELEASE_CONFLICT+"\n"+build_candidate.WRAPPER
     if "fn vr_release_binary_fragment(" not in build_candidate.WRAPPER:
-        marker="fn vr_question_guard(";pos=build_candidate.WRAPPER.find(marker)
-        if pos<0: raise SystemExit("release wrapper: question guard marker not found")
-        build_candidate.WRAPPER=build_candidate.WRAPPER[:pos]+_RELEASE_BINARY_FRAGMENT+"\n"+build_candidate.WRAPPER[pos:]
+        p=build_candidate.WRAPPER.find("fn vr_question_guard(");
+        if p<0: raise SystemExit("release wrapper: question guard marker not found")
+        build_candidate.WRAPPER=build_candidate.WRAPPER[:p]+_RELEASE_BINARY_FRAGMENT+"\n"+build_candidate.WRAPPER[p:]
     if "fn vr_release_negation_conflict(" not in build_candidate.WRAPPER:
-        marker="fn vr_question_guard(";pos=build_candidate.WRAPPER.find(marker)
-        if pos<0: raise SystemExit("release wrapper: question guard marker not found")
-        build_candidate.WRAPPER=build_candidate.WRAPPER[:pos]+_RELEASE_NEGATION+"\n"+build_candidate.WRAPPER[pos:]
+        p=build_candidate.WRAPPER.find("fn vr_question_guard(");
+        if p<0: raise SystemExit("release wrapper: question guard marker not found")
+        build_candidate.WRAPPER=build_candidate.WRAPPER[:p]+_RELEASE_NEGATION+"\n"+build_candidate.WRAPPER[p:]
     if "fn vr_release_tail_contamination(" not in build_candidate.WRAPPER:
-        marker="fn vr_question_guard(";pos=build_candidate.WRAPPER.find(marker)
-        if pos<0: raise SystemExit("release wrapper: question guard marker not found")
-        build_candidate.WRAPPER=build_candidate.WRAPPER[:pos]+_RELEASE_TAIL+"\n"+build_candidate.WRAPPER[pos:]
+        p=build_candidate.WRAPPER.find("fn vr_question_guard(");
+        if p<0: raise SystemExit("release wrapper: question guard marker not found")
+        build_candidate.WRAPPER=build_candidate.WRAPPER[:p]+_RELEASE_TAIL+"\n"+build_candidate.WRAPPER[p:]
     build_candidate.WRAPPER=_replace_function(build_candidate.WRAPPER,"fn vr_question_guard(",_RELEASE_GUARD)
     build_candidate.WRAPPER=_replace_function(build_candidate.WRAPPER,"unsafe fn veridex_score(",_RELEASE_SCORE)
     build_candidate.WRAPPER=_replace_function(build_candidate.WRAPPER,"fn vr_safe_pow(score:f32)->f32{",_MONOTONIC_SHARPEN)
