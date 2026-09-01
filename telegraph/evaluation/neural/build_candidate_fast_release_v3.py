@@ -1,195 +1,25 @@
 #!/usr/bin/env python3
-"""Track-2 release builder v3: final-path factual conflict hardening.
+"""Track-2 final release builder: lean live-margin path.
 
-Builds on the robust v2 release builder. Material contradictions, relation
-reversals and unsupported qualifiers are applied directly in veridex_score so
-neural similarity cannot wash out an obvious factual conflict.
+Keep the real MiniLM fast scorer as the primary signal and retain only the
+vetted targeted contradiction/polarity/entity/numeric guards from the base
+release wrapper. Lab-only material caps, tail-contamination penalties, and a
+second rewritten score pipeline are intentionally excluded from the release
+artifact.
 """
 from __future__ import annotations
 
 import build_candidate
 import build_candidate_fast
-import build_candidate_fast_release_v2 as base
-
-
-def _replace_function(src: str, marker: str, replacement: str) -> str:
-    start = src.find(marker)
-    if start < 0:
-        raise RuntimeError(f"v3 patch: function marker not found: {marker}")
-    brace = src.find("{", start)
-    if brace < 0:
-        raise RuntimeError(f"v3 patch: opening brace not found: {marker}")
-    depth = 0
-    quote = None
-    escaped = False
-    i = brace
-    while i < len(src):
-        ch = src[i]
-        if quote is not None:
-            if escaped:
-                escaped = False
-            elif ch == "\\":
-                escaped = True
-            elif ch == quote:
-                quote = None
-        else:
-            if ch == '"':
-                quote = '"'
-            elif ch == "{":
-                depth += 1
-            elif ch == "}":
-                depth -= 1
-                if depth == 0:
-                    return src[:start] + replacement + src[i + 1:]
-        i += 1
-    raise RuntimeError(f"v3 patch: unmatched braces: {marker}")
-
-
-EXPANDED_OPPOSITE = r'''fn vr_opposite(gt:&[u8],ans:&[u8])->bool{
-    const PAIRS:&[(&[u8],&[u8])]=&[
-      (b"fraud",b"safe"),(b"fraudulent",b"legitimate"),(b"scam",b"safe"),
-      (b"malicious",b"benign"),(b"malicious",b"legitimate"),(b"trusted",b"malicious"),
-      (b"dangerous",b"safe"),(b"harmful",b"safe"),(b"unsafe",b"safe"),
-      (b"compromised",b"secure"),(b"phishing",b"legitimate"),
-      (b"genuine",b"counterfeit"),(b"positive",b"negative"),(b"bullish",b"bearish"),
-      (b"increase",b"decrease"),(b"increased",b"decreased"),(b"rise",b"fall"),
-      (b"rose",b"fell"),(b"rising",b"falling"),(b"higher",b"lower"),
-      (b"up",b"down"),(b"gain",b"loss"),(b"gained",b"lost"),
-      (b"approved",b"rejected"),(b"authorized",b"unauthorized"),(b"authorised",b"unauthorised"),
-      (b"confirmed",b"denied"),(b"allowed",b"blocked"),(b"allowed",b"forbidden"),
-      (b"yes",b"no"),(b"true",b"false"),(b"declined",b"increased"),
-      (b"reduced",b"increased"),(b"decreased",b"increased"),
-      (b"lower",b"higher"),(b"down",b"up"),(b"loss",b"gain"),
-      (b"prevented",b"caused"),(b"caused",b"prevented"),
-      (b"succeeded",b"failed"),(b"success",b"failure"),
-      (b"processed",b"received"),(b"received",b"processed"),
-      (b"sent",b"received"),(b"received",b"sent"),
-      (b"blocked",b"allowed"),(b"allowed",b"blocked"),
-      (b"reported",b"denied"),(b"denied",b"reported"),
-      (b"requested",b"approved"),(b"approved",b"requested"),
-      (b"owns",b"uses"),(b"uses",b"owns"),(b"controls",b"owns"),(b"owns",b"controls"),
-      (b"bought",b"sold"),(b"sold",b"bought"),
-    ];
-    for(a,b)in PAIRS{if(vr_has_word(gt,a)&&vr_has_word(ans,b))||(vr_has_word(gt,b)&&vr_has_word(ans,a)){return true;}}
-    match(vr_direction(gt),vr_direction(ans)){(Some(g),Some(a))=>g!=a,_=>false}
-}
-'''
-
-MATERIAL = r'''const VR_MATERIAL_FACTOR:f32=0.04;
-const VR_MATERIAL_CAP:f32=0.20;
-fn vr_material_conflict_factor(q:&[u8],gt:&[u8],ans:&[u8])->f32{
-    let unsupported_entity=(vr_has_word(ans,b"different")&&vr_has_word(ans,b"entity")||vr_has_word(ans,b"another")&&vr_has_word(ans,b"entity"))
-        &&!(vr_has_word(gt,b"different")&&vr_has_word(gt,b"entity")||vr_has_word(gt,b"another")&&vr_has_word(gt,b"entity"));
-    let unsupported_relation=(vr_has_word(ans,b"different")&&(vr_has_word(ans,b"relationship")||vr_has_word(ans,b"relation")))
-        &&!(vr_has_word(gt,b"different")&&(vr_has_word(gt,b"relationship")||vr_has_word(gt,b"relation")));
-    let unsupported_period=(vr_has_word(ans,b"different")&&(vr_has_word(ans,b"period")||vr_has_word(ans,b"time")))
-        &&!(vr_has_word(gt,b"different")&&(vr_has_word(gt,b"period")||vr_has_word(gt,b"time")));
-    let explicit_opposite=vr_has_word(ans,b"opposite")&&(vr_has_word(ans,b"conclusion")||vr_has_word(ans,b"final")||vr_has_word(ans,b"result"))
-        &&!(vr_has_word(gt,b"opposite")&&(vr_has_word(gt,b"conclusion")||vr_has_word(gt,b"final")||vr_has_word(gt,b"result")));
-    let unsupported_unrelated=vr_has_word(ans,b"unrelated")
-        &&(vr_has_word(ans,b"entity")||vr_has_word(ans,b"relationship")||vr_has_word(ans,b"topic")||vr_has_word(ans,b"background"))
-        &&!vr_has_word(gt,b"unrelated");
-    let relation_reverse=(vr_has_word(gt,b"issued")&&vr_has_word(ans,b"received"))
-        ||(vr_has_word(gt,b"received")&&vr_has_word(ans,b"issued"))
-        ||(vr_has_word(gt,b"sent")&&vr_has_word(ans,b"received"))
-        ||(vr_has_word(gt,b"received")&&vr_has_word(ans,b"sent"))
-        ||(vr_has_word(gt,b"processed")&&vr_has_word(ans,b"received"))
-        ||(vr_has_word(gt,b"received")&&vr_has_word(ans,b"processed"))
-        ||(vr_has_word(gt,b"blocked")&&vr_has_word(ans,b"allowed"))
-        ||(vr_has_word(gt,b"allowed")&&vr_has_word(ans,b"blocked"))
-        ||(vr_has_word(gt,b"reported")&&vr_has_word(ans,b"denied"))
-        ||(vr_has_word(gt,b"denied")&&vr_has_word(ans,b"reported"))
-        ||(vr_has_word(gt,b"prevented")&&vr_has_word(ans,b"caused"))
-        ||(vr_has_word(gt,b"caused")&&vr_has_word(ans,b"prevented"))
-        ||(vr_has_word(gt,b"approved")&&vr_has_word(ans,b"rejected"))
-        ||(vr_has_word(gt,b"rejected")&&vr_has_word(ans,b"approved"))
-        ||(vr_has_word(gt,b"approved")&&vr_has_word(ans,b"requested"))
-        ||(vr_has_word(gt,b"requested")&&vr_has_word(ans,b"approved"))
-        ||(vr_has_word(gt,b"owns")&&vr_has_word(ans,b"uses"))
-        ||(vr_has_word(gt,b"uses")&&vr_has_word(ans,b"owns"))
-        ||(vr_has_word(gt,b"controls")&&vr_has_word(ans,b"owns"))
-        ||(vr_has_word(gt,b"owns")&&vr_has_word(ans,b"controls"))
-        ||(vr_has_word(gt,b"bought")&&vr_has_word(ans,b"sold"))
-        ||(vr_has_word(gt,b"sold")&&vr_has_word(ans,b"bought"));
-    let polarity_reverse=(vr_has_word(gt,b"compromised")&&vr_has_word(ans,b"secure"))
-        ||(vr_has_word(gt,b"secure")&&vr_has_word(ans,b"compromised"))
-        ||(vr_has_word(gt,b"trusted")&&vr_has_word(ans,b"malicious"))
-        ||(vr_has_word(gt,b"malicious")&&vr_has_word(ans,b"trusted"))
-        ||(vr_has_word(gt,b"genuine")&&vr_has_word(ans,b"counterfeit"))
-        ||(vr_has_word(gt,b"counterfeit")&&vr_has_word(ans,b"genuine"))
-        ||(vr_has_word(gt,b"succeeded")&&vr_has_word(ans,b"failed"))
-        ||(vr_has_word(gt,b"failed")&&vr_has_word(ans,b"succeeded"))
-        ||(vr_has_word(gt,b"success")&&vr_has_word(ans,b"failure"))
-        ||(vr_has_word(gt,b"failure")&&vr_has_word(ans,b"success"));
-    if unsupported_entity||unsupported_relation||unsupported_period||explicit_opposite||unsupported_unrelated||relation_reverse||polarity_reverse{VR_MATERIAL_FACTOR}else{1.0}
-}
-'''
+import build_candidate_fast_release as base
 
 
 def patch() -> None:
-    base.robust_patch()
-    w = build_candidate.WRAPPER
-    w = _replace_function(w, "fn vr_opposite(", EXPANDED_OPPOSITE)
-    marker = "unsafe fn veridex_score("
-    pos = w.find(marker)
-    if pos < 0:
-        raise RuntimeError("v3 patch: veridex_score marker not found")
-    w = w[:pos] + MATERIAL + "\n" + w[pos:]
-
-    start = w.find(marker)
-    brace = w.find("{", start)
-    depth = 0
-    quote = None
-    escaped = False
-    i = brace
-    end = None
-    while i < len(w):
-        ch = w[i]
-        if quote is not None:
-            if escaped:
-                escaped = False
-            elif ch == "\\":
-                escaped = True
-            elif ch == quote:
-                quote = None
-        else:
-            if ch == '"':
-                quote = '"'
-            elif ch == "{":
-                depth += 1
-            elif ch == "}":
-                depth -= 1
-                if depth == 0:
-                    end = i + 1
-                    break
-        i += 1
-    if end is None:
-        raise RuntimeError("v3 patch: veridex_score closing brace not found")
-
-    score = w[start:end]
-    if "let q=read_str(" not in score or "let qg=vr_question_guard(" not in score:
-        raise RuntimeError("v3 patch: unexpected score implementation")
-
-    needle = "let qg=vr_question_guard(q.as_bytes(),gb,ab);"
-    if needle not in score:
-        raise RuntimeError("v3 patch: question-guard score anchor not found")
-    score = score.replace(
-        needle,
-        needle + "let material=vr_material_conflict_factor(q.as_bytes(),gb,ab);",
-        1,
-    )
-    score = score.replace(
-        "let mut final_score=vr_safe_pow(shaped_base*fg*qg);",
-        "let mut final_score=vr_safe_pow(shaped_base*fg*qg*material);",
-        1,
-    )
-    score = score.replace(
-        "if numeric_mismatch_strict{final_score=final_score.min(0.30);}",
-        "if numeric_mismatch_strict{final_score=final_score.min(0.30);}if material<1.0{final_score=final_score.min(VR_MATERIAL_CAP);}",
-        1,
-    )
-    w = w[:start] + score + w[end:]
-    build_candidate.WRAPPER = w
+    # The base release wrapper already delegates to the original fast scorer
+    # and installs the targeted release guards. Do not layer v2/v3 lab logic
+    # on top of it; that path was correlated with the live-margin regression.
+    base.patch_release_guards()
+    build_candidate.WRAPPER = build_candidate.WRAPPER
 
 
 if __name__ == "__main__":
