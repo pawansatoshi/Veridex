@@ -71,6 +71,7 @@ jobs:
           python3 -m py_compile telegraph/evaluation/lab/track2_release_doctor_v10.py
           python3 -m py_compile telegraph/evaluation/neural/build_candidate_fast_release_v2.py
           python3 -m py_compile telegraph/evaluation/neural/build_candidate_fast_release_v3.py
+          python3 -m py_compile telegraph/evaluation/neural/build_candidate_fast_release_lab.py
           python3 telegraph/evaluation/lab/track2_release_doctor_v10.py \
             --wasm telegraph/evaluation/veridex-track2-final.wasm \
             --fast-limit 128 \
