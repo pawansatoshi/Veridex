@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Standalone Track-2 release doctor v9.
+"""Track-2 release doctor v9: fast candidate tournament, deep winner gate.
 
-Runs a deterministic candidate tournament without the legacy nested doctor
-control flow. Candidate variants are rebuilt from the pinned baseline and
-measured against historical + sampled shadow data. The strongest fast
-candidates are then re-tested on the full generated corpus and authoritative
-Telegraph gates. No benchmark data or evaluator thresholds are modified.
+The doctor searches a small, high-information set of generalized scorer
+variants, not a long serial ladder. Every variant is rebuilt from the pinned
+baseline and scored on a deterministic stratified fast corpus. Only the best
+candidate reaches the one-shot full shadow corpus and authoritative Telegraph
+gates. No benchmark/checker thresholds are modified.
 """
 from __future__ import annotations
 
@@ -16,47 +16,44 @@ import re
 from pathlib import Path
 
 import track2_release_doctor_v3 as d
-import track2_release_doctor_v5 as v5
 
 ROOT = Path(__file__).resolve().parents[3]
 LAB = ROOT / "telegraph/evaluation/lab"
 RELEASE = ROOT / "telegraph/evaluation/neural/build_candidate_fast_release_v3.py"
-FULL = LAB / "shadow_corpus.generated.json"
-FAST = LAB / "shadow_corpus.fast.generated.json"
+FULL_CORPUS = LAB / "shadow_corpus.generated.json"
+FAST_CORPUS = LAB / "shadow_corpus.fast.generated.json"
 WASM_DEFAULT = ROOT / "telegraph/evaluation/veridex-track2-final.wasm"
+SAMPLER = LAB / "sample_shadow_corpus.py"
 
-LADDER = [
-    ("0.035", "0.18", "moderate"),
-    ("0.030", "0.16", "moderate-strong"),
-    ("0.025", "0.14", "strong"),
-    ("0.020", "0.12", "strong-cap"),
-    ("0.017", "0.10", "aggressive"),
-    ("0.015", "0.08", "aggressive-cap"),
-    ("0.012", "0.06", "very-aggressive"),
-    ("0.010", "0.05", "maximum"),
+# Three deliberate points on the factual-conflict strength curve. This is
+# enough to detect whether stronger separation improves ranking without turning
+# each CI run into a 10-candidate serial benchmark.
+CANDIDATES = [
+    ("current", None, None),
+    ("balanced", "0.025", "0.14"),
+    ("strong", "0.015", "0.08"),
 ]
-MAX_DEEP_CANDIDATES = 4
 
 
-def emit(name, data):
+def emit(name: str, data: object) -> None:
     d.EVID.mkdir(parents=True, exist_ok=True)
-    (d.EVID / name).write_text(
-        data if isinstance(data, str) else json.dumps(data, indent=2, ensure_ascii=False),
-        encoding="utf-8",
-    )
+    payload = data if isinstance(data, str) else json.dumps(data, indent=2, ensure_ascii=False)
+    (d.EVID / name).write_text(payload, encoding="utf-8")
 
 
-def set_material(factor, cap):
+def set_material(factor: str | None, cap: str | None) -> None:
     text = RELEASE.read_text(encoding="utf-8")
-    pat = r"const VR_MATERIAL_FACTOR:f32=[0-9.]+;\nconst VR_MATERIAL_CAP:f32=[0-9.]+;"
-    repl = f"const VR_MATERIAL_FACTOR:f32={factor};\nconst VR_MATERIAL_CAP:f32={cap};"
-    new, count = re.subn(pat, repl, text, count=1)
+    if factor is None or cap is None:
+        return
+    pattern = r"const VR_MATERIAL_FACTOR:f32=[0-9.]+;\nconst VR_MATERIAL_CAP:f32=[0-9.]+;"
+    replacement = f"const VR_MATERIAL_FACTOR:f32={factor};\nconst VR_MATERIAL_CAP:f32={cap};"
+    new, count = re.subn(pattern, replacement, text, count=1)
     if count != 1:
         raise RuntimeError("doctor-v9: material constants not found")
     RELEASE.write_text(new, encoding="utf-8")
 
 
-def quality(report):
+def quality(report: dict) -> tuple:
     s = report.get("shadow", {})
     c = report.get("critical", {})
     h = report.get("historical_replay", {})
@@ -71,22 +68,40 @@ def quality(report):
     )
 
 
-def lab_once(wasm, corpus):
+def build_candidate(wasm: Path) -> None:
+    d.build(wasm)
+    d.structural(wasm)
+
+
+def prepare_corpus(rounds: int, fast_limit: int) -> None:
+    d.generate(max(1, min(rounds, 1)))
+    p = d.run([
+        __import__("sys").executable,
+        str(SAMPLER),
+        "--input", str(FULL_CORPUS),
+        "--output", str(FAST_CORPUS),
+        "--limit", str(fast_limit),
+    ], 120, 1)
+    if p.returncode:
+        raise RuntimeError("shadow-sampler: " + (p.stderr.strip() or p.stdout.strip()))
+    d.CORPUS = FAST_CORPUS
+    emit("shadow-sample-summary.json", json.loads(p.stdout) if p.stdout.strip().startswith("{") else {"stdout": p.stdout})
+
+
+def lab_once(wasm: Path, corpus: Path) -> dict:
     d.CORPUS = corpus
     try:
         return d.run_lab(wasm)
     except RuntimeError:
         if d.REPORT.exists():
-            return json.loads(d.REPORT.read_text(encoding="utf-8"))
+            try:
+                return json.loads(d.REPORT.read_text(encoding="utf-8"))
+            except Exception:
+                pass
         raise
 
 
-def build_clean(wasm):
-    d.build(wasm)
-    d.structural(wasm)
-
-
-def authoritative(wasm):
+def authoritative(wasm: Path) -> None:
     d.gate("preflight", ["node", str(d.PRE), str(wasm), str(d.PRIMARY)])
     d.gate("tournament", ["node", str(d.TOUR), str(wasm), str(d.PRIMARY)])
     d.gate("contract-preflight", ["node", str(d.PRE), str(wasm), str(d.CONTRACT)])
@@ -98,96 +113,83 @@ def authoritative(wasm):
     d.checker(wasm, d.PRIMARY, "wazero")
 
 
-def main():
+def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--wasm", type=Path, default=WASM_DEFAULT)
-    ap.add_argument("--fast-limit", type=int, default=128)
-    ap.add_argument("--json", action="store_true")
+    ap.add_argument("--fast-limit", type=int, default=48)
+    ap.add_argument("--rounds", type=int, default=1)
     args = ap.parse_args()
 
     d.RELEASE = RELEASE
-    RELEASE.parent.mkdir(parents=True, exist_ok=True)
     d.EVID.mkdir(parents=True, exist_ok=True)
-
     original_source = RELEASE.read_text(encoding="utf-8")
-    d.generate(1)
-    v5._sample_full(args.fast_limit)
 
-    candidates = [("current", None, None)] + [(label, factor, cap) for factor, cap, label in LADDER]
+    prepare_corpus(args.rounds, args.fast_limit)
+
     history = []
+    best_quality = None
+    winner = None
+    winner_report = None
+    winner_source = original_source
 
-    for label, factor, cap in candidates:
+    for label, factor, cap in CANDIDATES:
+        RELEASE.write_text(original_source, encoding="utf-8")
+        set_material(factor, cap)
         try:
-            RELEASE.write_text(original_source, encoding="utf-8")
-            if factor is not None:
-                set_material(factor, cap)
-            build_clean(args.wasm)
-            report = lab_once(args.wasm, FAST)
-            row = {"label": label, "factor": factor, "cap": cap, "quality": quality(report), "report": report}
+            build_candidate(args.wasm)
+            report = lab_once(args.wasm, FAST_CORPUS)
+            q = quality(report)
+            row = {"label": label, "factor": factor, "cap": cap, "quality": q, "report": report}
             history.append(row)
             emit("doctor-v9-candidate-last.json", row)
+            if best_quality is None or q < best_quality:
+                best_quality = q
+                winner = (label, factor, cap)
+                winner_report = report
+                winner_source = RELEASE.read_text(encoding="utf-8")
+                emit("doctor-v9-best.json", {"label": label, "factor": factor, "cap": cap, "quality": q})
         except Exception as exc:
             row = {"label": label, "factor": factor, "cap": cap, "error": str(exc)}
             history.append(row)
             emit("doctor-v9-candidate-error.json", row)
 
-    successful = [r for r in history if "quality" in r]
-    successful.sort(key=lambda r: tuple(r["quality"]))
-    if not successful:
+    if winner is None or winner_report is None:
         RELEASE.write_text(original_source, encoding="utf-8")
-        raise RuntimeError("doctor-v9: no buildable candidate")
+        raise RuntimeError("doctor-v9: no candidate built and evaluated successfully")
 
-    deep_attempts = []
-    for rank, winner in enumerate(successful[:MAX_DEEP_CANDIDATES], start=1):
-        try:
-            RELEASE.write_text(original_source, encoding="utf-8")
-            if winner.get("factor") is not None:
-                set_material(winner["factor"], winner["cap"])
-            build_clean(args.wasm)
-            d.generate(1)
-            deep = lab_once(args.wasm, FULL)
-            attempt = {
-                "rank": rank,
-                "winner": {k: winner.get(k) for k in ("label", "factor", "cap", "quality")},
-                "deep": deep,
-            }
-            deep_attempts.append(attempt)
-            emit(f"doctor-v9-deep-{rank}.json", attempt)
-            if deep.get("verdict") != "GREEN":
-                continue
+    # Restore exactly the measured winner and rebuild once from source.
+    RELEASE.write_text(winner_source, encoding="utf-8")
+    build_candidate(args.wasm)
 
-            try:
-                authoritative(args.wasm)
-            except Exception as exc:
-                attempt["authoritative_error"] = str(exc)
-                emit(f"doctor-v9-authoritative-{rank}.json", attempt)
-                continue
+    # One mandatory full generated-corpus pass. This is the release-quality
+    # local gate; the fast sample never substitutes for the deep gate.
+    d.generate(1)
+    d.CORPUS = FULL_CORPUS
+    deep = lab_once(args.wasm, FULL_CORPUS)
+    emit("deep-lab-final.json", deep)
+    if deep.get("verdict") != "GREEN":
+        raise RuntimeError("doctor-v9: best fast candidate failed full deep lab")
 
-            sha = hashlib.sha256(args.wasm.read_bytes()).hexdigest()
-            result = {
-                "verdict": "GREEN",
-                "winner": attempt["winner"],
-                "deep": deep,
-                "sha256": sha,
-                "bytes": args.wasm.stat().st_size,
-                "candidate_count": len(history),
-                "deep_candidates_tested": rank,
-                "deep_attempts": deep_attempts,
-            }
-            (ROOT / "telegraph/evaluation/VERIDEX_TRACK2_FINAL_SHA256.txt").write_text(
-                f"{sha}  {args.wasm.name}\nsource commit: {__import__('os').getenv('GITHUB_SHA','local')}\n",
-                encoding="utf-8",
-            )
-            emit("release-doctor-final.json", result)
-            print(json.dumps(result, indent=2, ensure_ascii=False))
-            return 0
-        except Exception as exc:
-            attempt = {"rank": rank, "winner": winner, "error": str(exc)}
-            deep_attempts.append(attempt)
-            emit(f"doctor-v9-deep-error-{rank}.json", attempt)
+    authoritative(args.wasm)
 
-    RELEASE.write_text(original_source, encoding="utf-8")
-    raise RuntimeError("doctor-v9: no fast-ranked candidate survived deep + authoritative verification")
+    sha = hashlib.sha256(args.wasm.read_bytes()).hexdigest()
+    result = {
+        "verdict": "GREEN",
+        "winner": {"label": winner[0], "factor": winner[1], "cap": winner[2]},
+        "fast_quality": best_quality,
+        "fast_report": winner_report,
+        "deep": deep,
+        "sha256": sha,
+        "bytes": args.wasm.stat().st_size,
+        "candidate_history": history,
+    }
+    (ROOT / "telegraph/evaluation/VERIDEX_TRACK2_FINAL_SHA256.txt").write_text(
+        f"{sha}  {args.wasm.name}\nsource commit: {__import__('os').getenv('GITHUB_SHA','local')}\n",
+        encoding="utf-8",
+    )
+    emit("release-doctor-final.json", result)
+    print(json.dumps(result, indent=2, ensure_ascii=False))
+    return 0
 
 
 if __name__ == "__main__":
