@@ -20,6 +20,12 @@
     "evaluate:miner": "node scripts/evaluate-miner.mjs",
     "verify:release-qa": "node scripts/verify-release-qa.mjs"
   },
+  "dependencies": {
+    "@x402/core": "^2.11.0",
+    "@x402/evm": "^2.11.0",
+    "@x402/fetch": "^2.11.0",
+    "viem": "^2.39.0"
+  },
   "devDependencies": {
     "@types/node": "^22.0.0",
     "typescript": "^5.7.0",
