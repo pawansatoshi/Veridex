@@ -1,0 +1,1 @@
+R5 release line is frozen to the historical 14.0 baseline until forensic and differential gates prove a semantic improvement. No blind registrations.
