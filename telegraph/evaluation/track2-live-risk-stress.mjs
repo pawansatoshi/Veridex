@@ -109,9 +109,9 @@ const result = {
   meanMargin,
   p10Margin,
   worstMargin,
-  targetMeanMargin: 0.20,
+  targetMeanMargin: 0.35,
   targetP10Margin: 0.05,
   diagnostics,
 };
 console.log(JSON.stringify(result, null, 2));
-if (inversions > 0 || meanMargin < 0.20 || p10Margin < 0.05) process.exit(2);
+if (inversions > 0 || meanMargin < 0.35 || p10Margin < 0.05) process.exit(2);
