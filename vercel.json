@@ -5,6 +5,7 @@
     { "src": "/health/resilience", "dest": "/api/health-resilience" },
     { "src": "/detect", "dest": "/api/detect" },
     { "src": "/analyze", "dest": "/api/analyze" },
+    { "src": "/track3", "dest": "/api/track3" },
     { "src": "/metrics", "dest": "/api/metrics" }
   ],
   "headers": [
