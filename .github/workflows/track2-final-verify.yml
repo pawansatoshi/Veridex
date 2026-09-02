@@ -73,7 +73,7 @@ jobs:
           RUSTFLAGS: -Aunsafe-op-in-unsafe-fn
         run: |
           set -euo pipefail
-          python3 telegraph/evaluation/neural/build_candidate_fast_release.py \
+          python3 telegraph/evaluation/neural/build_candidate_r5.py \
             --out telegraph/evaluation/veridex-track2-final.wasm
 
       - name: Structural validation for both artifacts
@@ -164,7 +164,7 @@ jobs:
           {
             echo "golden 14.0 source commit: 76486fa01a54b7d03c173dedf7a34852e2c38b57"
             echo "source baseline commit: dfa0cf7fda72789267811ba2190f61a8eaacedf6"
-            echo "final build: 14.0-derived neural-hybrid + question-aware four-signal composite + high-confidence contradiction caps + 14.0 calibration"
+            echo "final build: R5 question-aware four-signal composite + high-confidence contradiction caps + 14.0 calibration"
             echo "checker commit: f537c7c085e9d3366c5615fe1ad1f98a0abeff7c"
             echo "target mean margin: 0.35"
             echo "source commit: $GITHUB_SHA"
