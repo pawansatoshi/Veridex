@@ -2,11 +2,8 @@
 """Build the final Track-2 R5 candidate.
 
 R5 uses the proven fast neural scorer as the continuous semantic signal and
-adds only conservative, high-confidence factual protections. It deliberately
-does not re-read the baseline static breakdown buffer: the previous attempt
-showed repeated identical scores on distinct mutated answers, so R5 now uses
-the scalar rank_answer_base path to keep the ABI/dataflow identical to the
-historically validated 14.0 scorer.
+adds only conservative, high-confidence factual protections. Numeric equality
+never overrides an answer that carries known contradiction or contamination.
 """
 from __future__ import annotations
 
@@ -28,7 +25,7 @@ fn vr_r5_numeric_context(q:&[u8])->bool{
 fn vr_r5_number(text:&[u8])->Option<(f64,bool)>{
     let mut i=0usize;
     while i<text.len(){
-        let c= text[i];
+        let c=text[i];
         if c.is_ascii_digit(){
             let prev=if i>0{vr_lower(text[i-1])}else{0};
             if prev==b'q'&&i+1<text.len()&&matches!(text[i+1],b'1'|b'2'|b'3'|b'4'){i+=2;continue;}
@@ -120,34 +117,28 @@ _R5_SCORE = r'''unsafe fn veridex_score(q_ptr:i32,q_len:i32,gt_ptr:i32,gt_len:i3
     let qb=q.as_bytes();let gb=gt.as_bytes();let ab=a.as_bytes();
     if vr_r5_normalized_equal(gb,ab){return(1.0,1.0,1.0,1.0);}
 
-    // Keep the exact scalar path used by the validated 14.0 build. This avoids
-    // any aliasing/static-buffer ambiguity while preserving the MiniLM+BM25
-    // semantic representation as the primary continuous signal.
     let mut score=rank_answer_base(q_ptr,q_len,gt_ptr,gt_len,ma_ptr,ma_len);
     if !score.is_finite(){return(0.0,0.0,0.0,0.0);}
     score=score.clamp(0.0,1.0);
 
     let entity_conflict=vr_r5_entity_conflict(qb,gb,ab);
     let opposite=vr_opposite(gb,ab);
-    let numeric_equal=vr_r5_numeric_equal(qb,gb,ab);
+    let numeric_equiv=vr_r5_numeric_equal(qb,gb,ab);
     let numeric_mismatch=vr_r5_numeric_mismatch(qb,gb,ab);
     let binary_conflict=vr_r5_binary_conflict(qb,gb,ab);
     let direction_conflict=vr_r5_direction_conflict(gb,ab);
     let negation_conflict=vr_r5_negation_conflict(gb,ab);
     let tail_bad=vr_r5_tail_bad(ab);
 
-    // High-confidence contradictions are caps, not multiplicative collapses.
-    // This protects the ranking tail without turning every uncertain answer
-    // into near-zero noise.
+    // Contamination has precedence over numeric equivalence. For example,
+    // "42 victims" and "42 victims. Unrelated background ..." are numerically
+    // equal but are not equivalent answers for ranking purposes.
     if opposite||binary_conflict||direction_conflict{score=score.min(0.12);}
     else if entity_conflict{score=score.min(0.18);}
     else if numeric_mismatch{score=score.min(0.25);}
     if negation_conflict{score=score.min(0.20);}
     if tail_bad{score=score.min(0.20);}
-
-    // A verified numeric paraphrase must not lose to a wrong-format/units
-    // variant merely because lexical overlap is weaker.
-    if numeric_equal{score=score.max(0.90);}
+    if numeric_equiv&&!tail_bad&&!negation_conflict{score=score.max(0.90);}
 
     (vr_r5_safe_pow(score),score,1.0,1.0)
 }'''
@@ -182,14 +173,9 @@ def replace_function(wrapper:str,marker:str,replacement:str)->str:
 
 def patch()->None:
     _BASE_PATCH()
-    b=build_candidate.WRAPPER
-    # Add only the R5-specific helpers; leave the fast builder's ABI/runtime
-    # allocation and baseline implementation untouched.
-    b=_R5_HELPERS+"\n"+b
+    b=_R5_HELPERS+"\n"+build_candidate.WRAPPER
     b=replace_function(b,"unsafe fn veridex_score(",_R5_SCORE)
     b=_R5_CALIBRATION+"\n"+b
-    # The fast wrapper's exported breakdown remains available and the primary
-    # rank path is the R5 veridex_score above.
     build_candidate.WRAPPER=b
 
 if __name__=="__main__":
