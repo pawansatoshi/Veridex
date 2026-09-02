@@ -33,7 +33,7 @@ permissions:
 
 concurrency:
   group: track2-final-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   build-verify-publish:
@@ -164,7 +164,7 @@ jobs:
           {
             echo "golden 14.0 source commit: 76486fa01a54b7d03c173dedf7a34852e2c38b57"
             echo "source baseline commit: dfa0cf7fda72789267811ba2190f61a8eaacedf6"
-            echo "final build: R5 question-aware four-signal composite + high-confidence contradiction caps + 14.0 calibration"
+            echo "final build: R5 scalar 14.0 semantic baseline + high-confidence contradiction caps + robust numeric/entity/direction checks"
             echo "checker commit: f537c7c085e9d3366c5615fe1ad1f98a0abeff7c"
             echo "target mean margin: 0.35"
             echo "source commit: $GITHUB_SHA"
@@ -183,5 +183,3 @@ jobs:
             telegraph/evaluation/VERIDEX_TRACK2_GOLDEN14_SHA256.txt
             telegraph/evaluation/track2-expanded-benchmark.json
             telegraph/evaluation/ci-evidence/
-
-# Operational retrigger only; release source and gates are unchanged.
