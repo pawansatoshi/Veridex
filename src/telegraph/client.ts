@@ -83,9 +83,10 @@ export function loadTelegraphClientOptions(): TelegraphClientOptions {
     .map((item) => item.trim())
     .filter(Boolean);
 
+  const privateKey = process.env.TELEGRAPH_EVM_PRIVATE_KEY;
   return {
     engineUrl: envUrl("TELEGRAPH_ENGINE_URL", DEFAULT_ENGINE_URL),
-    privateKey: process.env.TELEGRAPH_EVM_PRIVATE_KEY,
+    ...(privateKey ? { privateKey } : {}),
     maxPaymentUsdc: envNumber("TELEGRAPH_MAX_PAYMENT_USDC", DEFAULT_MAX_PAYMENT_USDC, 0, 1),
     allowedNetworks: configuredNetworks,
     timeoutMs: envNumber("TELEGRAPH_TIMEOUT_MS", DEFAULT_TIMEOUT_MS, 2_000, 60_000),
@@ -179,15 +180,7 @@ export async function askTelegraph(
         throw new Error(`Telegraph Engine returned HTTP ${initial.status}${detail ? `: ${detail}` : ""}`);
       }
       const response = (await initial.json()) as TelegraphAskResponse;
-      return {
-        response,
-        metadata: {
-          requestId,
-          payment: "not_required",
-          statusCode: initial.status,
-          elapsedMs: Date.now() - started,
-        },
-      };
+      return { response, metadata: { requestId, payment: "not_required", statusCode: initial.status, elapsedMs: Date.now() - started } };
     }
 
     const paymentRequirement = readPaymentRequirement(initial, options.maxPaymentUsdc, options.allowedNetworks);
@@ -215,15 +208,16 @@ export async function askTelegraph(
       }
 
       const response = (await paidResponse.json()) as TelegraphAskResponse;
-      const proof = decodeHeaderValue(paidResponse.headers.get("PAYMENT-RESPONSE")) as TelegraphPaymentProof | undefined;
+      const proofValue = decodeHeaderValue(paidResponse.headers.get("PAYMENT-RESPONSE"));
+      const paymentProof = proofValue && typeof proofValue === "object" ? proofValue as TelegraphPaymentProof : undefined;
       return {
         response,
         metadata: {
           requestId,
-          payment: proof?.success === true ? "settled" : "required",
+          payment: paymentProof?.success === true ? "settled" : "required",
           paymentNetwork: paymentRequirement.network,
           paymentAmountAtomic: paymentRequirement.amountAtomic,
-          paymentProof: proof,
+          ...(paymentProof ? { paymentProof } : {}),
           statusCode: paidResponse.status,
           elapsedMs: Date.now() - started,
         },
