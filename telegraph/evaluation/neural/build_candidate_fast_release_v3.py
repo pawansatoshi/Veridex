@@ -91,16 +91,28 @@ pub unsafe extern "C" fn rank_answer(q_ptr:i32,q_len:i32,gt_ptr:i32,gt_len:i32,m
     if score<=0.0{return 0.0;}
     let gt=read_str(gt_ptr,gt_len);
     let answer=read_str(ma_ptr,ma_len);
-    if vr_release_tail_contamination(gt.as_bytes())||vr_release_tail_contamination(answer.as_bytes()){
-        score.min(0.20)
-    }else{score}
+    let gt_tail=vr_release_tail_contamination(gt.as_bytes());
+    let answer_tail=vr_release_tail_contamination(answer.as_bytes());
+    let direct_predicate_conflict=if gt_tail||answer_tail{
+        false
+    }else if vr_has_word(gt.as_bytes(),b"not")||vr_has_word(gt.as_bytes(),b"never")||vr_has_word(answer.as_bytes(),b"not")||vr_has_word(answer.as_bytes(),b"never"){
+        false
+    }else{
+        match(vr_release_predicate_polarity(gt.as_bytes()),vr_release_predicate_polarity(answer.as_bytes())){
+            (Some(g),Some(a))=>g!=a,
+            _=>false
+        }
+    };
+    if gt_tail||answer_tail{score.min(0.20)}
+    else if direct_predicate_conflict{score.min(0.15)}
+    else{score}
 }'''
 
 
 def patch() -> None:
     # Keep the authoritative release guard stack from build_candidate_fast_release.
-    # Then enforce the live-risk tail-integrity rule directly at the exported
-    # scoring boundary. This avoids relying on any intermediate shaping path.
+    # Then enforce the live-risk tail-integrity and generalized predicate rules
+    # directly at the exported scoring boundary.
     base.patch_release_guards()
     w = build_candidate.WRAPPER
     if "fn vr_release_tail_contamination(" not in w:
@@ -110,8 +122,8 @@ def patch() -> None:
         w = w[:p] + _RELEASE_TAIL + "\n" + w[p:]
     w = _replace_function(w, "fn vr_question_guard(", _RELEASE_GUARD)
     w = _replace_function(w, "pub unsafe extern \"C\" fn rank_answer(", _RANK_ANSWER)
-    if "vr_release_tail_contamination(answer.as_bytes())" not in w:
-        raise RuntimeError("v3 patch: exported rank_answer integrity guard was not wired")
+    if "direct_predicate_conflict" not in w:
+        raise RuntimeError("v3 patch: exported predicate guard was not wired")
     build_candidate.WRAPPER = w
 
 
