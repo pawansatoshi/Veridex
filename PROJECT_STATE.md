@@ -2,133 +2,117 @@
 
 **Repository:** `pawansatoshi/Veridex`  
 **Branch:** `main`  
-**State reviewed:** 29 Aug 2026  
-**Current phase:** H1 OPERATIONAL / TELEGRAPH TRACK 2 HARDENING
+**State reviewed:** 2 Sep 2026  
+**Current phase:** TELEGRAPH TRACK 3 APPLICATION HARDENING / RELEASE VERIFICATION
 
 ## Current reality
 
-The deterministic EVM analysis core, proxy-aware composition, Capability Passport domain layer, Continuous Watch domain layer, evaluation harness, production Miner endpoint, Telegraph YAML/registration, dedicated product surfaces, progressive Evidence Explorer, evidence-backed spatial visualization and Telegraph Track 1/2/3 presentation surfaces are implemented.
+The deterministic EVM analysis core, proxy-aware composition, Capability Passport, Continuous Watch domain layer, evaluation harness, production Miner endpoint, Telegraph YAML/registration, dedicated product surfaces, progressive Evidence Explorer, spatial evidence visualization, and Telegraph Track 1/2/3 presentation surfaces are implemented.
 
-Track 1 Miner registration is live. Track 2 candidate WASM registration was attempted, but the first candidate failed Telegraph structural validation because its self-match score did not beat an unrelated cross-match. That failure is now treated as a real blocker rather than a documentation claim.
+Track 3 now has a production application path at `/telegraph/application/` with a dedicated `POST /track3` orchestration endpoint. The endpoint combines the existing deterministic analysis with a server-side Telegraph Engine/x402 secondary intelligence request, normalizes the response, preserves conflict/inconclusive states and returns a versioned machine-readable result.
 
-## Track 2 incident and remediation
+## Track 3 implementation status
 
-**Observed failure:** Telegraph rejected registration `#1766` during submission with:
+**Status: IMPLEMENTED / CI-HARDENED / EXTERNAL PAYMENT CONFIGURATION PENDING.**
 
-`structural validation failed: self-match (0.0000) did not beat unrelated cross-match (0.0000)`
+Implemented:
 
-This proves the previously supplied candidate artifact was not acceptable for Track 2, even though it passed the upload/hash/on-chain registration UI.
+- `src/telegraph/client.ts` — server-side Telegraph `/v1/ask` client with x402 retry path, network allowlist, per-request payment cap and timeout.
+- `src/application/track3.ts` — deterministic + Telegraph orchestration, bounded review parsing, provenance, conflict handling and explicit decision states.
+- `api/track3.ts` — POST-only public endpoint, origin guard, lightweight per-IP rate limiting and secret-safe structured logs.
+- `telegraph/application/index.html` — production UI with live workflow, Telegraph provenance/payment state, evidence separation and machine-result copy action.
+- `tests/unit/track3.test.ts` — parser, conflict and failure-semantics regression coverage.
+- `vercel.json` — `/track3` route.
+- `.github/workflows/ci.yml` — explicit Track 3 regression gate alongside existing H1/Phase 02/03/04 gates.
+- `docs/TRACK-3-APPLICATION.md` — application contract and production boundaries.
+- `docs/TRACK-3-RUNBOOK.md` — release, x402, smoke-test, troubleshooting and rollback procedure.
 
-**Root cause:** the previous evaluator did not provide sufficient behavioral discrimination for the platform's self-match structural gate.
+## Release verification incident and fix
 
-**Remediation:** added `telegraph/evaluation/veridex_evaluator.c` and `telegraph/evaluation/BUILD.md`. The replacement evaluator is deterministic, ground-truth anchored, exports the required ABI, returns `0` for empty inputs, returns `1` for normalized exact matches, filters common stopwords for overlap, and otherwise scores bounded token overlap/length similarity. A locally instantiated WASM build was verified to export `memory`, `alloc`, `dealloc`, `rank_answer`, and `breakdown_answer`, with self-match `1.0`, unrelated example `0.0`, paraphrase-like overlap `0.2819`, and empty input `0.0`.
+The first Track 3 CI run on commit `617b268132ad2610f4587655c4bfa94fd0e44cfd` exposed two pre-release issues:
 
-**Release artifact:** `veridex-evaluator-v2.wasm` was built from the new source. SHA-256: `4ae038a9e5ee99036f3bef4efc5be7529e72db17ff051a9f5b10a368deb1b285`.
+1. strict TypeScript `exactOptionalPropertyTypes` failures in the new Telegraph client/orchestration code;
+2. an existing Phase 05D regression: `tests/ui/phase05d.test.ts` expected `/assets/veridex-spatial.css`, but `evidence/index.html` did not link the stylesheet even though the spatial controller and stylesheet existed.
 
-**Important:** Telegraph WASM registrations are immutable. Registration `#1766` must not be submitted as a valid Track 2 candidate. A fresh registration is required for the replacement artifact.
+Both were fixed in subsequent commits. The CI logs showed the Track 3 regression suite itself passing `7/7` tests before the overall gate failed on the unrelated Phase 05D UI test. The Phase 05D page integration was restored by adding the shared spatial stylesheet link rather than weakening the regression test.
 
-## Phase 01 — EVM Analysis Core
+## Current CI evidence
 
-**Status: COMPLETE / historical H1 runtime evidence verified.**
+For commit `617b268...`, GitHub Actions verified successfully before the final enforcement step:
 
-## Phase 02 — Proxy-Aware Composition
+- dependency install
+- npm audit: 0 vulnerabilities
+- Track 3 tests: 7/7 passed
+- proxy tests: passed
+- Passport tests: passed
+- Watch tests: passed
+- live Miner health: passed
+- Telegraph YAML validation: passed
+- live Telegraph integration verification: passed
+- resilience recovery: passed
+- real-chain ground truth: 3/3 cases, 12/12 observations, accuracy 1.0
+- deterministic quality evaluation: passed, quality score 1.0
+- production benchmark: completed
+- production schema: completed
 
-**Status: COMPLETE / historical CI gate verified.**
+The final enforcement step failed only because the full unit suite caught the Phase 05D stylesheet-link regression plus the earlier strict typecheck/build failures. A new CI run is required after the fixes; repository state must not be called GREEN until that run finishes successfully.
 
-## Phase 03 — Capability Passport
+## Telegraph configuration boundary
 
-**Status: COMPLETE / historical CI gate verified.**
+Production Track 3 needs a currently verified, externally reachable Telegraph Engine base URL and a server-side EVM burner key when x402 payment is required.
 
-## Phase 04 — Continuous Watch
+Required Vercel production variables:
 
-**Status: IMPLEMENTED / historical CI gate verified.**
+- `TELEGRAPH_ENGINE_URL`
+- `TELEGRAPH_EVM_PRIVATE_KEY`
+- optional safety/config variables documented in `docs/TRACK-3-RUNBOOK.md`
 
-A durable scheduler and production `WatchStore` are intentionally not claimed as deployed functionality.
+Do not commit or expose the private key. The current Telegraph docs distinguish node public API port `7044` from the Engine subprocess port `8080`; a Vercel serverless function must use an externally reachable Engine route, not an internal-only service address. citeturn618968search0turn618968search1turn618968search2
 
-## Phase 05 — UX / Information Architecture Overhaul
-
-**Status: COMPLETE — 05A through 05E implemented.**
-
-The landing page, Analyze, Evidence, Passport, Watch, Telegraph and Docs surfaces are separated and the evidence explorer/spatial layer is presentation-only.
-
-## Phase 06 — Telegraph Track Surfaces
-
-**Status: COMPLETE — 06A through 06H implemented at the presentation/documentation layer.**
-
-### 06A — Telegraph hub
-
-`/telegraph/` is now a focused hub for the three H1 tracks with clear routing and a separate product-layer explanation for Passport and Watch.
-
-### 06B — Track 1 Miner
-
-`/telegraph/miner/` documents Miner `1001`, registration `#144`, `FRAUD_DETECTION`, the deterministic pipeline, evidence hierarchy, failure semantics and machine-readable contract.
-
-### 06C — Track 2 Evaluation
-
-`/telegraph/evaluation/` documents the ground-truth/evaluation workflow. The scorer implementation is now also checked into `telegraph/evaluation/veridex_evaluator.c` with a reproducible build contract.
-
-### 06D — Track 3 Application
-
-`/telegraph/application/` documents the real application-to-Miner flow and routes users to the live analyzer/evidence surfaces.
-
-### 06E — Passport integration
-
-Passport remains a first-class product surface and is explicitly not mislabeled as a Telegraph track.
-
-### 06F — Watch integration
-
-Watch remains a longitudinal product surface with current manual/browser-local boundaries preserved.
-
-### 06G — Navigation/mobile consistency
-
-Track pages use compact navigation, responsive layouts and reduced-motion support.
-
-### 06H — Judge journey
-
-The intended journey is Home → Analyze → Evidence, with Telegraph → Miner/Evaluation/Application and Passport/Watch as deeper product surfaces.
-
-## Current Telegraph registration
+## Track 1 status
 
 - Miner ID: `1001`
 - Slug: `veridex-contract-risk-miner`
 - Registration: `#144`
-- Intent: `FRAUD_DETECTION`
+- Intent historically registered: `FRAUD_DETECTION`
 - Network: Base Sepolia
 - Production endpoint: `https://veridex-ecru.vercel.app`
 
-## Track 2 registration status
+Fresh registry status must still be checked before making a current official-status claim.
 
-- Previous candidate registration: `#1766`
-- Intent: `FRAUD_DETECTION`
-- Status: **REJECTED AT SUBMISSION STRUCTURAL VALIDATION**
-- Replacement artifact: `veridex-evaluator-v2.wasm`
-- Replacement artifact SHA-256: `4ae038a9e5ee99036f3bef4efc5be7529e72db17ff051a9f5b10a368deb1b285`
-- Fresh registration: **PENDING**
+## Track 2 status
 
-## Current blocking gate
+Track 2 remains independent of Track 3. The hidden-score experiments and repeated weak hidden results are not used as a dependency for the application.
 
-The main verification lane requires audit, typecheck, build, unit tests, proxy/passport/watch tests, production health, YAML validation, live Telegraph integration, resilience recovery, real-chain ground truth, deterministic evaluation, production benchmark and production response-schema checks.
+- replacement scorer is locally built/verified;
+- previous registrations that failed hidden/structural acceptance remain rejected;
+- no Track 3 code imports the Track 2 WASM/scorer.
 
-**Current-main status:** not independently observed GREEN through the available connector. Do not convert repository presence into runtime proof.
+## Track 3 adoption plan
 
-## H1 status
+The application is designed for genuine adoption evidence:
 
-**Product/Miner implementation: submission-ready.**  
-**UX implementation: complete.**  
-**Track 1: registered/live; operational status must be freshly verified.**  
-**Track 2: replacement scorer built and locally verified; fresh on-chain registration/submission still required.**  
-**Track 3: presentation/application surface implemented; Track 3 opens after Track 1/2 close.**
+1. share the public production URL in the Telegraph community and on X;
+2. have real users run meaningful contract reviews;
+3. preserve result screenshots/request IDs and payment proof where appropriate;
+4. demonstrate an end-to-end decision flow rather than meaningless request volume.
+
+Do not manufacture users, traffic, transactions, rankings or performance claims.
+
+## H1 / Track 3 operating rule
+
+Track 3 is judged on useful production demand and application quality. The app must remain live and make real Telegraph requests where advertised. A provider outage must remain an explicit unavailable/inconclusive state, never a negative security result.
 
 ## Next milestones
 
-1. register the replacement Track 2 WASM artifact
-2. wait for registry indexing and verify the new registration appears under the connected wallet
-3. submit the new registration ID with the exact same replacement WASM bytes
-4. verify Track 2 submission acceptance, not merely on-chain registration
-5. freeze the Track 1/H1 evidence package
-6. keep the production Miner stable through the operational window
-7. only then resume post-H1 WatchStore, alerts, agents/SDK/MCP and broader product expansion
+1. finish the first post-fix all-gates CI run and require GREEN;
+2. confirm the latest Vercel production deployment is `READY` and serves the updated Track 3 UI;
+3. verify the live `TELEGRAPH_ENGINE_URL` from the current Telegraph environment before production paid smoke testing;
+4. configure a small-funded burner key in Vercel Production only;
+5. run one paid real-user-style smoke test and capture provider/intent/payment/result evidence;
+6. begin genuine community onboarding and adoption capture;
+7. only then consider optional Track 3 stretch work such as multi-intent modes, richer reports, MCP/agent wrappers or durable watch infrastructure.
 
 ## Evidence policy
 
-Repository presence is not runtime proof. Never claim official Telegraph ranking, fabricated traffic/demand, fabricated benchmark numbers, current-commit CI GREEN, or live registry alignment without fresh evidence.
+Repository presence is not runtime proof. Never claim official Telegraph ranking, fabricated traffic/demand, current-commit CI GREEN, successful x402 settlement, or current registry alignment without fresh evidence.
