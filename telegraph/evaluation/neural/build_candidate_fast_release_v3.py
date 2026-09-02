@@ -2,10 +2,9 @@
 """Track-2 final release builder: lean factual-integrity path.
 
 Keep the real MiniLM fast scorer as the primary signal and retain the vetted
-release contradiction/polarity/entity/numeric guards. Add the small release
-integrity guard that rejects explicit trailing negation or unrelated-tail
-contamination before monotonic shaping. Lab-only material caps and a second
-rewritten score pipeline remain excluded from the release artifact.
+release contradiction/polarity/entity/numeric guards. Add a small release
+integrity guard at the exported scoring boundary so explicit trailing negation
+and unrelated-tail contamination cannot be hidden by neural similarity.
 """
 from __future__ import annotations
 
@@ -86,10 +85,22 @@ _RELEASE_GUARD = r'''fn vr_question_guard(q:&[u8],gt:&[u8],ans:&[u8])->f32{
 }'''
 
 
+_RANK_ANSWER = r'''#[no_mangle]
+pub unsafe extern "C" fn rank_answer(q_ptr:i32,q_len:i32,gt_ptr:i32,gt_len:i32,ma_ptr:i32,ma_len:i32)->f32{
+    let score=veridex_score(q_ptr,q_len,gt_ptr,gt_len,ma_ptr,ma_len).0;
+    if score<=0.0{return 0.0;}
+    let gt=read_str(gt_ptr,gt_len);
+    let answer=read_str(ma_ptr,ma_len);
+    if vr_release_tail_contamination(gt.as_bytes())||vr_release_tail_contamination(answer.as_bytes()){
+        score.min(0.20)
+    }else{score}
+}'''
+
+
 def patch() -> None:
-    # Keep the proven release guard stack from build_candidate_fast_release.
-    # The only extra release-path hardening here is the bounded tail-integrity
-    # check required by the live-risk stress suite.
+    # Keep the authoritative release guard stack from build_candidate_fast_release.
+    # Then enforce the live-risk tail-integrity rule directly at the exported
+    # scoring boundary. This avoids relying on any intermediate shaping path.
     base.patch_release_guards()
     w = build_candidate.WRAPPER
     if "fn vr_release_tail_contamination(" not in w:
@@ -98,6 +109,9 @@ def patch() -> None:
             raise RuntimeError("v3 patch: question guard marker not found")
         w = w[:p] + _RELEASE_TAIL + "\n" + w[p:]
     w = _replace_function(w, "fn vr_question_guard(", _RELEASE_GUARD)
+    w = _replace_function(w, "pub unsafe extern \"C\" fn rank_answer(", _RANK_ANSWER)
+    if "vr_release_tail_contamination(answer.as_bytes())" not in w:
+        raise RuntimeError("v3 patch: exported rank_answer integrity guard was not wired")
     build_candidate.WRAPPER = w
 
 
