@@ -92,14 +92,8 @@ pub unsafe extern "C" fn breakdown_answer(q_ptr:i32,q_len:i32,gt_ptr:i32,gt_len:
 
 
 def patch() -> None:
-    # Start from the already-vetted v3 release path, including the explicit
-    # trailing-negation/unrelated-tail guard and generalized predicate rule.
     v3.patch()
 
-    # Keep rank_answer and breakdown_answer semantically identical at the
-    # exported boundary. The tournament treats breakdown[4] as an invariant
-    # copy of rank_answer, so both exports must apply the same integrity and
-    # predicate caps.
     build_candidate.WRAPPER = _replace_function(
         build_candidate.WRAPPER,
         'pub unsafe extern "C" fn rank_answer(',
@@ -111,15 +105,20 @@ def patch() -> None:
         _SYNC_BREAKDOWN,
     )
 
-    # Critical ordering fix: the fast scorer's numeric-equivalence shortcut
-    # previously lifted an answer to >=0.95 even when vr_question_guard had
-    # correctly detected a mutation. Only allow the lift when the guard is
-    # effectively clean.
     marker = "if safe_numeric_equiv{let lifted=vr_safe_pow(base.max(0.95));return(lifted,base,1.0,qg);}"
     replacement = "if safe_numeric_equiv && qg >= 0.999{let lifted=vr_safe_pow(base.max(0.95));return(lifted,base,1.0,qg);}"
     if marker not in build_candidate.WRAPPER:
         raise RuntimeError("v4 patch: numeric-equivalence lift marker not found")
     build_candidate.WRAPPER = build_candidate.WRAPPER.replace(marker, replacement, 1)
+
+    # Generalize numeric mismatch detection beyond monetary/rate questions.
+    # This covers ordinary count/date/time facts such as victims affected and
+    # incident dates without changing the scoring rule itself.
+    old_context = 'fn vr_numeric_context(q:&[u8])->bool{const TERMS:&[&[u8]]=&[b"amount",b"value",b"loss",b"profit",b"revenue",b"cost",b"price",b"fee",b"number",b"total",b"volume",b"rate",b"percentage",b"percent",b"worth",b"valuation",b"supply",b"balance",b"quantity"];vr_has_any(q,TERMS)}'
+    new_context = 'fn vr_numeric_context(q:&[u8])->bool{const TERMS:&[&[u8]]=&[b"amount",b"value",b"loss",b"profit",b"revenue",b"cost",b"price",b"fee",b"number",b"total",b"volume",b"rate",b"percentage",b"percent",b"worth",b"valuation",b"supply",b"balance",b"quantity",b"count",b"victims",b"users",b"accounts",b"incidents",b"transactions",b"cases",b"people",b"items",b"date",b"year",b"month",b"day",b"time",b"when"];vr_has_any(q,TERMS)}'
+    if old_context not in build_candidate.WRAPPER:
+        raise RuntimeError("v4 patch: numeric-context marker not found")
+    build_candidate.WRAPPER = build_candidate.WRAPPER.replace(old_context, new_context, 1)
 
 
 if __name__ == "__main__":
