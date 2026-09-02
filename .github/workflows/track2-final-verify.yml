@@ -49,36 +49,53 @@ jobs:
       - name: Install system tools
         run: |
           set -euo pipefail
-          # Hosted runners can contain an unrelated third-party Chrome APT source
-          # whose mirror may be mid-sync. It is not required by this pipeline;
-          # remove it so the release install depends only on Ubuntu repositories.
+          # The pipeline does not need third-party Chrome repositories. Removing
+          # them makes APT deterministic on hosted runners during mirror syncs.
           sudo find /etc/apt/sources.list.d -maxdepth 1 -type f \( -iname '*google*' -o -iname '*chrome*' \) -delete || true
           sudo apt-get update -o Acquire::Retries=3
           sudo apt-get install -y wabt golang-go python3 clang lld
 
-      - name: Install Rust target
+      - name: Install pinned Rust toolchain
         run: |
-          rustup toolchain install stable --profile minimal
-          rustup default stable
+          set -euo pipefail
+          rustup toolchain install 1.98.0 --profile minimal
+          rustup default 1.98.0
           rustup target add wasm32-unknown-unknown
+          rustc --version
 
       - name: Prepare evidence directory
         run: mkdir -p telegraph/evaluation/ci-evidence
 
-      - name: Build exact 14.0 golden reference
+      - name: Build and cryptographically verify exact 14.0 golden
         env:
           RUSTFLAGS: -Aunsafe-op-in-unsafe-fn
+          RUSTUP_TOOLCHAIN: 1.98.0
         run: |
           set -euo pipefail
-          python3 telegraph/evaluation/neural/build_candidate_fast.py \
-            --out telegraph/evaluation/veridex-track2-golden14.wasm
+          rm -rf /tmp/veridex-golden14
+          git worktree add --detach /tmp/veridex-golden14 76486fa01a54b7d03c173dedf7a34852e2c38b57
+          python3 /tmp/veridex-golden14/telegraph/evaluation/neural/build_candidate_fast.py \
+            --out "$GITHUB_WORKSPACE/telegraph/evaluation/veridex-track2-golden14.wasm"
+          GOLDEN_SHA=$(sha256sum telegraph/evaluation/veridex-track2-golden14.wasm | awk '{print $1}')
+          GOLDEN_SIZE=$(stat -c%s telegraph/evaluation/veridex-track2-golden14.wasm)
+          test "$GOLDEN_SHA" = fd797ad1ef60d1e48d79e612d8b4c53108e87f7155de81a8a2f62833ff9d4544
+          test "$GOLDEN_SIZE" -eq 24194832
+          {
+            echo "sha256=$GOLDEN_SHA"
+            echo "size=$GOLDEN_SIZE"
+            echo "source_commit=76486fa01a54b7d03c173dedf7a34852e2c38b57"
+            echo "expected_sha256=fd797ad1ef60d1e48d79e612d8b4c53108e87f7155de81a8a2f62833ff9d4544"
+            echo "expected_size=24194832"
+          } | tee telegraph/evaluation/ci-evidence/golden14-proof.txt
+          git worktree remove --force /tmp/veridex-golden14
 
-      - name: Build final R5 candidate
+      - name: Build final R5 candidate from isolated release builder
         env:
           RUSTFLAGS: -Aunsafe-op-in-unsafe-fn
+          RUSTUP_TOOLCHAIN: 1.98.0
         run: |
           set -euo pipefail
-          python3 telegraph/evaluation/neural/build_candidate_r5.py \
+          python3 telegraph/evaluation/neural/build_candidate_track2_final.py \
             --out telegraph/evaluation/veridex-track2-final.wasm
 
       - name: Structural validation for both artifacts
@@ -103,7 +120,7 @@ jobs:
             telegraph/evaluation/track2-expanded-benchmark.json \
             | tee telegraph/evaluation/ci-evidence/expanded-corpus.json
 
-      - name: Compare final candidate against 14.0 golden
+      - name: Compare final candidate against exact 14.0 golden
         run: |
           set -euo pipefail
           node telegraph/evaluation/track2-golden-differential.mjs \
@@ -168,8 +185,10 @@ jobs:
           sha256sum telegraph/evaluation/veridex-track2-final.wasm | tee telegraph/evaluation/VERIDEX_TRACK2_FINAL_SHA256.txt
           {
             echo "golden 14.0 source commit: 76486fa01a54b7d03c173dedf7a34852e2c38b57"
+            echo "golden 14.0 expected sha256: fd797ad1ef60d1e48d79e612d8b4c53108e87f7155de81a8a2f62833ff9d4544"
             echo "source baseline commit: dfa0cf7fda72789267811ba2190f61a8eaacedf6"
-            echo "final build: R5 scalar 14.0 semantic baseline + high-confidence contradiction caps + robust numeric/entity/direction checks"
+            echo "final build: isolated 14.0-derived fast neural baseline + high-confidence factual contradiction caps + robust numeric/entity/direction/polarity checks + historical 14.0 monotone calibration"
+            echo "compatibility import isolation: build_candidate_track2_final installs a no-op build_candidate_compat module before loading build_candidate_fast"
             echo "checker commit: f537c7c085e9d3366c5615fe1ad1f98a0abeff7c"
             echo "target mean margin: 0.35"
             echo "source commit: $GITHUB_SHA"
@@ -178,7 +197,7 @@ jobs:
       - name: Upload exact verified artifacts and evidence
         uses: actions/upload-artifact@v4
         with:
-          name: veridex-track2-r5-${{ github.sha }}
+          name: veridex-track2-final-${{ github.sha }}
           if-no-files-found: error
           retention-days: 30
           path: |

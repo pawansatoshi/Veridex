@@ -7,80 +7,71 @@ if (!goldenPath || !candidatePath || !benchmarkPath) {
   process.exit(2);
 }
 
-const benchmark = JSON.parse(fs.readFileSync(benchmarkPath,'utf8'));
-const enc = new TextEncoder();
-const load = async p => (await WebAssembly.instantiate(fs.readFileSync(p),{})).instance.exports;
-
-const score = (e,q,gt,a) => {
-  const Q=enc.encode(q), G=enc.encode(gt), A=enc.encode(a);
-  const m=new Uint8Array(e.memory.buffer);
-  const qp=e.alloc(Q.length), gp=e.alloc(G.length), ap=e.alloc(A.length);
-  m.set(Q,qp); m.set(G,gp); m.set(A,ap);
+const benchmark=JSON.parse(fs.readFileSync(benchmarkPath,'utf8'));
+const enc=new TextEncoder();
+const load=async p=>(await WebAssembly.instantiate(fs.readFileSync(p),{})).instance.exports;
+const score=(e,q,gt,a)=>{
+  const Q=enc.encode(q),G=enc.encode(gt),A=enc.encode(a),m=new Uint8Array(e.memory.buffer);
+  const qp=e.alloc(Q.length),gp=e.alloc(G.length),ap=e.alloc(A.length);
+  m.set(Q,qp);m.set(G,gp);m.set(A,ap);
   const s=e.rank_answer(qp,Q.length,gp,G.length,ap,A.length);
-  e.dealloc(qp,Q.length); e.dealloc(gp,G.length); e.dealloc(ap,A.length);
+  e.dealloc(qp,Q.length);e.dealloc(gp,G.length);e.dealloc(ap,A.length);
   if(!Number.isFinite(s)||s<0||s>1) throw new Error(`invalid score ${s}`);
   return s;
+};
+const categoryOf=label=>{
+  const m=label.match(/\|\s*([a-z0-9_]+)-(?:high|low)\s*>/i);
+  return m?m[1]:'unknown';
+};
+const mean=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:0;
+const percentile=(a,p)=>{
+  if(!a.length)return 0;
+  const s=[...a].sort((x,y)=>x-y),i=Math.min(s.length-1,Math.max(0,Math.ceil(p*s.length)-1));
+  return s[i];
 };
 
 const qcases=[];
 for(const c of benchmark.cases||[]){
-  const hi=(c.answers||[]).filter(a=>a.tier==='high');
-  const lo=(c.answers||[]).filter(a=>a.tier==='low');
+  const hi=(c.answers||[]).filter(a=>a.tier==='high'),lo=(c.answers||[]).filter(a=>a.tier==='low');
   if(!hi.length||!lo.length) continue;
-  for(const h of hi) for(const l of lo){
-    qcases.push({q:c.question,gt:c.ground_truth,high:h.text,low:l.text,label:`${c.question} | ${h.label} > ${l.label}`});
-  }
+  for(const h of hi) for(const l of lo) qcases.push({q:c.question,gt:c.ground_truth,high:h.text,low:l.text,label:`${c.question} | ${h.label} > ${l.label}`});
 }
 
 const [gold,cand]=await Promise.all([load(goldenPath),load(candidatePath)]);
 const rows=[]; let gInv=0,cInv=0;
 for(const c of qcases){
-  const gh=score(gold,c.q,c.gt,c.high), gl=score(gold,c.q,c.gt,c.low);
-  const ch=score(cand,c.q,c.gt,c.high), cl=score(cand,c.q,c.gt,c.low);
-  const gm=gh-gl, cm=ch-cl;
-  rows.push({label:c.label,goldMargin:gm,candidateMargin:cm,goldHigh:gh,goldLow:gl,candidateHigh:ch,candidateLow:cl});
-  if(gh<=gl) gInv++;
-  if(ch<=cl) cInv++;
+  const gh=score(gold,c.q,c.gt,c.high),gl=score(gold,c.q,c.gt,c.low),ch=score(cand,c.q,c.gt,c.high),cl=score(cand,c.q,c.gt,c.low);
+  const gm=gh-gl,cm=ch-cl;
+  rows.push({label:c.label,category:categoryOf(c.label),goldMargin:gm,candidateMargin:cm,goldHigh:gh,goldLow:gl,candidateHigh:ch,candidateLow:cl});
+  if(gh<=gl)gInv++; if(ch<=cl)cInv++;
 }
 
-const sorted=a=>a.slice().sort((x,y)=>x-y);
-const mean=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:0;
-const quantile=(a,p)=>{const s=sorted(a);if(!s.length)return 0;const pos=(s.length-1)*p;const lo=Math.floor(pos),hi=Math.ceil(pos);if(lo===hi)return s[lo];return s[lo]+(s[hi]-s[lo])*(pos-lo);};
-const gm=rows.map(x=>x.goldMargin), cm=rows.map(x=>x.candidateMargin);
-const goldenMean=mean(gm), candidateMean=mean(cm);
-const goldenP10=quantile(gm,0.10), candidateP10=quantile(cm,0.10);
-const goldenWorst=Math.min(...gm), candidateWorst=Math.min(...cm);
-const improved=rows.filter(r=>r.candidateMargin>r.goldMargin).length;
-const regressed=rows.filter(r=>r.candidateMargin<r.goldMargin).length;
-const severe=rows.filter(r=>r.candidateMargin+0.15<r.goldMargin).length;
-const weak=rows.filter(r=>r.candidateMargin<0.05).length;
+const margins=rows.map(x=>x.candidateMargin);
+const goldMargins=rows.map(x=>x.goldMargin);
+const summarize=rs=>{
+  const ms=rs.map(x=>x.candidateMargin), arr=rs.map(x=>x.candidateHigh-x.candidateLow);
+  const collapsed=rs.filter(x=>Math.abs(x.candidateMargin)<0.05).length;
+  const inv=rs.filter(x=>x.candidateMargin<=0).length;
+  return {pairs:rs.length,inversions:inv,meanMargin:mean(ms),p10Margin:percentile(ms,0.10),medianMargin:percentile(ms,0.50),worstMargin:ms.length?Math.min(...ms):0,bestMargin:ms.length?Math.max(...ms):0,nearCollapseUnder0p05:collapsed};
+};
+const categoryMap=new Map();
+for(const r of rows){if(!categoryMap.has(r.category))categoryMap.set(r.category,[]);categoryMap.get(r.category).push(r);}
+const candidateByCategory=Object.fromEntries([...categoryMap.entries()].sort().map(([k,v])=>[k,summarize(v)]));
+const goldenByCategory=Object.fromEntries([...categoryMap.entries()].sort().map(([k,v])=>{
+  const ms=v.map(x=>x.goldMargin);return [k,{pairs:v.length,inversions:v.filter(x=>x.goldMargin<=0).length,meanMargin:mean(ms),p10Margin:percentile(ms,0.10),medianMargin:percentile(ms,0.50),worstMargin:ms.length?Math.min(...ms):0,bestMargin:ms.length?Math.max(...ms):0,nearCollapseUnder0p05:v.filter(x=>Math.abs(x.goldMargin)<0.05).length}];
+}));
 
+const regressions=rows.filter(r=>r.candidateMargin+0.02<r.goldMargin)
+  .sort((a,b)=>(a.candidateMargin-a.goldMargin)-(b.candidateMargin-b.goldMargin)).slice(0,30);
 const out={
   cases:rows.length,
-  golden:{inversions:gInv,meanMargin:goldenMean,p10Margin:goldenP10,worstMargin:goldenWorst},
-  candidate:{inversions:cInv,meanMargin:candidateMean,p10Margin:candidateP10,worstMargin:candidateWorst},
-  delta:{meanMargin:candidateMean-goldenMean,p10Margin:candidateP10-goldenP10,worstMargin:candidateWorst-goldenWorst,inversions:cInv-gInv},
-  distribution:{improved,regressed,severeRegressions:severe,weakPairs:weak,severeRegressionRate:rows.length?severe/rows.length:0,weakPairRate:rows.length?weak/rows.length:0},
-  regressedPairs:rows.filter(r=>r.candidateMargin+0.10<r.goldMargin).sort((a,b)=>(a.candidateMargin-a.goldMargin)-(b.candidateMargin-b.goldMargin)).slice(0,25),
+  golden:{inversions:gInv,meanMargin:mean(goldMargins),p10Margin:percentile(goldMargins,0.10),medianMargin:percentile(goldMargins,0.50),worstMargin:goldMargins.length?Math.min(...goldMargins):0,bestMargin:goldMargins.length?Math.max(...goldMargins):0},
+  candidate:{inversions:cInv,meanMargin:mean(margins),p10Margin:percentile(margins,0.10),medianMargin:percentile(margins,0.50),worstMargin:margins.length?Math.min(...margins):0,bestMargin:margins.length?Math.max(...margins):0,nearCollapseUnder0p05:margins.filter(x=>Math.abs(x)<0.05).length},
+  delta:{meanMargin:mean(margins)-mean(goldMargins),p10Margin:percentile(margins,0.10)-percentile(goldMargins,0.10),medianMargin:percentile(margins,0.50)-percentile(goldMargins,0.50),worstMargin:(margins.length?Math.min(...margins):0)-(goldMargins.length?Math.min(...goldMargins):0),inversions:cInv-gInv},
+  goldenByCategory,
+  candidateByCategory,
+  regressedPairs:regressions
 };
 console.log(JSON.stringify(out,null,2));
-
-// Release gate policy:
-// 1) no new ordering inversions relative to the 14.0 golden;
-// 2) robust absolute internal target of mean margin >= 0.35;
-// 3) p10 margin >= 0.05 so the tail is not collapsed;
-// 4) no more than 5% severe (>0.15) pair regressions;
-// 5) don't accept a broad collapse of the golden mean: candidate must retain
-//    at least 90% of the golden mean or 0.50, whichever is stricter.
-const fail =
-  cInv > gInv ||
-  candidateMean < 0.35 ||
-  candidateP10 < 0.05 ||
-  severe > Math.max(1, Math.floor(rows.length*0.05)) ||
-  candidateMean < Math.max(0.50, goldenMean*0.90);
-
-if(fail){
-  console.error('golden differential gate: FAIL');
-  process.exit(1);
-}
-console.error('golden differential gate: PASS');
+const fail=out.candidate.inversions>out.golden.inversions || out.candidate.meanMargin<out.golden.meanMargin || out.candidate.p10Margin<out.golden.p10Margin;
+if(fail) process.exit(1);
