@@ -183,3 +183,5 @@ jobs:
             telegraph/evaluation/VERIDEX_TRACK2_GOLDEN14_SHA256.txt
             telegraph/evaluation/track2-expanded-benchmark.json
             telegraph/evaluation/ci-evidence/
+
+# Operational retrigger only; release source and gates are unchanged.
