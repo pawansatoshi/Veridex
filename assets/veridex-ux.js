@@ -6,7 +6,7 @@
   document.querySelectorAll('[data-expand]').forEach(btn=>btn.addEventListener('click',()=>{const id=btn.getAttribute('data-expand');const el=document.getElementById(id);if(!el)return;const open=el.classList.toggle('open');btn.setAttribute('aria-expanded',String(open));const label=btn.querySelector('[data-expand-label]');if(label)label.textContent=open?'Hide evidence':'View evidence →';}));
   document.querySelectorAll('[data-example-address]').forEach(btn=>btn.addEventListener('click',()=>{const input=document.querySelector(btn.getAttribute('data-target')||'#address');if(input){input.value=btn.getAttribute('data-example-address');input.focus();}}));
 
-  // Mobile-first navigation: preserve all links, but place them behind a predictable menu.
+  // Mobile-first navigation: keep every destination, but expose it through a readable menu on small screens.
   document.querySelectorAll('.ux-nav').forEach(nav=>{
     if(nav.querySelector('.ux-menu-toggle'))return;
     const toggle=document.createElement('button');
@@ -24,24 +24,7 @@
     addEventListener('resize',()=>{if(innerWidth>760)close()},{passive:true});
   });
 
-  // Guided progress for the two analysis experiences without changing their request logic.
-  function attachProgress(form, mode){
-    if(!form || form.dataset.progressAttached)return;
-    form.dataset.progressAttached='1';
-    const status=document.createElement('div');
-    status.className='ux-live-status';
-    status.setAttribute('aria-live','polite');
-    status.innerHTML='<strong></strong><span></span>';
-    form.parentNode.insertBefore(status,form.nextSibling);
-    const title=status.querySelector('strong');
-    const detail=status.querySelector('span');
-    const stages=mode==='track3'[
-      ? ['Reviewing contract','Validating address and reading deterministic evidence…','Requesting live Telegraph intelligence…','Comparing independent signals…','Preparing the decision…']
-      : ['Analyzing contract','Validating address and reading structure…','Resolving proxy and verification evidence…','Inspecting capabilities…','Preparing the assessment…']
-    ];
-  }
-
-  // Lightweight implementation of guided progress; it deliberately observes existing result DOM.
+  // Guided progress sits above the existing request handlers; it changes presentation only.
   function setupGuidedProgress(form, mode){
     if(!form || form.dataset.guided)return;
     form.dataset.guided='1';
@@ -69,7 +52,7 @@
   }
   setupGuidedProgress(document.querySelector('#form'),path.includes('/telegraph/application/')?'track3':'analyze');
 
-  // Track 3: keep the raw provider payload available, but make it progressive disclosure.
+  // Track 3: keep provider payload available, but hide it behind progressive disclosure.
   if(path.includes('/telegraph/application/')){
     const review=document.querySelector('#tgReview');
     const box=review&&review.closest('.review');
