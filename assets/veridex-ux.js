@@ -24,7 +24,7 @@
     addEventListener('resize',()=>{if(innerWidth>760)close()},{passive:true});
   });
 
-  // Guided progress sits above the existing request handlers; it changes presentation only.
+  // Guided progress is used only on the core analysis experiences and sits above their existing request handlers.
   function setupGuidedProgress(form, mode){
     if(!form || form.dataset.guided)return;
     form.dataset.guided='1';
@@ -44,13 +44,16 @@
     form.addEventListener('submit',()=>{
       index=0;status.classList.add('show');title.textContent=stages[0][0];detail.textContent=stages[0][1];
       if(timer)clearInterval(timer);
-      timer=setInterval(()=>{if(result && result.classList.contains('show')){stop();return}index=Math.min(index+1,stages.length-1);title.textContent=stages[index][0];detail.textContent=stages[index][1]},900);
-      setTimeout(()=>{if(result && result.classList.contains('show'))stop()},10000);
+      timer=setInterval(()=>{if(result&&result.classList.contains('show')){stop();return}index=Math.min(index+1,stages.length-1);title.textContent=stages[index][0];detail.textContent=stages[index][1]},900);
+      setTimeout(()=>{if(result&&result.classList.contains('show'))stop()},10000);
     },true);
-    const observer=new MutationObserver(()=>{if(result && result.classList.contains('show'))stop()});
+    const observer=new MutationObserver(()=>{if(result&&result.classList.contains('show'))stop()});
     if(result)observer.observe(result,{attributes:true,attributeFilter:['class']});
   }
-  setupGuidedProgress(document.querySelector('#form'),path.includes('/telegraph/application/')?'track3':'analyze');
+  const progressForm=document.querySelector('#form');
+  if(progressForm && (path==='/analyze/' || path.startsWith('/analyze/') || path.includes('/telegraph/application/'))){
+    setupGuidedProgress(progressForm,path.includes('/telegraph/application/')?'track3':'analyze');
+  }
 
   // Track 3: keep provider payload available, but hide it behind progressive disclosure.
   if(path.includes('/telegraph/application/')){
