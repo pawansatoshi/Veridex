@@ -1,95 +1,75 @@
 #!/usr/bin/env node
 /**
- * Validate Telegraph SMART_CONTRACT_AUDIT preference pairs before upload.
- * Local quality gate only; not a substitute for human review or node curation.
+ * Local preflight for SMART_CONTRACT_AUDIT_GENERAL preference pairs.
+ * The pinned Telegraph kit's train_adapter.py --check-data is the final
+ * authority for held-out leakage and surface-style checks.
  */
 import fs from "node:fs";
-
+const normalize = (s) => s.normalize("NFC").replace(/\s+/gu, " ").trim();
+const failures = [];
+const warnings = [];
 const args = process.argv.slice(2);
-const flag = args.indexOf("--input");
-if (flag < 0 || !args[flag + 1]) {
+const at = args.indexOf("--input");
+if (at < 0 || !args[at + 1]) {
   console.error("Usage: node scripts/validate-smart-contract-audit-data.mjs --input <pairs.jsonl>");
   process.exit(2);
 }
-const file = args[flag + 1];
-const lines = fs.readFileSync(file, "utf8").split(/\r?\n/).filter((line) => line.trim());
-const errors = [];
+const file = args[at + 1];
+const lines = fs.readFileSync(file, "utf8").split(/\r?\n/u).filter((x) => x.trim());
 const rows = [];
-
-for (let i = 0; i < lines.length; i++) {
-  const lineNo = i + 1;
-  let row;
-  try { row = JSON.parse(lines[i]); }
-  catch { errors.push(`line ${lineNo}: invalid JSON`); continue; }
-  for (const key of ["prompt", "chosen", "rejected"]) {
-    if (typeof row[key] !== "string" || !row[key].trim()) errors.push(`line ${lineNo}: missing/non-string ${key}`);
-  }
-  if (["prompt", "chosen", "rejected"].some((key) => typeof row[key] !== "string")) continue;
-  if (row.label_kind && row.label_kind !== "preference_pair") errors.push(`line ${lineNo}: label_kind must be preference_pair`);
-  if (row.intent_id && row.intent_id !== "SMART_CONTRACT_AUDIT_GENERAL") errors.push(`line ${lineNo}: wrong intent_id`);
-  if (row.prompt.length < 16 || row.prompt.length > 16000) errors.push(`line ${lineNo}: prompt length outside 16..16000`);
-  for (const key of ["chosen", "rejected"]) {
-    if (row[key].length < 8 || row[key].length > 32000) errors.push(`line ${lineNo}: ${key} length outside 8..32000`);
-  }
-  if (row.chosen === row.rejected) errors.push(`line ${lineNo}: chosen and rejected are identical`);
-  const p = row.provenance;
-  if (!p || typeof p !== "object" || typeof p.source_kind !== "string" || typeof p.source_url !== "string") {
-    errors.push(`line ${lineNo}: provenance.source_kind and provenance.source_url are required`);
-  } else {
-    if (["llm", "synthetic", "generated", "model"].includes(p.source_kind.toLowerCase())) {
-      errors.push(`line ${lineNo}: generated provenance is unverified; do not present it as attested human material`);
-    }
-    try {
-      if (new URL(p.source_url).protocol !== "https:") errors.push(`line ${lineNo}: provenance URL must use https`);
-    } catch { errors.push(`line ${lineNo}: invalid provenance URL`); }
-  }
-  rows.push(row);
-}
-
-const normalize = (s) => s.normalize("NFC").replace(/\s+/g, " ").trim().toLowerCase();
 const seenPrompts = new Map();
-const rejectedCounts = new Map();
-let identicalAnswers = 0;
-let longerChosen = 0;
-let shorterChosen = 0;
-let equalLength = 0;
-
-for (let i = 0; i < rows.length; i++) {
-  const row = rows[i];
+let generated = 0, humanWithUrl = 0, missingProvenance = 0, skipped = 0;
+for (let i = 0; i < lines.length; i++) {
+  const line = i + 1;
+  let row;
+  try { row = JSON.parse(lines[i]); } catch { failures.push("line " + line + ": invalid JSON"); continue; }
+  if (!row || typeof row !== "object" || Array.isArray(row)) { failures.push("line " + line + ": row must be an object"); continue; }
+  if (row.label_kind && row.label_kind !== "preference_pair") { skipped++; continue; }
+  if (![row.prompt, row.chosen, row.rejected].every((v) => typeof v === "string" && v.trim())) {
+    failures.push("line " + line + ": preference pair requires non-empty prompt, chosen and rejected"); continue;
+  }
+  if (row.intent_id && row.intent_id !== "SMART_CONTRACT_AUDIT_GENERAL") failures.push("line " + line + ": wrong intent_id");
+  if (Buffer.byteLength(JSON.stringify(row), "utf8") > 64 * 1024) failures.push("line " + line + ": row exceeds 64 KiB");
+  for (const [key, min, max] of [["prompt",16,16000],["chosen",8,32000],["rejected",8,32000]]) {
+    const value = normalize(row[key]);
+    if (value.length < min || value.length > max) failures.push("line " + line + ": " + key + " length outside " + min + ".." + max);
+    if (/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/u.test(row[key])) failures.push("line " + line + ": " + key + " contains control characters");
+  }
+  if (normalize(row.chosen) === normalize(row.rejected)) failures.push("line " + line + ": chosen and rejected are identical");
   const prompt = normalize(row.prompt);
-  if (seenPrompts.has(prompt)) errors.push(`duplicate normalized prompt at rows ${seenPrompts.get(prompt)} and ${i + 1}`);
-  else seenPrompts.set(prompt, i + 1);
-  rejectedCounts.set(row.rejected, (rejectedCounts.get(row.rejected) ?? 0) + 1);
-  if (row.chosen === row.rejected) identicalAnswers++;
-  const chosenWords = row.chosen.trim().split(/\s+/).length;
-  const rejectedWords = row.rejected.trim().split(/\s+/).length;
-  if (chosenWords > rejectedWords) longerChosen++;
-  else if (chosenWords < rejectedWords) shorterChosen++;
-  else equalLength++;
+  if (seenPrompts.has(prompt)) failures.push("line " + line + ": duplicate normalized prompt (first line " + seenPrompts.get(prompt) + ")");
+  else seenPrompts.set(prompt, line);
+  const kind = String(row.provenance?.source_kind ?? "").toLowerCase();
+  const url = String(row.provenance?.source_url ?? "");
+  if (["llm","synthetic","generated","model"].includes(kind)) generated++;
+  else if (kind === "human" && /^https?:\/\//i.test(url)) humanWithUrl++;
+  if (!kind || !url) missingProvenance++;
+  rows.push({ chosen: row.chosen, rejected: row.rejected });
 }
-
 const n = rows.length;
-const uniqueRejected = rejectedCounts.size;
-const maxRejectedShare = n ? Math.max(...rejectedCounts.values()) / n : 1;
-const identicalRate = n ? identicalAnswers / n : 1;
-// Pairwise length-only baseline: choose whichever direction (longer or shorter)
-// is more predictive; ties are counted as half-correct.
-const lengthOnlyAccuracy = n
-  ? Math.max((longerChosen + equalLength * 0.5) / n, (shorterChosen + equalLength * 0.5) / n)
-  : 1;
-
-if (n < 50) errors.push(`only ${n} pairs; need at least 50 for the local diversity gate (training needs substantially more)`);
-if (n && uniqueRejected / n < 0.8) errors.push(`unique rejected answers ${(uniqueRejected / n * 100).toFixed(1)}% < 80%`);
-if (maxRejectedShare > 0.02) errors.push(`most-repeated rejected answer share ${(maxRejectedShare * 100).toFixed(1)}% > 2%`);
-if (identicalRate > 0.01) errors.push(`identical answer rate ${(identicalRate * 100).toFixed(1)}% > 1%`);
-if (lengthOnlyAccuracy > 0.65) errors.push(`word-count-only pairwise accuracy ${(lengthOnlyAccuracy * 100).toFixed(1)}% > 65%`);
-
+const rejectedCounts = new Map();
+for (const row of rows) rejectedCounts.set(row.rejected.trim(), (rejectedCounts.get(row.rejected.trim()) ?? 0) + 1);
+const uniqueRate = n ? rejectedCounts.size / n : 0;
+const maxRepeated = n ? Math.max(...rejectedCounts.values()) / n : 1;
+const identical = n ? rows.filter((r) => r.chosen.trim() === r.rejected.trim()).length / n : 1;
+const longer = rows.filter((r) => r.chosen.length > r.rejected.length).length;
+const ties = rows.filter((r) => r.chosen.length === r.rejected.length).length;
+const longerAccuracy = n ? (longer + ties * 0.5) / n : 0.5;
+const lengthShortcut = Math.max(longerAccuracy, 1 - longerAccuracy);
+if (!n) failures.push("no usable preference pairs");
+if (n && uniqueRate < 0.80) failures.push("unique rejected answers " + (uniqueRate*100).toFixed(1) + "% < 80%");
+if (maxRepeated > 0.02) failures.push("most-repeated rejected answer share " + (maxRepeated*100).toFixed(1) + "% > 2%");
+if (identical > 0.01) failures.push("identical answer rate " + (identical*100).toFixed(1) + "% > 1%");
+if (lengthShortcut > 0.65) failures.push("length-only shortcut " + (lengthShortcut*100).toFixed(1) + "% > 65%");
+if (generated) warnings.push(generated + " generated/model rows are unverified; never relabel them as human");
+if (missingProvenance) warnings.push(missingProvenance + " rows lack source_kind or source_url");
+if (humanWithUrl < n) warnings.push(humanWithUrl + "/" + n + " rows have human provenance plus an HTTP(S) source URL; a URL alone is not attestation");
+warnings.push("Run the pinned Telegraph kit's train_adapter.py --check-data; it additionally checks held-out negative leakage and a five-seed bag-of-words surface-style probe.");
 console.log(JSON.stringify({
-  file, rows: n, uniqueRejected,
-  uniqueRejectedPct: Number((uniqueRejected / Math.max(n, 1) * 100).toFixed(2)),
-  maxRejectedSharePct: Number((maxRejectedShare * 100).toFixed(2)),
-  identicalAnswerPct: Number((identicalRate * 100).toFixed(2)),
-  wordCountOnlyAccuracyPct: Number((lengthOnlyAccuracy * 100).toFixed(2)),
-  errors, readyForHumanReview: errors.length === 0
-}, null, 2));
-process.exit(errors.length ? 1 : 0);
+  file, usablePairs:n, skippedRows:skipped,
+  metrics:{uniqueRejectedFraction:Number(uniqueRate.toFixed(4)),maxRejectedShare:Number(maxRepeated.toFixed(4)),identicalAnswerFraction:Number(identical.toFixed(4)),lengthShortcutAccuracy:Number(lengthShortcut.toFixed(4))},
+  provenance:{humanWithUrl,generatedUnverified:generated,missing:missingProvenance},
+  failures,warnings,readyForLocalPreflight:failures.length===0,
+  readyForPoolSubmission:failures.length===0 && generated===0 && missingProvenance===0 && humanWithUrl===n
+},null,2));
+process.exit(failures.length ? 1 : 0);
