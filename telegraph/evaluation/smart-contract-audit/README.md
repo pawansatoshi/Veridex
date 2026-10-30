@@ -100,3 +100,25 @@ A candidate replaces the incumbent only if it reaches at least 70% win rate and 
 The issue is currently labelled `reward:unfunded`: it commits **no bounty payment**. H2 competition prizes and protocol incentives are separate systems.
 
 No `/claim` has been posted. Do not imply that the bounty is reserved for this contributor.
+
+
+## Supporting artifacts added
+
+- `baseline.lock` pins the public V2 adapter kit commit used as the build reference.
+- `sources.md` records public technical/finding sources and their license/provenance restrictions.
+- `coverage-matrix.md` defines the positive, negative and boundary cases the preference corpus must cover.
+- `IMPLEMENTATION_STATUS.md` records verified progress, blockers and actions deliberately not taken.
+- `pairs.jsonl` is intentionally empty until human-reviewed preference pairs exist.
+- `scripts/fetch-smart-contract-audit-candidates.mjs` fetches SCVD finding metadata into a review queue; it does not fabricate preference labels.
+- `scripts/validate-smart-contract-audit-data.mjs` performs local structure, duplication, length-bias and provenance preflight. The pinned Telegraph kit's `--check-data` remains mandatory for leakage and surface-style validation.
+
+Run the public-source candidate fetcher in a network-enabled environment:
+
+```bash
+node scripts/fetch-smart-contract-audit-candidates.mjs
+```
+
+Run the local tests:
+
+```npm run test:audit-data
+```
