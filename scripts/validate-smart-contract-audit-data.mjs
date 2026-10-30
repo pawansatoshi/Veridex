@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import fs from "node:fs";
 import { pathToFileURL } from "node:url";
-const normalize = (s) => s.normalize("NFC").replace(/\\s+/gu, " ").trim();
+const normalize = (s) => s.normalize("NFC").replace(/\s+/gu, " ").trim();
 
 export function validateRows(inputRows) {
   const failures = [], warnings = [], rows = [], seenPrompts = new Map();
@@ -16,7 +16,7 @@ export function validateRows(inputRows) {
     for (const [key,min,max] of [["prompt",16,16000],["chosen",8,32000],["rejected",8,32000]]) {
       const value = normalize(row[key]);
       if (value.length < min || value.length > max) failures.push("line " + line + ": " + key + " length outside " + min + ".." + max);
-      if (/[\\u0000-\\u0008\\u000B\\u000C\\u000E-\\u001F\\u007F]/u.test(row[key])) failures.push("line " + line + ": " + key + " contains control characters");
+      if (/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/u.test(row[key])) failures.push("line " + line + ": " + key + " contains control characters");
     }
     if (normalize(row.chosen) === normalize(row.rejected)) failures.push("line " + line + ": chosen and rejected are identical");
     const prompt = normalize(row.prompt);
@@ -25,7 +25,7 @@ export function validateRows(inputRows) {
     const kind = String(row.provenance?.source_kind ?? "").toLowerCase();
     const url = String(row.provenance?.source_url ?? "");
     if (["llm","synthetic","generated","model"].includes(kind)) generated++;
-    else if (kind === "human" && /^https?:\\/\\//i.test(url)) humanWithUrl++;
+    else if (kind === "human" && /^https?:\/\//i.test(url)) humanWithUrl++;
     if (!kind || !url) missingProvenance++;
     rows.push({chosen:row.chosen,rejected:row.rejected});
   }
@@ -53,7 +53,7 @@ function main() {
   const args=process.argv.slice(2), at=args.indexOf("--input");
   if(at<0||!args[at+1]){console.error("Usage: node scripts/validate-smart-contract-audit-data.mjs --input <pairs.jsonl>");process.exit(2);}
   const file=args[at+1], rows=[], parseFailures=[];
-  const lines=fs.readFileSync(file,"utf8").split(/\\r?\\n/u).filter(line=>line.trim());
+  const lines=fs.readFileSync(file,"utf8").split(/\r?\n/u).filter(line=>line.trim());
   for(let i=0;i<lines.length;i++){try{rows.push(JSON.parse(lines[i]));}catch{parseFailures.push("line "+(i+1)+": invalid JSON");}}
   const result=validateRows(rows);
   result.failures.unshift(...parseFailures);
