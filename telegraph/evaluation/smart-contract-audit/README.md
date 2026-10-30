@@ -54,6 +54,18 @@ Before any upload:
 4. Confirm the row is eligible through the official eval-pool status endpoint after signing/uploading it yourself.
 5. Coordinate with at least four other independent contributors. The pool requires at least five distinct contributors before preference-pair material can be used.
 
+## Public reference corpus candidates
+
+Use these as primary technical references when constructing human-reviewed cases; cite the exact relevant section or finding per row:
+
+- OWASP Smart Contract Top 10 2026: https://owasp.github.io/www-project-smart-contract-top-10/
+- OWASP reentrancy guidance and examples: https://scs.owasp.org/SCWE/SCWE-046/
+- Solidity security considerations (including reentrancy and checks-effects-interactions): https://docs.solidity.org/en/latest/security-considerations.html
+- EIP-1470 / SWC test-case model: https://eips.ethereum.org/EIPS/eip-1470
+- Slither detector documentation: https://github.com/crytic/slither/wiki/Detector-Documentation
+
+A source URL alone does not make a generated row attested. A human contributor must inspect the source, validate the code-level claim, and author/review the preference judgment. Keep compiler version, EVM target, dependency version, and detector version with each case where relevant. Solidity >=0.8 checked arithmetic must not be mislabeled as overflow-prone unless the code uses `unchecked`, unsafe assembly, or another demonstrated path.
+
 ## Adapter build
 
 Follow the current official guides, not the legacy Track 2 `rank_answer` C ABI:
