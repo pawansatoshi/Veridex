@@ -21,7 +21,7 @@
 
 ## Verification and remaining blockers
 
-Local syntax/tests are being run in this branch. The current execution environment has Python 3.13.5, Node 22, Go 1.23.2, no Rust toolchain and no visible GPU. The official adapter kit requires Go 1.25+, Rust with `wasm32-wasip1`, Python 3.10+, and preferably a GPU for practical ModernBERT training. The container also has no outbound DNS/network access, so it cannot fetch SCVD data or clone the adapter kit directly.
+Local syntax checks passed for the validator and SCVD fetcher. Four Node tests passed for fail-closed behavior, generated provenance, duplicate prompt detection, and the rule that a URL alone does not establish human attestation. The current execution environment has Python 3.13.5, Node 22, Go 1.23.2, no Rust toolchain and no visible GPU. The official adapter kit requires Go 1.25+, Rust with `wasm32-wasip1`, Python 3.10+, and preferably a GPU for practical ModernBERT training. The container also has no outbound DNS/network access, so it cannot fetch SCVD data or clone the adapter kit directly.
 
 No preference dataset is being fabricated. The source queue must be fetched in a network-enabled environment and reviewed by humans. The final dataset must pass both this repository's preflight and the pinned kit's `train_adapter.py --check-data`.
 
