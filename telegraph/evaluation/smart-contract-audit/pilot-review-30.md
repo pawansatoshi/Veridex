@@ -10,7 +10,7 @@ Status: **metadata review queue only**. This is not an attested evaluation datas
 
 ## Files
 - pilot-review-30.csv: committed selection index (case ID, category, title, pending status)
-- source-candidates/pilot-review-30.jsonl: generated full metadata packet, including blank review fields and preserved SCVD references
+- source-candidates/pilot-review-30.jsonl: generated full metadata packet, including blank review fields, preserved SCVD references, and links extracted from finding summaries
 - source-candidates/pilot-review-30-manifest.json: generated source counts, selection method, and metadata-field coverage
 - Both generated files are included in the smart-contract-audit-human-review-queue GitHub Actions artifact; artifacts expire after 14 days
 
@@ -23,10 +23,10 @@ Status: **metadata review queue only**. This is not an attested evaluation datas
 6. Obtain an independent second review before using the case in preference data.
 
 ## Preference-pair gate
-Do **not** fill chosen or rejected and do not mark provenance_source_kind=human until a qualified human reviewer has independently verified the finding and authored the preference judgment. A public URL or SCVD taxonomy label alone is not human attestation.
+Do not fill chosen or rejected and do not mark provenance_source_kind=human until a qualified human reviewer has independently verified the finding and authored the preference judgment. A public URL or SCVD taxonomy label alone is not human attestation.
 
 ## Known source-quality gap
-The first source artifact showed that only 27/30 selected records had a source commit and 11/30 had a source-file field; none had a populated contract name or function name. The earlier fetcher did not preserve the SCVD references array. The updated fetcher now preserves those references, and the next workflow artifact will report their coverage. A source commit or file field is metadata, not proof that the linked code is the audited code.
+The first source artifact showed that only 27/30 selected records had a source commit and 11/30 had a source-file field; none had a populated contract name or function name. The current shortlist has 9/30 records with 29 inline links extracted from SCVD finding summaries. The raw references array was empty in the first API snapshot. The generated manifest reports the latest coverage; all links and metadata still require human verification. A source commit or file field is not proof that the linked code is the audited code.
 
 ## Next milestone
 Resolve the primary report and exact source location for all 30 cases, then complete independent human adjudication. Exclude unresolved or inadequately sourced records. This workflow does not create preference labels, upload data to Telegraph, register an adapter, sign a wallet message, or claim a bounty.
