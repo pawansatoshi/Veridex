@@ -44,7 +44,7 @@ export function buildPilot(sourceRows, selections, sourceManifest = {}, generate
   }
   const distinctRepositories = new Set(cases.map((row) => row.source_repo).filter(Boolean)).size;
   const coverage = {};
-  for (const field of ["source_url", "source_commit", "source_file", "source_references", "contract_name", "function_name"]) {
+  for (const field of ["source_url", "source_commit", "source_file", "source_references", "source_summary_links", "contract_name", "function_name"]) {
     coverage[field] = cases.filter((row) => {
       const value = row[field];
       return Array.isArray(value) ? value.length > 0 : Boolean(value);
