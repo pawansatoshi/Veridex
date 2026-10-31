@@ -26,13 +26,26 @@ function pick(record, ...keys) {
 function stableId(record, swc) {
   return String(pick(record, "scvd_id") ?? [swc, pick(record, "doc_id") ?? "", pick(record, "finding_index") ?? "", pick(record, "title") ?? ""].join(":"));
 }
+function sourceReferences(record) {
+  return Array.isArray(record.references) ? record.references : [];
+}
 function sourceUrl(record) {
   const repo = pick(record, "repo.url");
   const commit = pick(record, "repo.commit");
   const file = pick(record, "repo.relative_file", "target.path");
   if (repo && commit && file) return repo.replace(/\/$/u, "") + "/blob/" + commit + "/" + String(file).replace(/^\//u, "");
-  const refs = Array.isArray(record.references) ? record.references : [];
-  return refs.find((value) => typeof value === "string" && /^https?:\/\//i.test(value) && !value.includes("api.scvd.dev")) ?? repo ?? null;
+  const refs = sourceReferences(record);
+  const firstUrl = refs.find((value) => typeof value === "string" && /^https?:\/\//i.test(value) && !value.includes("api.scvd.dev"));
+  return firstUrl ?? repo ?? null;
+}
+function sourceUrlKind(record) {
+  const repo = pick(record, "repo.url");
+  const commit = pick(record, "repo.commit");
+  const file = pick(record, "repo.relative_file", "target.path");
+  if (repo && commit && file) return "constructed_source_path";
+  if (sourceReferences(record).some((value) => typeof value === "string" && /^https?:\/\//i.test(value))) return "external_reference";
+  if (repo) return "repository_root";
+  return "missing";
 }
 async function fetchCategory({ swc, category }) {
   let cursor = null;
@@ -62,12 +75,16 @@ function toReviewCase(record) {
   const swcs = pick(record, "taxonomy.swc") ?? [];
   return {
     case_id: stableId(record, record._requested_swc),
+    source_document_id: pick(record, "doc_id"),
+    source_finding_index: pick(record, "finding_index"),
     category: record._category,
     swc: record._requested_swc,
     source_title: pick(record, "title"),
     source_summary: pick(record, "short_summary", "description_md"),
     source_severity: pick(record, "severity"),
     source_url: sourceUrl(record),
+    source_url_kind: sourceUrlKind(record),
+    source_references: sourceReferences(record),
     source_repo: pick(record, "repo.url"),
     source_commit: pick(record, "repo.commit"),
     source_file: pick(record, "repo.relative_file", "target.path"),
