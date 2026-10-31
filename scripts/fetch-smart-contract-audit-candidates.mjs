@@ -29,6 +29,15 @@ function stableId(record, swc) {
 function sourceReferences(record) {
   return Array.isArray(record.references) ? record.references : [];
 }
+function sourceSummaryLinks(record) {
+  const summary = String(pick(record, "short_summary", "description_md") ?? "");
+  const links = new Set();
+  const markdown = /\]\((https?:\/\/[^\s)]+)\)/giu;
+  const raw = /https?:\/\/[^\s)\]>]+/giu;
+  for (const match of summary.matchAll(markdown)) links.add(match[1]);
+  for (const match of summary.matchAll(raw)) links.add(match[0].replace(/[.,;]+$/u, ""));
+  return [...links];
+}
 function sourceUrl(record) {
   const repo = pick(record, "repo.url");
   const commit = pick(record, "repo.commit");
@@ -85,6 +94,7 @@ function toReviewCase(record) {
     source_url: sourceUrl(record),
     source_url_kind: sourceUrlKind(record),
     source_references: sourceReferences(record),
+    source_summary_links: sourceSummaryLinks(record),
     source_repo: pick(record, "repo.url"),
     source_commit: pick(record, "repo.commit"),
     source_file: pick(record, "repo.relative_file", "target.path"),
