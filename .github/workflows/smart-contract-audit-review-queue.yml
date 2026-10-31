@@ -7,6 +7,8 @@ on:
       - bounty/smart-contract-audit-128
     paths:
       - "scripts/fetch-smart-contract-audit-candidates.mjs"
+      - "scripts/build-smart-contract-audit-pilot.mjs"
+      - "telegraph/evaluation/smart-contract-audit/pilot-review-30.csv"
       - ".github/workflows/smart-contract-audit-review-queue.yml"
 
 permissions:
@@ -33,14 +35,21 @@ jobs:
         run: |
           node scripts/fetch-smart-contract-audit-candidates.mjs telegraph/evaluation/smart-contract-audit/source-candidates
 
-      - name: Summarize candidate queue
+      - name: Build curated 30-case pilot packet
+        run: node scripts/build-smart-contract-audit-pilot.mjs
+
+      - name: Summarize candidate and pilot queues
         run: |
           node --input-type=module <<'NODE'
           import fs from "node:fs";
-          const path = "telegraph/evaluation/smart-contract-audit/source-candidates/manifest.json";
-          const manifest = JSON.parse(fs.readFileSync(path, "utf8"));
-          console.log("Candidate metadata fetched:", manifest.counts.total);
-          console.log(JSON.stringify(manifest.counts.by_category, null, 2));
+          const root = "telegraph/evaluation/smart-contract-audit/source-candidates";
+          const source = JSON.parse(fs.readFileSync(root + "/manifest.json", "utf8"));
+          const pilot = JSON.parse(fs.readFileSync(root + "/pilot-review-30-manifest.json", "utf8"));
+          console.log("Candidate metadata fetched:", source.counts.total);
+          console.log(JSON.stringify(source.counts.by_category, null, 2));
+          console.log("Pilot candidates:", pilot.counts.total);
+          console.log(JSON.stringify(pilot.counts.by_category, null, 2));
+          console.log("Pilot metadata coverage:", JSON.stringify(pilot.metadata_coverage, null, 2));
           console.log("All records remain unreviewed; no preference labels were generated.");
           NODE
 
