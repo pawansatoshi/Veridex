@@ -4,14 +4,15 @@
 
 The current 30-case shortlist contains 10 records per SCVD category and spans 24 source repositories. It is curated, not a random or statistically representative sample.
 
-## Metadata coverage observed in the first source artifact
-- 30/30 records had a repository/source URL.
+## Metadata coverage observed
+- 30/30 records had a source URL.
 - 27/30 had a source commit.
 - 11/30 had a source-file field.
 - 0/30 had a contract name or function name.
-- The first fetcher did not retain the original SCVD references array, so report-level provenance could not be resolved reliably from that artifact.
+- 9/30 selected records contained 29 inline links in their finding summaries; the first fetcher did not preserve these links.
+- The raw SCVD references array was empty in the first API snapshot.
 
-The fetcher has been updated to preserve the raw references array, source document ID, and finding index. The next workflow artifact will report reference coverage. These fields still require human verification; a repository URL, commit, or reference does not prove that a finding is valid.
+The updated fetcher preserves the raw references array and extracts links embedded in the source summary, plus the SCVD document ID and finding index. The generated manifest reports the latest field coverage. These values still require human verification; a repository URL, commit, or source-summary link does not prove that a finding is valid or that the cited code is the audited version.
 
 ## Taxonomy/title mismatches requiring review
 - A record classified as reentrancy is titled "Use named imports instead of importing the entire namespace" and has informational source severity.
