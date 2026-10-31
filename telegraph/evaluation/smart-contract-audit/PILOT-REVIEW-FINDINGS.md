@@ -29,3 +29,12 @@ These are not adjudicated false positives. They are evidence-resolution tasks. T
 5. Obtain a second independent review and exclude unresolved cases.
 
 Do not produce chosen/rejected answers, attest human provenance, or upload any dataset until this gate is met.
+
+## Assistant source spot-checks — preliminary, not human attestation
+
+- **AI Arena reentrancy candidate:** At the pinned source commit, MergingPool.claimRewards caches lowerBound, updates numRoundsClaimed inside the loop, and calls mintFromMergingPool. FighterFarm.mintFromMergingPool reaches _createNewFighter, which invokes _safeMint. This source path is consistent with the reported callback/reentrancy mechanism and is a strong candidate for an independent reviewer to reproduce. Sources: https://github.com/code-423n4/2024-02-ai-arena/blob/cd1a0e6d1b40168657d1aaee8223dc050e15f8cc/src/MergingPool.sol and https://github.com/code-423n4/2024-02-ai-arena/blob/cd1a0e6d1b40168657d1aaee8223dc050e15f8cc/src/FighterFarm.sol#L313-L317
+- **Beanstalk arithmetic-category candidate:** At the pinned source commit, SiloFacet.transferDeposits loops through amounts and calls _spendDepositAllowance for each amount. The supplied summary frames this as reducing repeated storage operations, not as an arithmetic vulnerability. Source: https://github.com/BeanstalkFarms/Beanstalk/blob/dfb418d185cd93eef08168ccaffe9de86bc1f062/protocol/contracts/beanstalk/silo/SiloFacet/SiloFacet.sol#L174-L192
+- **Dropbox reentrancy-category candidate:** The supplied finding summary recommends named imports and is marked Informational; the summary does not describe a reentrancy exploit. Its category assignment requires source/report review and should not be accepted as a vulnerability label.
+
+These are source-level triage observations from the public commit-pinned files. They are not a completed human review, exploit reproduction, or final valid/invalid adjudication. Keep all three records pending until an independent reviewer confirms the original report and impact.
+
