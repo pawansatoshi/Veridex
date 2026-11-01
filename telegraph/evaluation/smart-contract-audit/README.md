@@ -1,124 +1,66 @@
 # SMART_CONTRACT_AUDIT — Telegraph bounty #128
 
-This workspace is for a contribution to
+This workspace is a contribution scaffold for the public Telegraph issue:
 https://github.com/telegraphprotocol/bounties/issues/128
 
 ## Scope
 
-Target Intent: `SMART_CONTRACT_AUDIT_GENERAL`  
-Adapter registration family: `SMART_CONTRACT_AUDIT`  
-Intent class: **Hybrid** (verified against the current official H2 Intent catalogue on 2026-10-30).
+Target Intent: SMART_CONTRACT_AUDIT_GENERAL  
+Registration family: SMART_CONTRACT_AUDIT  
+Intent class: hybrid (recheck the live catalogue before export or registration)
 
-The bounty asks for two separately verifiable deliverables:
+The bounty asks for two independently verifiable deliverables:
 
-1. Public evaluation material: preference pairs that are technically correct, distinct, and independently sourced.
-2. A ModernBERT-based hybrid evaluator adapter packaged as a WASI WebAssembly module and accepted by Telegraph's node-side evaluation.
+1. Public evaluation material: technically correct, distinct preference pairs with traceable public provenance and contributor attribution.
+2. A current evaluator adapter for the SMART_CONTRACT_AUDIT family, accepted by the node and live after competition.
 
-## Veridex fit — and the gap
+## Critical current-format rule
 
-Veridex already has deterministic evidence for ownership/control, proxy and upgradeability surfaces, pause controls, and mint authority. Those signals are useful audit context, especially for access-control analysis.
+The original 28 October adapter-kit pin described a full-model float .wasm with abi_version 2 and runtime onnx_f32. That format is now obsolete and rejected by current validators as legacy_full_model. Q32.32 and MiniLM rank_answer formats are retired too.
 
-They do **not** establish detection of reentrancy or integer-overflow vulnerabilities. Do not label a capability observation as a confirmed vulnerability. The evaluator must reward answers that distinguish:
+The current adapter is a safetensors LoRA delta (format_version 1, abi lora-v1) applied to the validators' shared ModernBERT Foundation Model. The model and engine are not embedded in the package. The current adapter kit is pinned in baseline.lock; the current official requirements are recorded in TELEGRAPH-REQUIREMENTS-2026-11-01.md.
 
-- confirmed source/bytecode findings from heuristics;
-- exploitable paths from mere function/selector presence;
-- implementation behavior from proxy storage/context;
-- missing evidence from a clean bill of health;
-- severity from exploitability and confidence.
+Current public build sequence:
 
-## Non-negotiable evidence rules
+1. Prepare independently reviewed pairs.jsonl.
+2. Train with float_runtime.train_adapter.
+3. Export the LoRA delta with float_runtime.export_adapter against the published foundation.json.
+4. Check/package with cmd/adapterbuild lora.
+5. Host the exact safetensors package and run cmd/adapterexec behind a public HTTPS runnable endpoint.
+6. Register with the required wasmRunnableUrl only after explicit user approval; current docs specify a $5 MACHINA bond plus gas.
+7. Wait for remote check, package validation, bit-for-bit confirmation and hidden-pool competition.
 
-- Use only public inputs and material we are entitled to use.
-- Every contributed pair must be human-reviewed and have traceable public provenance.
-- Do not upload LLM-generated/synthetic rows as `human` or imply that a generated example is independently attested.
-- Do not publish hidden qualification prompts, expected answers, evaluation distributions, private node diagnostics, customer inputs, or credentials.
-- Never use unpublished incumbent model weights or private evaluation data.
-- A local training pass is not proof of acceptance. The node's hidden competition must promote the adapter.
-- Keep signing keys local. Never commit keys or ask the assistant to handle them.
+A local training or package pass is not node acceptance. A candidate must reach at least 70% and beat the incumbent by at least two percentage points on the same hidden sample. The public pool must have at least five distinct contributors before questions are used.
 
-## Evaluation data format
+## Veridex fit and limits
 
-One JSON object per line in `pairs.jsonl`:
+Veridex has deterministic evidence for ownership/control, proxy and upgradeability surfaces, pause controls, and mint authority. Those signals can provide audit context, especially for access-control analysis.
 
-```json
-{"prompt":"Review the supplied contract excerpt for a reentrancy issue and explain the call sequence.","chosen":"...","rejected":"...","label_kind":"preference_pair","provenance":{"source_kind":"human","source_url":"https://..."}}
-```
+They do not establish detection of reentrancy or integer-overflow vulnerabilities. Do not label a capability observation as a confirmed vulnerability. The evaluator must distinguish confirmed findings from heuristics, exploitability from function presence, implementation behavior from proxy context, missing evidence from a clean bill of health, and severity from exploitability and confidence.
 
-The prompt, chosen answer, and rejected answer must address the same task. The rejected answer must be plausible but technically wrong, not a stock phrase. Keep answer lengths comparable and vary the failure mode.
+## Current evidence state
 
-Before any upload:
+- SCVD metadata queue: 1,064 records (55 reentrancy, 417 access_control, 592 arithmetic).
+- Curated pilot: 30 records, 10 per category, across 24 source repositories. It is not a random or representative sample.
+- Latest artifact metadata coverage: source URL 30/30, source commit 27/30, source file 11/30, summary links 9/30, raw references 0/30, contract name 0/30, function name 0/30.
+- All 30 pilot rows remain needs_independent_human_review. Reviewer, timestamp, prompt, chosen, rejected and human provenance fields are blank.
+- pairs.jsonl is intentionally empty.
+- Preliminary source spot checks found a callback path consistent with the AI Arena reentrancy report, a Beanstalk gas/storage optimization misclassified under arithmetic, and a Dropbox informational import recommendation misclassified under reentrancy. None is a final human adjudication.
 
-1. Independently verify every chosen answer against its cited public source and the supplied code.
-2. Have a second reviewer check vulnerability classification, exploit preconditions, impact, and remediation.
-3. Run `node scripts/validate-smart-contract-audit-data.mjs --input telegraph/evaluation/smart-contract-audit/pairs.jsonl`.
-4. Confirm the row is eligible through the official eval-pool status endpoint after signing/uploading it yourself.
-5. Coordinate with at least four other independent contributors. The pool requires at least five distinct contributors before preference-pair material can be used.
+Before any preference pair is created, independently locate the original audit report, resolve the exact source file/function at the pinned commit, assess preconditions and impact, record reproducible evidence or precise source reasoning, and obtain a second independent review. Exclude unresolved cases.
 
-## Public reference corpus candidates
+## Data quality and provenance
 
-Use these as primary technical references when constructing human-reviewed cases; cite the exact relevant section or finding per row:
+The official kit's current checks include unique rejected answers (at least 80%), no single rejected answer above 2%, identical chosen/rejected no more than 1%, length-only heuristic accuracy at most 65%, held-out leakage at most 10%, and surface-style heuristic accuracy at most 65%.
 
-- OWASP Smart Contract Top 10 2026: https://owasp.github.io/www-project-smart-contract-top-10/
-- OWASP reentrancy guidance and examples: https://scs.owasp.org/SCWE/SCWE-046/
-- Solidity security considerations (including reentrancy and checks-effects-interactions): https://docs.solidity.org/en/latest/security-considerations.html
-- EIP-1470 / SWC test-case model: https://eips.ethereum.org/EIPS/eip-1470
-- Slither detector documentation: https://github.com/crytic/slither/wiki/Detector-Documentation
+A public URL alone does not attest a generated or model-authored answer. Do not mark provenance as human unless a human reviewer actually authored and verified the preference judgment. Each evaluation-pool upload is signed by its contributor and must be checked for final eligible status.
 
-A source URL alone does not make a generated row attested. A human contributor must inspect the source, validate the code-level claim, and author/review the preference judgment. Keep compiler version, EVM target, dependency version, and detector version with each case where relevant. Solidity >=0.8 checked arithmetic must not be mislabeled as overflow-prone unless the code uses `unchecked`, unsafe assembly, or another demonstrated path.
+## Reward and participation
 
-## Adapter build
+Issue #128 is labelled reward:unfunded and does not promise bounty payment. Posting /claim is optional and is required only if a contributor wants to be listed as a participant. After claiming, the issue requires /progress <what you did> at least every 72 hours or the claim lapses.
 
-Follow the current official guides, not the legacy Track 2 `rank_answer` C ABI:
+No /claim or /progress comment has been posted for pawansatoshi as of the latest status check.
 
-- https://docs.telegraphprotocol.com/docs/scoring/train-a-scoring-adapter
-- https://docs.telegraphprotocol.com/docs/scoring/build-a-scoring-module
-- https://docs.telegraphprotocol.com/docs/scoring/contribute-evaluation-data
+## Security and authorization
 
-The current adapter is a float32 ONNX ModernBERT reward model packaged into a single WASI command with `telegraph.adapter` metadata (`abi_version: 2`, `runtime: onnx_f32`, `class: hybrid`). It is not the old Track 2 `rank_answer` module and not a deterministic comparator.
-
-The documented build stages are: prepare preference pairs → train → export ONNX → bake WASM → package → host the exact artifact and runnable endpoint → register on the `SMART_CONTRACT_AUDIT` family → wait for node verification and hidden-pool competition.
-
-A candidate replaces the incumbent only if it reaches at least 70% win rate and beats the incumbent by at least 2 percentage points on the same hidden sample. Do not claim success until the node reports promotion.
-
-## Current state
-
-- [x] Issue #128 checked: open, `priority:p2`, `reward:unfunded`.
-- [x] Current catalogue class checked: Hybrid.
-- [x] Veridex capability scope compared with audit requirements.
-- [x] Local dataset quality gate added.
-- [ ] Collect and independently review public-source pairs.
-- [ ] Recruit independent contributors until the pool has at least five.
-- [ ] Submit eligible rows through the official signed eval-pool flow.
-- [ ] Train and validate the current float32 adapter on public data.
-- [ ] Run the public node-compatible packaging and smoke checks.
-- [ ] Register only after local checks pass and the user explicitly authorizes the on-chain transaction.
-- [ ] Obtain node-side promotion evidence.
-- [ ] Submit reproducible proof to bounty #128.
-
-## Reward and claim status
-
-The issue is currently labelled `reward:unfunded`: it commits **no bounty payment**. H2 competition prizes and protocol incentives are separate systems.
-
-No `/claim` has been posted. Do not imply that the bounty is reserved for this contributor.
-
-
-## Supporting artifacts added
-
-- `baseline.lock` pins the public V2 adapter kit commit used as the build reference.
-- `sources.md` records public technical/finding sources and their license/provenance restrictions.
-- `coverage-matrix.md` defines the positive, negative and boundary cases the preference corpus must cover.
-- `IMPLEMENTATION_STATUS.md` records verified progress, blockers and actions deliberately not taken.
-- `pairs.jsonl` is intentionally empty until human-reviewed preference pairs exist.
-- `scripts/fetch-smart-contract-audit-candidates.mjs` fetches SCVD finding metadata into a review queue; it does not fabricate preference labels.
-- `scripts/validate-smart-contract-audit-data.mjs` performs local structure, duplication, length-bias and provenance preflight. The pinned Telegraph kit's `--check-data` remains mandatory for leakage and surface-style validation.
-
-Run the public-source candidate fetcher in a network-enabled environment:
-
-```bash
-node scripts/fetch-smart-contract-audit-candidates.mjs
-```
-
-Run the local tests:
-
-```npm run test:audit-data
-```
+Never commit private keys or unpublished evaluation material. No data upload, signature, wallet approval, bond, registration, adapter deployment, bounty submission or payment is performed by this scaffold. PR #256 remains Draft until the user explicitly chooses otherwise.
