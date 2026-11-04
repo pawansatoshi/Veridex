@@ -38,3 +38,18 @@ Do not produce chosen/rejected answers, attest human provenance, or upload any d
 
 These are source-level triage observations from the public commit-pinned files. They are not a completed human review, exploit reproduction, or final valid/invalid adjudication. Keep all three records pending until an independent reviewer confirms the original report and impact.
 
+
+
+## Additional source trace — AI Arena H-08 (4 November 2026)
+
+Candidate: `SCVD-github:code-423n4/2024-02-ai-arena-findings-1643` (SCVD finding index 1643; category `reentrancy`; source commit `cd1a0e6d1b40168657d1aaee8223dc050e15f8cc`).
+
+The original Code4rena AI Arena report resolves this candidate to **H-08**, titled “Player can mint more fighter NFTs during claim of rewards by leveraging reentrancy on the claimRewards() function” (High severity). The report describes `MergingPool.claimRewards()` calling `FighterFarm.mintFromMergingPool()`, which reaches `_safeMint`; a contract receiver can re-enter from `onERC721Received` while the outer claim loop is still active. The report includes a proof-of-concept attack contract and test path. The report's appended mitigation review lists H-08 as **Mitigation Confirmed**, with mitigation PR #6. Therefore this is a historically reported and subsequently confirmed-mitigated issue, not evidence that the pinned historical code or a current deployment remains exploitable.
+
+Source trail:
+- Original report: https://code4rena.com/reports/2024-02-ai-arena#h-08-player-can-mint-more-fighter-nfts-during-claim-of-rewards-by-leveraging-reentrancy-on-the-claimrewards-function
+- Pinned `MergingPool.sol`: https://github.com/code-423n4/2024-02-ai-arena/blob/cd1a0e6d1b40168657d1aaee8223dc050e15f8cc/src/MergingPool.sol
+- Pinned `FighterFarm.sol`: https://github.com/code-423n4/2024-02-ai-arena/blob/cd1a0e6d1b40168657d1aaee8223dc050e15f8cc/src/FighterFarm.sol
+- Mitigation review table: https://code4rena.com/reports/2024-02-ai-arena#mitigation-review
+
+The SCVD row remains `needs_independent_human_review`. This trace resolves the original report and historical mitigation status, but no reviewer identity, review timestamp, final valid/invalid adjudication, prompt, chosen/rejected pair, or human-provenance attestation has been written. An independent reviewer must still reproduce or inspect the PoC and compare the vulnerable commit with the mitigation before authoring any evaluation pair.
