@@ -1,5 +1,5 @@
 repository=https://github.com/telegraphprotocol/telegraph-wasm-baseline
 commit=1ed063e2f0066cfaf0e124d66ec6a17b7a6121fd
 commit_date=2026-10-31T23:28:25Z
-adapter_contract=format_version:1,abi:lora-v1,package:safetensors-delta,class:hybrid
+adapter_contract=format_version:1,abi:lora-v1,package:safetensors-delta,class:UNRESOLVED
 foundation_release=https://github.com/telegraphprotocol/telegraph-foundation/releases/tag/modernbert-base-lora16-v1
