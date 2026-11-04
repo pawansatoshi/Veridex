@@ -7,7 +7,7 @@ https://github.com/telegraphprotocol/bounties/issues/128
 
 Target Intent: SMART_CONTRACT_AUDIT_GENERAL  
 Registration family: SMART_CONTRACT_AUDIT  
-Intent class: hybrid (recheck the live catalogue before export or registration)
+Intent class: UNRESOLVED. The pinned adapter-kit does not classify SMART_CONTRACT_AUDIT in its compiled catalogue, so offline adapterbuild class resolution refuses the _GENERAL target. The official Intents guide says _GENERAL children belong to judgment prefixes; this suggests judgment, but only the live on-chain prefix kind is authoritative.
 
 The bounty asks for two independently verifiable deliverables:
 
@@ -18,7 +18,7 @@ The bounty asks for two independently verifiable deliverables:
 
 The original 28 October adapter-kit pin described a full-model float .wasm with abi_version 2 and runtime onnx_f32. That format is now obsolete and rejected by current validators as legacy_full_model. Q32.32 and MiniLM rank_answer formats are retired too.
 
-The current adapter is a safetensors LoRA delta (format_version 1, abi lora-v1) applied to the validators' shared ModernBERT Foundation Model. The model and engine are not embedded in the package. The current adapter kit is pinned in baseline.lock; the current official requirements are recorded in TELEGRAPH-REQUIREMENTS-2026-11-01.md.
+The current adapter is a safetensors LoRA delta (format_version 1, abi lora-v1) applied to the validators' shared ModernBERT Foundation Model. The model and engine are not embedded in the package. The current adapter kit is pinned in baseline.lock; the current official requirements are recorded in TELEGRAPH-REQUIREMENTS-2026-11-01.md. Do not use the previous hybrid assumption: the current pinned kit cannot resolve this family offline, and the live node kind has not yet been verified.
 
 Current public build sequence:
 
@@ -37,6 +37,12 @@ A local training or package pass is not node acceptance. A candidate must reach 
 Veridex has deterministic evidence for ownership/control, proxy and upgradeability surfaces, pause controls, and mint authority. Those signals can provide audit context, especially for access-control analysis.
 
 They do not establish detection of reentrancy or integer-overflow vulnerabilities. Do not label a capability observation as a confirmed vulnerability. The evaluator must distinguish confirmed findings from heuristics, exploitability from function presence, implementation behavior from proxy context, missing evidence from a clean bill of health, and severity from exploitability and confidence.
+
+## Intent-class compatibility blocker — checked 4 November 2026
+
+The pinned adapter-kit's `pkg/adapterbuild/class.go` resolves a `_GENERAL` intent by stripping the suffix and looking up its base prefix in the compiled catalogue. `SMART_CONTRACT_AUDIT` is absent from that catalogue, so `ResolveClass` rejects the target as unknown. The official Intents guide says `_GENERAL` children are used for judgment prefixes and deterministic/hybrid prefixes do not have `_GENERAL` children. This contradicts the previous `hybrid` assumption and points toward judgment, but the live on-chain `intentKind` and `/api/wasm?resolve=SMART_CONTRACT_AUDIT` remain authoritative and were inaccessible from this environment. Do not train/export/package until the live kind is verified and the official kit can resolve the target.
+
+References: https://github.com/telegraphprotocol/telegraph-wasm-baseline/blob/1ed063e2f0066cfaf0e124d66ec6a17b7a6121fd/pkg/adapterbuild/class.go ; https://github.com/telegraphprotocol/telegraph-wasm-baseline/blob/1ed063e2f0066cfaf0e124d66ec6a17b7a6121fd/pkg/scoring/catalog/catalog.go ; https://anjoman.ai/docs/using/intents
 
 ## Current evidence state
 
@@ -59,7 +65,7 @@ A public URL alone does not attest a generated or model-authored answer. Do not 
 
 Issue #128 is labelled reward:unfunded and does not promise bounty payment. Posting /claim is optional and is required only if a contributor wants to be listed as a participant. After claiming, the issue requires /progress <what you did> at least every 72 hours or the claim lapses.
 
-No /claim or /progress comment has been posted for pawansatoshi as of the latest status check.
+No /claim or /progress comment has been posted for pawansatoshi as of 4 November 2026.
 
 ## Security and authorization
 
