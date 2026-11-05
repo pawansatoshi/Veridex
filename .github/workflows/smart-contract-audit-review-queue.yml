@@ -1,0 +1,62 @@
+name: Build SMART_CONTRACT_AUDIT review queue
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - bounty/smart-contract-audit-128
+    paths:
+      - "scripts/fetch-smart-contract-audit-candidates.mjs"
+      - "scripts/build-smart-contract-audit-pilot.mjs"
+      - "telegraph/evaluation/smart-contract-audit/pilot-review-30.csv"
+      - ".github/workflows/smart-contract-audit-review-queue.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: smart-contract-audit-review-queue
+  cancel-in-progress: false
+
+jobs:
+  fetch-public-candidates:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out contribution branch
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Fetch public SCVD metadata for human review
+        run: |
+          node scripts/fetch-smart-contract-audit-candidates.mjs telegraph/evaluation/smart-contract-audit/source-candidates
+
+      - name: Build curated 30-case pilot packet
+        run: node scripts/build-smart-contract-audit-pilot.mjs
+
+      - name: Summarize candidate and pilot queues
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from "node:fs";
+          const root = "telegraph/evaluation/smart-contract-audit/source-candidates";
+          const source = JSON.parse(fs.readFileSync(root + "/manifest.json", "utf8"));
+          const pilot = JSON.parse(fs.readFileSync(root + "/pilot-review-30-manifest.json", "utf8"));
+          console.log("Candidate metadata fetched:", source.counts.total);
+          console.log(JSON.stringify(source.counts.by_category, null, 2));
+          console.log("Pilot candidates:", pilot.counts.total);
+          console.log(JSON.stringify(pilot.counts.by_category, null, 2));
+          console.log("Pilot metadata coverage:", JSON.stringify(pilot.metadata_coverage, null, 2));
+          console.log("All records remain unreviewed; no preference labels were generated.");
+          NODE
+
+      - name: Upload review queue artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: smart-contract-audit-human-review-queue
+          path: telegraph/evaluation/smart-contract-audit/source-candidates/
+          if-no-files-found: error
+          retention-days: 14

@@ -55,6 +55,9 @@ jobs:
           set -o pipefail
           npm test | tee artifacts/unit-tests.txt
 
+      - name: SMART_CONTRACT_AUDIT data and pilot tests
+        run: npm run test:audit-data
+
       - name: Track 3 application regression tests
         id: track3
         continue-on-error: true
