@@ -59,7 +59,8 @@ function main() {
   result.failures.unshift(...parseFailures);
   result.ok=result.failures.length===0;
   result.readyForLocalPreflight=result.ok;
-  result.readyForPoolSubmission=false;\n  result.submissionReadiness="requires_independent_human_adjudication_and_network_eligibility";
+  result.readyForPoolSubmission=false;
+  result.submissionReadiness="requires_independent_human_adjudication_and_network_eligibility";
   console.log(JSON.stringify({file,...result},null,2));
   process.exit(result.ok?0:1);
 }
