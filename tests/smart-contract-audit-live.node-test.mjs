@@ -17,9 +17,13 @@ test("live evidence never promotes catalogue classification into live confirmati
     checkedAt: "2026-11-16T00:00:00.000Z",
     baseUrl: "https://devnode.telegraphprotocol.com",
     registry: { ok: false, status: 503 },
-    miners: { ok: false, status: 503 },
-    scorer: { ok: false, status: 503 },
-    pool: { ok: false, status: 503 }
+    intentDetail: { ok: false, status: 503 },
+    familyMiners: { ok: false, status: 503 },
+    intentMiners: { ok: false, status: 503 },
+    familyScorer: { ok: false, status: 503 },
+    intentScorer: { ok: false, status: 503 },
+    familyPool: { ok: false, status: 503 },
+    intentPool: { ok: false, status: 503 }
   });
   assert.equal(result.decision.liveIntentConfirmed, false);
   assert.equal(result.decision.liveClassConfirmed, false);
