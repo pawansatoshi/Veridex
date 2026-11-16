@@ -53,20 +53,20 @@ test("rejected-answer uniqueness uses the same Unicode and whitespace normalizat
 });
 
 
-test("canonical Hybrid Intent id is accepted and historical _GENERAL id is rejected", () => {
+test("canonical node Intent id is accepted and family prefix is rejected", () => {
   const base = {
     prompt: "Assess whether the supplied contract has a reachable unauthorized state-changing path.",
     chosen: "The access-controlled entry point checks the configured role before changing protected state, and the supplied call path shows no bypass.",
     rejected: "The contract is vulnerable because its function is public in the ABI, which means any caller can ignore the modifier and change protected state."
   };
-  assert.equal(validateRows([{ ...base, intent_id: "SMART_CONTRACT_AUDIT" }]).failures.some((x) => x.includes("intent_id")), false);
-  assert.equal(validateRows([{ ...base, intent_id: "SMART_CONTRACT_AUDIT_GENERAL" }]).failures.some((x) => x.includes("intent_id")), true);
+  assert.equal(validateRows([{ ...base, intent_id: "SMART_CONTRACT_AUDIT_GENERAL" }]).failures.some((x) => x.includes("intent_id")), false);
+  assert.equal(validateRows([{ ...base, intent_id: "SMART_CONTRACT_AUDIT" }]).failures.some((x) => x.includes("intent_id")), true);
 });
 
 test("Hybrid truth-source object is accepted by local structural preflight", () => {
   const row = {
     label_kind: "truth_source",
-    intent_id: "SMART_CONTRACT_AUDIT",
+    intent_id: "SMART_CONTRACT_AUDIT_GENERAL",
     source: {
       version: "1",
       kind: "miner",
@@ -75,7 +75,7 @@ test("Hybrid truth-source object is accepted by local structural preflight", () 
       name: "Veridex public audit evidence source",
       base_url: "https://example.org",
       auth: { type: "none" },
-      endpoints: [{ path: "/audit", method: "POST", intents: ["SMART_CONTRACT_AUDIT"] }]
+      endpoints: [{ path: "/audit", method: "POST", intents: ["SMART_CONTRACT_AUDIT_GENERAL"] }]
     }
   };
   const result = validateRows([row]);
