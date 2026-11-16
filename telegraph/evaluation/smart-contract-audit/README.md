@@ -1,40 +1,61 @@
-# SMART_CONTRACT_AUDIT evaluator — Veridex contribution
+# Veridex — SMART_CONTRACT_AUDIT evaluator contribution
 
-This workspace began as a scaffold for Telegraph bounty [#128](https://github.com/telegraphprotocol/bounties/issues/128). That issue is now closed with reason `not_planned`; the maintainer redirected continuing work to Season II missions [#189 Exchange](https://github.com/telegraphprotocol/bounties/issues/189) and [#202 Web3 Native & DeFi](https://github.com/telegraphprotocol/bounties/issues/202). Mission #202 explicitly includes an Evaluators contribution route for SMART_CONTRACT_AUDIT.
+**Current target:** `SMART_CONTRACT_AUDIT`  
+**Published Season II class:** Hybrid  
+**Mission:** Telegraph Season II Mission #202 — Web3 Native & DeFi  
+**Track:** Evaluators  
+**State:** engineering scaffold + live evidence workflow; official pool contribution not yet submitted.
 
-## Scope and protocol facts
+## Outcome
 
-- Target Intent: `SMART_CONTRACT_AUDIT_GENERAL`.
-- Registration family: `SMART_CONTRACT_AUDIT`.
-- The issue and published catalogue describe the target as judgment. Live node class, canonical Intent and scorer routing must still be verified independently.
-- Current adapter format: safetensors LoRA delta for the shared ModernBERT Foundation Model (`abi=lora-v1`, `format_version=1`). Full-model WASM is legacy.
-- Pinned adapter-kit: `1ed063e2f0066cfaf0e124d66ec6a17b7a6121fd`. Its compiled catalogue lacks `SMART_CONTRACT_AUDIT`; offline `ResolveClass` rejects the target. Do not invent a catalogue entry or guess a class. Obtain a maintainer-confirmed compatible revision or official extension path before training/export/package.
+Veridex is building a reproducible, evidence-first evaluation contribution for smart-contract audit intelligence. It checks whether a miner's assessment is supported by the correct source revision, code path, exploit preconditions, impact and uncertainty—not whether an answer merely sounds plausible.
 
-## What this repository currently provides
+For this Hybrid Intent, the intended contribution has two components, subject to live node confirmation:
+1. Truth-source material for the checkable part of the Intent.
+2. Balanced question/answer evaluation material for the judgment component, and a compatible evaluator adapter only if the live scoring path requires one.
 
-- Public SCVD metadata fetcher and curated 30-case pilot builder.
-- Metadata-only human review queue; no prompts, answers, preference labels or human-review claims are generated.
-- Fail-closed preference-pair validator and regression tests.
-- CI runs the validator when `pairs.jsonl` is non-empty; an empty file remains explicitly not submission-ready.
-- SCVD workflow stores artifacts for 30 days.
-- Preliminary source-triage notes with original-report/source links where located.
+## Current engineering
 
-## Evidence limitations
+- SCVD public metadata fetcher and curated 30-case pilot review queue.
+- Explicitly unreviewed source register; no synthetic human labels.
+- Fail-closed validator for official question rows and truth-source row shapes.
+- Live, read-only protocol evidence script for Intent registry, miner supply, scorer resolution and evaluation-pool state.
+- GitHub Actions workflow to capture live evidence and preserve a 30-day artifact.
+- Unit tests for schema validation and live evidence parsing.
 
-The preserved 31 October 2026 snapshot contains 1,064 metadata records and a curated 30-case pilot (10 per category across 24 repositories). It is not statistically representative. Coverage: source URL 30/30, source commit 27/30, source file 11/30, summary links 9/30, raw references 0/30, contract/function names 0/30.
+## Critical requirements
 
-All 30 pilot rows remain `needs_independent_human_review`. `pairs.jsonl` is empty. AI Arena H-08 is a historically reported and mitigated reentrancy candidate; Beanstalk and Dropbox have unresolved taxonomy mismatches. No item is a completed independent adjudication.
+- The current Season II catalogue lists `SMART_CONTRACT_AUDIT` as Hybrid. The older bounty #128 wording about `SMART_CONTRACT_AUDIT_GENERAL` is historical and is not the current target.
+- The live node's canonical Intent record, request/response schema, miner supply, scorer resolution and pool status must be captured before creating any official truth source.
+- Hybrid question material is used only when the evaluation pool has at least five distinct contributors. Truth sources have no five-contributor minimum; one eligible source can provide the checkable reference.
+- Every row begins in quarantine. Only row-level `eligible` material in the active frozen snapshot is actually used.
+- An upload is an account-holder-signed action. No signature or upload has been performed.
+- The adapter-kit pin in `baseline.lock` does not compile-resolve `SMART_CONTRACT_AUDIT`. The published class is Hybrid, but the exact compatible kit/catalogue path needs maintainer confirmation before training or packaging.
 
-Every candidate needs the original audit report, exact commit-pinned source/function, preconditions, impact, reproducible evidence or precise source reasoning, and a second independent review. Exclude unresolved cases.
+## Pilot status
 
-## Data quality
+The preserved 31 October 2026 snapshot has 1,064 metadata records and a curated 30-case shortlist across 24 repositories. It is not representative. All 30 cases remain `needs_independent_human_review`; `pairs.jsonl` remains empty. The AI Arena H-08 candidate is historical and marked mitigated; Beanstalk and Dropbox candidates have unresolved taxonomy. None may be treated as gold labels.
 
-The local validator checks basic schema, duplicate prompts/rejected answers, length heuristics and declared provenance. It cannot authenticate reviewer identity, prove an independent second review or determine Anjoman/network eligibility. It always reports `readyForPoolSubmission: false`. The official adapter-kit checks and final Anjoman `eligible` status are separate gates.
+## Validation
 
-Do not treat a source URL, automated metadata, a local validator pass or model-generated answer as human verification.
+Run:
+```bash
+npm run test:audit-data
+npm run validate:audit-data
+npm run verify:audit-live
+```
 
-## Participation, reward and authorization
+The empty dataset is expected to fail the data readiness validator. The live evidence command is read-only and does not sign, upload, bond, register or pay. It records evidence but cannot establish row eligibility unless the live node returns it.
 
-Issue #128 is labelled `reward:unfunded`; it promises no standalone GitHub payout. Season II prizes and protocol earnings are separate and eligibility-dependent. The user's account has not claimed #128, #189 or #202 in the comments checked for this update. Claiming is optional; if the user chooses to claim a mission, the bot requires meaningful `/progress <update>` at least every 72 hours.
+## Official references
 
-No preference data is uploaded, no wallet message is signed, no bond or payment is made, no adapter is registered or deployed, and no bounty is claimed by this scaffold. PR #256 remains Draft and is not merged.
+- [Season II Intent catalogue](https://hackathon.telegraphprotocol.com/intents)
+- [Season II rules](https://hackathon.telegraphprotocol.com/rules)
+- [Mission #202](https://github.com/telegraphprotocol/bounties/issues/202)
+- [Evaluation material guide](https://anjoman.ai/docs/scoring/contribute-evaluation-data)
+- [Evaluator adapter guide](https://anjoman.ai/docs/scoring/build-a-scoring-module)
+- [How Telegraph scoring works](https://anjoman.ai/docs/protocol/how-it-works)
+
+## Honest status
+
+No human-reviewed gold pairs, official truth source, official evaluation upload, eligible row, adapter package, adapter registration, wallet signature, or final hackathon submission is claimed by this repository at this stage. PR #256 is open, Draft and unmerged.
