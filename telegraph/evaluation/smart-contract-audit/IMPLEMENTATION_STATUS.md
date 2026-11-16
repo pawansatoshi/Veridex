@@ -3,7 +3,7 @@
 
 ## Current scope and official destination
 
-- Target Intent: `SMART_CONTRACT_AUDIT_GENERAL`; registration family: `SMART_CONTRACT_AUDIT`.
+- Current Season II catalogue candidate: `SMART_CONTRACT_AUDIT`, listed as **Hybrid**. The live node's canonical flag, miner count, request schema and resolved scorer remain unverified; do not use the old `SMART_CONTRACT_AUDIT_GENERAL` assumption unless the live node confirms it.
 - Telegraph bounty issue [#128](https://github.com/telegraphprotocol/bounties/issues/128) is **closed** with reason `not_planned` (15 November 2026). The maintainer says work continues inside the Season II missions it serves: [#189 Exchange](https://github.com/telegraphprotocol/bounties/issues/189) and [#202 Web3 Native & DeFi](https://github.com/telegraphprotocol/bounties/issues/202).
 - Mission #202 explicitly includes an Evaluators contribution route for SMART_CONTRACT_AUDIT. Mission work is non-exclusive; GitHub claim/progress comments coordinate participation, while the official Anjoman submission path is separate.
 - Issue #128 retains the `reward:unfunded` label and explicitly says there is no standalone GitHub payout. Season II prizes and protocol earnings are separate and eligibility-dependent.
@@ -11,7 +11,7 @@
 
 ## Current published evaluator requirements
 
-- Issue #128 now describes `SMART_CONTRACT_AUDIT_GENERAL` as a judgment Intent and identifies `SMART_CONTRACT_AUDIT` as the registration family.
+- Historical issue #128 described `SMART_CONTRACT_AUDIT_GENERAL` as judgment. The current Season II shared Intent catalogue lists `SMART_CONTRACT_AUDIT` as Hybrid. The current live node must settle this discrepancy; the execution framework records the hybrid-first plan and exact verification steps.
 - Current adapter documentation specifies a safetensors LoRA delta for the shared ModernBERT Foundation Model (`abi=lora-v1`, `format_version=1`). Full-model WASM is a legacy format.
 - Mission #202 says evaluator work must follow the selected Intent's actual node class, family and scoring path. It asks for sourced, balanced better/worse examples and a compatible adapter **where needed**; do not assume a new adapter is always required.
 - The published catalogue/issue describe judgment, but live node class and scorer routing have not been independently retrieved in this environment. Treat published classification and live routing as separate facts.
@@ -83,4 +83,5 @@ Every candidate still needs its original audit report, exact commit-pinned sourc
 ## End-to-end execution framework
 
 - Added [`EXECUTION_FRAMEWORK.md`](EXECUTION_FRAMEWORK.md), defining the full evaluator goal, official-vs-project requirements, P0 live-route gate, evidence and dual-review protocol, dataset quality gates, conditional adapter path, acceptance tests, submission evidence and priority schedule through the 1 December 2026 deadline.
+- Reconciled the current Season II catalogue: `SMART_CONTRACT_AUDIT` is listed as Hybrid, correcting the older #128 Judgment / `_GENERAL` assumption. Live node canonical status, active miners, request schema and scorer resolution remain unverified.
 - Framework does not mark any blocked work complete. Live Intent/scorer compatibility, human review, official data eligibility, adapter work (if required), and final submission remain open.
