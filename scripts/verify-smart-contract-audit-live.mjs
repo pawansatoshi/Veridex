@@ -98,7 +98,7 @@ export function summarizeLiveEvidence({ checkedAt, baseUrl, registry, miners, sc
       scorerResolved: Boolean(scorerBody?.resolve?.scorer ?? scorerBody?.scorer),
       activeMinerCountKnown: Array.isArray(minerList),
       questionPoolReady: Number(poolBody?.eligible_submitters ?? 0) >= 5,
-      truthSourcePoolReady: Number(poolBody?.by_state?.eligible ?? poolBody?.eligible ?? 0) >= 1
+      eligibleRowsPresent: Number(poolBody?.by_state?.eligible ?? poolBody?.eligible ?? 0) > 0
     },
     safety: "Read-only diagnostics only. No wallet signing, upload, bond, registration, or payment was attempted."
   };
@@ -114,7 +114,6 @@ async function main() {
   ]);
   const result = summarizeLiveEvidence({ checkedAt, baseUrl: BASE, registry, miners, scorer, pool });
   const output = process.env.VERIDEX_AUDIT_LIVE_OUTPUT ?? "artifacts/smart-contract-audit-live-evidence.json";
-  fs.mkdirSync(new URL(".", "file://" + process.cwd() + "/").pathname, { recursive: true });
   fs.mkdirSync(output.slice(0, Math.max(0, output.lastIndexOf("/"))) || ".", { recursive: true });
   fs.writeFileSync(output, JSON.stringify(result, null, 2) + "\n", "utf8");
   console.log(JSON.stringify(result, null, 2));
