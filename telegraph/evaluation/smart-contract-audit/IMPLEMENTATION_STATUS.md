@@ -135,3 +135,12 @@ GitHub Actions read-only evidence run: [43814704469](https://github.com/pawansat
 - The evaluator test suite passed **14/14**; the dataset gate explicitly reported `not_run_empty_dataset` and `submission_ready: false`.
 - Live evidence workflow passed on the latest PR head `3da298c0e24ba7d53eb9da7b5d7f64ecd4c1e6c4`: [run 43815216437](https://github.com/pawansatoshi/Veridex/actions/runs/43815216437).
 - These results verify tests and read-only diagnostics. They do not establish eligible Veridex rows, a dedicated scorer, adapter registration, or final hackathon acceptance.
+
+
+## Latest branch-head verification — 16 November 2026
+
+On PR head `d5ec2f07dc0a85d7592e8c78d63eb96493dc6141`:
+- CI passed: [43815404578](https://github.com/pawansatoshi/Veridex/actions/runs/43815404578).
+- Phase 04 Continuous Watch passed: [43815404572](https://github.com/pawansatoshi/Veridex/actions/runs/43815404572).
+- Live protocol evidence workflow passed: [43815404596](https://github.com/pawansatoshi/Veridex/actions/runs/43815404596).
+- The data validation gate still correctly reports the empty dataset as not submission-ready. Passing CI means the scaffolding/tests pass, not that the evaluator contribution is accepted.
