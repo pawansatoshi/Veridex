@@ -47,7 +47,8 @@ export function validateRows(inputRows) {
   if (humanWithUrl<n) warnings.push(humanWithUrl+"/"+n+" rows have human provenance plus an HTTP(S) source URL; a URL alone is not attestation");
   warnings.push("Run the pinned Telegraph kit's train_adapter.py --check-data; it additionally checks held-out negative leakage and a five-seed bag-of-words surface-style probe.");
   const ok=failures.length===0;
-  warnings.push("Local validation cannot authenticate reviewer identity, independent second review, or network eligibility; never treat declared human provenance as verification.");\n  return {ok,usablePairs:n,skippedRows:skipped,metrics:{uniqueRejectedFraction:Number(uniqueRate.toFixed(4)),maxRejectedShare:Number(maxRepeated.toFixed(4)),identicalAnswerFraction:Number(identical.toFixed(4)),lengthShortcutAccuracy:Number(lengthShortcut.toFixed(4))},provenance:{selfDeclaredHumanWithUrl:humanWithUrl,generatedUnverified:generated,missing:missingProvenance},failures,warnings,readyForLocalPreflight:ok,readyForPoolSubmission:false,submissionReadiness:"requires_independent_human_adjudication_and_network_eligibility"};
+  warnings.push("Local validation cannot authenticate reviewer identity, independent second review, or network eligibility; never treat declared human provenance as verification.");
+  return {ok,usablePairs:n,skippedRows:skipped,metrics:{uniqueRejectedFraction:Number(uniqueRate.toFixed(4)),maxRejectedShare:Number(maxRepeated.toFixed(4)),identicalAnswerFraction:Number(identical.toFixed(4)),lengthShortcutAccuracy:Number(lengthShortcut.toFixed(4))},provenance:{selfDeclaredHumanWithUrl:humanWithUrl,generatedUnverified:generated,missing:missingProvenance},failures,warnings,readyForLocalPreflight:ok,readyForPoolSubmission:false,submissionReadiness:"requires_independent_human_adjudication_and_network_eligibility"};
 }
 function main() {
   const args=process.argv.slice(2), at=args.indexOf("--input");
