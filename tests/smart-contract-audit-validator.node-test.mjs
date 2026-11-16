@@ -51,3 +51,47 @@ test("rejected-answer uniqueness uses the same Unicode and whitespace normalizat
   assert.equal(result.metrics.maxRejectedShare, 1);
   assert.ok(result.failures.some((message) => message.includes("unique rejected answers")));
 });
+
+
+test("canonical Hybrid Intent id is accepted and historical _GENERAL id is rejected", () => {
+  const base = {
+    prompt: "Assess whether the supplied contract has a reachable unauthorized state-changing path.",
+    chosen: "The access-controlled entry point checks the configured role before changing protected state, and the supplied call path shows no bypass.",
+    rejected: "The contract is vulnerable because its function is public in the ABI, which means any caller can ignore the modifier and change protected state."
+  };
+  assert.equal(validateRows([{ ...base, intent_id: "SMART_CONTRACT_AUDIT" }]).failures.some((x) => x.includes("intent_id")), false);
+  assert.equal(validateRows([{ ...base, intent_id: "SMART_CONTRACT_AUDIT_GENERAL" }]).failures.some((x) => x.includes("intent_id")), true);
+});
+
+test("Hybrid truth-source object is accepted by local structural preflight", () => {
+  const row = {
+    label_kind: "truth_source",
+    intent_id: "SMART_CONTRACT_AUDIT",
+    source: {
+      version: "1",
+      kind: "miner",
+      id: 0,
+      slug: "veridex-public-audit-truth",
+      name: "Veridex public audit evidence source",
+      base_url: "https://example.org",
+      auth: { type: "none" },
+      endpoints: [{ path: "/audit", method: "POST", intents: ["SMART_CONTRACT_AUDIT"] }]
+    }
+  };
+  const result = validateRows([row]);
+  assert.equal(result.ok, true);
+  assert.equal(result.material.truthSources, 1);
+  assert.equal(result.readyForPoolSubmission, false);
+});
+
+test("ground_truth rows require chosen answer and reject malformed null values safely", () => {
+  const good = {
+    label_kind: "ground_truth",
+    prompt: "Determine whether the specified privileged operation is reachable by an untrusted caller.",
+    chosen: "The supplied evidence does not demonstrate an untrusted path to the privileged operation."
+  };
+  assert.equal(validateRows([good]).ok, true);
+  const bad = validateRows([{ ...good, chosen: null }]);
+  assert.equal(bad.ok, false);
+  assert.ok(bad.failures.some((x) => x.includes("requires non-empty chosen")));
+});
