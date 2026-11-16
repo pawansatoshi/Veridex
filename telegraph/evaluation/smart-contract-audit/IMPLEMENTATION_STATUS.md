@@ -1,84 +1,79 @@
-# Implementation status — 1 November 2026
+# SMART_CONTRACT_AUDIT evaluator — implementation status
+**Last reconciled: 16 November 2026**
 
-## Confirmed current requirements
+## Current scope and official destination
 
-- Telegraph bounty issue #128 is open, tagged work:evaluator, priority:p2 and reward:unfunded.
-- Target Intent: SMART_CONTRACT_AUDIT_GENERAL. Registration family: SMART_CONTRACT_AUDIT. **Class is unresolved and must not be assumed hybrid.** The pinned adapter-kit's compiledClassOf strips _GENERAL and looks up the base prefix, but SMART_CONTRACT_AUDIT is absent from its compiled judgmentOrHybrid catalogue; ResolveClass therefore refuses the target as unknown. The official Intents guide says _GENERAL children are the convention for judgment prefixes and deterministic/hybrid prefixes have no _GENERAL child, which points toward judgment but is not a substitute for the live on-chain intentKind. The live node endpoint could not be reached from this environment on 4 November. Do not export or register until the live prefix kind and node routing are confirmed.
-- The official adapter format changed after the original 28 October pin. Full-model float .wasm packages (abi_version 2 / runtime onnx_f32) are no longer accepted and are rejected as legacy_full_model. Q32.32 and MiniLM rank_answer formats are also retired.
-- Current evaluator adapters are safetensors LoRA deltas for the shared ModernBERT Foundation Model (abi lora-v1, format_version 1). The base model and engine are not embedded in the adapter package.
-- Current official adapter kit pin: telegraph-wasm-baseline commit 1ed063e2f0066cfaf0e124d66ec6a17b7a6121fd (signed commit, 31 October 2026). Foundation release: modernbert-base-lora16-v1.
-- Current training requires Python 3.10+, Go 1.25+ for package checking, and a GPU is strongly recommended. The executor needs the published Foundation Model and engine. The current registration requires a real wasmRunnableUrl and a $5 MACHINA bond plus gas.
-- The current node flow includes runnable-endpoint public-pair checking, package hash and Stage 1 validation, bit-for-bit endpoint confirmation, and hidden-pool competition. A challenger needs at least 70% and at least a 2-point improvement over the incumbent on the same sample; the pool needs at least five distinct contributors.
+- Target Intent: `SMART_CONTRACT_AUDIT_GENERAL`; registration family: `SMART_CONTRACT_AUDIT`.
+- Telegraph bounty issue [#128](https://github.com/telegraphprotocol/bounties/issues/128) is **closed** with reason `not_planned` (15 November 2026). The maintainer says work continues inside the Season II missions it serves: [#189 Exchange](https://github.com/telegraphprotocol/bounties/issues/189) and [#202 Web3 Native & DeFi](https://github.com/telegraphprotocol/bounties/issues/202).
+- Mission #202 explicitly includes an Evaluators contribution route for SMART_CONTRACT_AUDIT. Mission work is non-exclusive; GitHub claim/progress comments coordinate participation, while the official Anjoman submission path is separate.
+- Issue #128 retains the `reward:unfunded` label and explicitly says there is no standalone GitHub payout. Season II prizes and protocol earnings are separate and eligibility-dependent.
+- No `/claim` has been posted by `pawansatoshi` on #128, #189 or #202 as of this reconciliation. No claim/progress clock is active. Do not post one without the user's explicit decision.
 
-## Work completed on this branch
+## Current published evaluator requirements
 
-- Added a public-source register and coverage matrix for reentrancy, access control, arithmetic, and negative controls.
-- Added a fail-closed local dataset validator and tests for schema, duplicates, length bias, provenance, and source requirements.
-- Added an SCVD metadata fetcher. It creates a review queue only; it does not fabricate prompts, answers, or preference labels.
-- Added a deterministic curated 30-case pilot builder and tests.
-- Added a GitHub Actions workflow that fetches public SCVD metadata, builds the pilot packet, prints field coverage, and uploads the artifact.
-- Preserved source references and extracted inline links from SCVD finding summaries.
-- Added preliminary source-level spot-check notes. They are explicitly not final human adjudications.
-- Updated baseline.lock to the current shared-foundation adapter kit and added TELEGRAPH-REQUIREMENTS-2026-11-01.md documenting the current public protocol requirements.
+- Issue #128 now describes `SMART_CONTRACT_AUDIT_GENERAL` as a judgment Intent and identifies `SMART_CONTRACT_AUDIT` as the registration family.
+- Current adapter documentation specifies a safetensors LoRA delta for the shared ModernBERT Foundation Model (`abi=lora-v1`, `format_version=1`). Full-model WASM is a legacy format.
+- Mission #202 says evaluator work must follow the selected Intent's actual node class, family and scoring path. It asks for sourced, balanced better/worse examples and a compatible adapter **where needed**; do not assume a new adapter is always required.
+- The published catalogue/issue describe judgment, but live node class and scorer routing have not been independently retrieved in this environment. Treat published classification and live routing as separate facts.
+- The pinned adapter-kit commit in `baseline.lock` is `1ed063e2f0066cfaf0e124d66ec6a17b7a6121fd`. Its compiled catalogue does not include `SMART_CONTRACT_AUDIT`; offline `ResolveClass` refuses the unknown family. Do not invent a catalogue entry or guess the class. Obtain a maintainer-confirmed compatible kit/catalogue revision or a supported official route.
 
-## Latest verified CI and artifacts
+## Engineering work present on the contribution branch
 
-- PR head at last check: 0b69418babd643269f2ba45d6fe75f675f8b76db (4 November 2026 check; no newer branch commit found).
-- CI run #626: success (test job).
-- Phase 04 Continuous Watch #323: success (phase4 job).
-- Pilot workflow #5: success, all seven substantive steps completed; the artifact remains from 31 October and has not been regenerated after the later documentation commits.
-- Pilot workflow artifact: smart-contract-audit-human-review-queue, 258,736 bytes, generated 31 October 2026 17:15:43 UTC, expires 14 November 2026 17:15:43 UTC.
-- Artifact source queue: 1,064 records (55 reentrancy, 417 access_control, 592 arithmetic).
-- Pilot: 30 records, 10 per category, 24 distinct source repositories.
+- Public-source register and category coverage matrix.
+- SCVD metadata fetcher and deterministic 30-case pilot builder.
+- Metadata-only review queue; it does not author prompts, answers, preference labels or reviewer attestations.
+- Local preference-pair validator and Node regression tests.
+- CI integration for validator execution when a non-empty dataset exists.
+- SCVD review-queue workflow with 30-day artifact retention.
+- Source-triage notes for AI Arena H-08, Beanstalk and Dropbox.
+- Updated mission/protocol status documentation.
 
-The artifact was generated at commit 68a5256, before the later documentation-only source spot-check commit. The workflow's fetch/build code and selection inputs were already present at that run. The latest PR head's CI passed after the subsequent commits.
+## SCVD snapshot and evidence limitations
 
-## Evidence quality and human-review gate
+The preserved 31 October 2026 artifact contains 1,064 source metadata records and a curated 30-case pilot (10 per category across 24 repositories). It is not a random or representative sample.
 
-Latest artifact metadata coverage:
+Observed pilot metadata coverage:
 - source URL: 30/30
 - source commit: 27/30
 - source file: 11/30
-- source summary links: 9/30
+- summary links: 9/30
 - raw source references: 0/30
 - contract name: 0/30
 - function name: 0/30
 
-All 30 pilot records remain needs_independent_human_review. Reviewer, timestamp, prompt, chosen, rejected and human provenance fields are blank. pairs.jsonl is intentionally empty.
+The GitHub-hosted artifact expired on 14 November 2026. A local ZIP snapshot is preserved, SHA-256 `f44ac6d05dc2b5f668f6b7e2f338745bdeb7da2fb80a66f82b25cb79c187fee3`. A fresh run is triggered by a push touching the watched fetcher, pilot builder, CSV or workflow file; the workflow now requests 30-day retention.
 
-Preliminary source-level spot checks:
-- AI Arena: the claimRewards → mintFromMergingPool → _safeMint callback path is consistent with the reported reentrancy mechanism and should be independently reproduced.
-- Beanstalk: the selected arithmetic-category item describes reducing repeated allowance storage operations; it is not an arithmetic vulnerability as stated.
-- Dropbox: the selected reentrancy-category item is an informational named-import recommendation and does not describe a reentrancy exploit.
+All 30 cases remain `needs_independent_human_review`. No reviewer identity, review timestamp, chosen/rejected answer or human provenance has been created. The old artifact's metadata is not human verification.
 
-These observations are preliminary source triage only. No case is marked valid, invalid, or human-verified. Every selected case still needs the original audit report, exact source file/function at the pinned commit, exploitability and impact analysis, reproducible evidence or precise source reasoning, and an independent second review. Unresolved cases must be excluded.
+Preliminary source triage only:
+- AI Arena H-08: original Code4rena report and historical mitigation record located; exact callback path is a strong candidate for independent reproduction. This does not prove current deployment exploitability.
+- Beanstalk: selected arithmetic-category summary describes a storage/gas optimization; taxonomy unresolved.
+- Dropbox: selected reentrancy-category summary describes an informational import recommendation; taxonomy unresolved.
 
-## Current blockers
+Every candidate still needs its original audit report, exact commit-pinned source file/function, preconditions, impact, reproducible evidence or precise source reasoning, and an independent second review. Unresolved records must be excluded.
 
-- The 30-case pilot is curated, not random or statistically representative.
-- SCVD metadata and category labels are not ground truth.
-- The pilot lacks complete exact source locations and original audit-report permalinks for most cases.
-- No independently reviewed preference pairs exist.
-- No row has been uploaded to the Telegraph evaluation pool or confirmed eligible.
-- At least five distinct contributors are required before question material is used.
-- No adapter has been trained, exported, packaged, hosted, or registered.
-- The earlier 28 October full-model WASI adapter path is obsolete; the current safetensors shared-foundation path is documented, but it has not yet been implemented or executed in this environment.
-- **New adapter-class blocker (4 November):** the pinned adapter-kit's offline ResolveClass for SMART_CONTRACT_AUDIT_GENERAL cannot resolve the target because the base prefix is absent from its compiled catalogue. The _GENERAL convention in the official Intents guide indicates judgment prefixes, while the workspace had incorrectly recorded hybrid. Live on-chain intentKind and /api/wasm?resolve=SMART_CONTRACT_AUDIT remain unverified because the devnode endpoint was inaccessible from this environment. Do not trust the old --class hybrid example until this is resolved.
-- The current environment has Python 3.13.5 and Node 22, but Go 1.23.2 (below the required Go 1.25+) and no visible GPU. It has no Rust toolchain; the published foundation engine is available from the official release, so rebuilding it locally is not a prerequisite for the current adapter-author workflow.
-- A runnable endpoint has not been deployed. The current guide requires the exact shared-foundation runtime, a public HTTPS batch endpoint and sufficient memory.
+## Dataset validation and provenance
 
-## Bounty participation status
+- `pairs.jsonl` remains intentionally empty.
+- CI runs `npm run test:audit-data` and runs `npm run validate:audit-data` when the dataset is non-empty. Empty data is reported as not submission-ready rather than treated as a successful dataset.
+- Rejected-answer uniqueness now uses the same NFC/whitespace normalization as the other comparisons.
+- The local validator always reports `readyForPoolSubmission: false`: local checks cannot authenticate reviewer identity, prove an independent second review, or establish Anjoman/network eligibility.
+- The official adapter-kit data checks and Anjoman's per-row eligible/rejected status remain separate required gates. Do not equate a local pass or metadata URL with human verification.
 
-No /claim or /progress comment has been posted by pawansatoshi on issue #128. /claim is optional and is required only if the user wants to be listed as a participant. Once claimed, /progress <what you did> must be posted at least every 72 hours or the claim lapses. The issue is explicitly reward:unfunded; it does not promise bounty payment.
+## Current verification status
 
-## Actions deliberately not taken
+- Previous PR-head CI #630 and Phase 04 #327 passed on commit `47ca616`.
+- The following remediation commits have now been pushed to the contribution branch:
+  - validator normalization and fail-closed pool-readiness reporting;
+  - regression test for normalized rejected-answer duplicates;
+  - CI invocation of the actual validator when pairs exist;
+  - SCVD artifact retention increased to 30 days.
+- Fresh CI and SCVD workflow results for these commits are pending verification. Do not describe them as passing until Actions reports success.
+- No adapter has been trained, exported, packaged, hosted, or registered. No live scorer endpoint has been confirmed.
 
-- No preference labels or human provenance have been fabricated.
-- No evaluation data has been signed or uploaded.
-- No /claim or /progress comment has been posted.
-- No wallet signature, bond approval, registration, adapter deployment, payment, or bounty submission has occurred.
-- PR #256 remains Draft; no merge or readiness transition has been performed.
+## Authorization boundaries
 
-## Next milestone
-
-First resolve the live SMART_CONTRACT_AUDIT prefix kind and adapter-kit compatibility; the offline builder currently rejects the target as unknown. In parallel, resolve the 30 candidates to original audit reports and exact commit-pinned source locations, then complete independent human adjudication. Only accepted cases should be used to author preference pairs. In parallel, coordinate additional independent contributors so the evaluation pool can reach five submitters. Once eligible public data exists, implement the current safetensors shared-foundation adapter workflow and its runnable endpoint, then seek explicit user approval before any signed upload or on-chain registration.
+- No preference labels, reviewer identity or human provenance may be fabricated.
+- No evaluation data is uploaded to Anjoman/Telegraph by this work.
+- No wallet message is signed; no bond, registration, adapter deployment, bounty claim or payment is performed.
+- PR #256 remains Draft and is not merged.
