@@ -399,3 +399,19 @@ Supported `label_kind` values are `preference_pair`, `ground_truth`, and `graded
 3. If deterministic/hybrid: author a valid public, no-key truth-source document matching the exact live request schema and verify its row state.
 4. Only build or train an adapter if the live scoring module actually requires it.
 5. Never treat a successful upload response, `attested` provenance, `admitted` state or a local validator pass as equivalent to `eligible` or canonical scoring-module promotion.
+
+
+---
+
+## 15. Critical scope correction — current Season II catalogue lists SMART_CONTRACT_AUDIT as Hybrid
+
+A fresh check of the current Season II shared Intent catalogue on 16 November 2026 lists **`SMART_CONTRACT_AUDIT` as a Hybrid Intent**. This supersedes the older bounty #128 wording that described `SMART_CONTRACT_AUDIT_GENERAL` as Judgment for purposes of current project planning.
+
+Consequences:
+1. Treat the exact canonical candidate as `SMART_CONTRACT_AUDIT`, not `SMART_CONTRACT_AUDIT_GENERAL`, unless the live node's canonical Intent list proves otherwise.
+2. Treat the expected evaluator path as **Hybrid** provisionally: a truth-source/comparator for the checkable fields plus a judgment adapter for the residual security reasoning, only where the actual live scorer says both are used.
+3. Do not train a judgment-only adapter based on the old bounty wording.
+4. The live node remains the final authority. Verify `canonical: true`, `miner_count > 0`, exact `request.params`, `response.fields`, `class`, and the resolved scorer using the documented node endpoints before building or uploading anything.
+5. The live Intent list endpoint was not readable through the available browser fetch during this reconciliation. Therefore the catalogue classification is confirmed as a published Season II reference, but live node routing, active miner supply and the exact request schema remain **unverified**.
+
+**Updated P0 decision:** current best-supported plan is Hybrid, but implementation stays blocked until the live node evidence is captured. If the node disagrees with the Season II catalogue, record the discrepancy and obtain maintainer direction; do not guess.
