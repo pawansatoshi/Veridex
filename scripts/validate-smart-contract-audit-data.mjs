@@ -27,12 +27,12 @@ export function validateRows(inputRows) {
     if (["llm","synthetic","generated","model"].includes(kind)) generated++;
     else if (kind === "human" && /^https?:\/\//i.test(url)) humanWithUrl++;
     if (!kind || !url) missingProvenance++;
-    rows.push({chosen:row.chosen,rejected:row.rejected});
+    rows.push({chosen:normalize(row.chosen),rejected:normalize(row.rejected)});
   }
   const n=rows.length, counts=new Map();
-  for (const row of rows) counts.set(row.rejected.trim(),(counts.get(row.rejected.trim())??0)+1);
+  for (const row of rows) counts.set(row.rejected,(counts.get(row.rejected)??0)+1);
   const uniqueRate=n?counts.size/n:0, maxRepeated=n?Math.max(...counts.values())/n:1;
-  const identical=n?rows.filter(r=>r.chosen.trim()===r.rejected.trim()).length/n:1;
+  const identical=n?rows.filter(r=>r.chosen===r.rejected).length/n:1;
   const longer=rows.filter(r=>r.chosen.length>r.rejected.length).length;
   const ties=rows.filter(r=>r.chosen.length===r.rejected.length).length;
   const longerAccuracy=n?(longer+ties*0.5)/n:0.5;
@@ -47,7 +47,7 @@ export function validateRows(inputRows) {
   if (humanWithUrl<n) warnings.push(humanWithUrl+"/"+n+" rows have human provenance plus an HTTP(S) source URL; a URL alone is not attestation");
   warnings.push("Run the pinned Telegraph kit's train_adapter.py --check-data; it additionally checks held-out negative leakage and a five-seed bag-of-words surface-style probe.");
   const ok=failures.length===0;
-  return {ok,usablePairs:n,skippedRows:skipped,metrics:{uniqueRejectedFraction:Number(uniqueRate.toFixed(4)),maxRejectedShare:Number(maxRepeated.toFixed(4)),identicalAnswerFraction:Number(identical.toFixed(4)),lengthShortcutAccuracy:Number(lengthShortcut.toFixed(4))},provenance:{humanWithUrl,generatedUnverified:generated,missing:missingProvenance},failures,warnings,readyForLocalPreflight:ok,readyForPoolSubmission:ok&&generated===0&&missingProvenance===0&&humanWithUrl===n};
+  warnings.push("Local validation cannot authenticate reviewer identity, independent second review, or network eligibility; never treat declared human provenance as verification.");\n  return {ok,usablePairs:n,skippedRows:skipped,metrics:{uniqueRejectedFraction:Number(uniqueRate.toFixed(4)),maxRejectedShare:Number(maxRepeated.toFixed(4)),identicalAnswerFraction:Number(identical.toFixed(4)),lengthShortcutAccuracy:Number(lengthShortcut.toFixed(4))},provenance:{selfDeclaredHumanWithUrl:humanWithUrl,generatedUnverified:generated,missing:missingProvenance},failures,warnings,readyForLocalPreflight:ok,readyForPoolSubmission:false,submissionReadiness:"requires_independent_human_adjudication_and_network_eligibility"};
 }
 function main() {
   const args=process.argv.slice(2), at=args.indexOf("--input");
@@ -59,7 +59,7 @@ function main() {
   result.failures.unshift(...parseFailures);
   result.ok=result.failures.length===0;
   result.readyForLocalPreflight=result.ok;
-  result.readyForPoolSubmission=result.ok&&result.provenance.generatedUnverified===0&&result.provenance.missing===0&&result.provenance.humanWithUrl===result.usablePairs;
+  result.readyForPoolSubmission=false;\n  result.submissionReadiness="requires_independent_human_adjudication_and_network_eligibility";
   console.log(JSON.stringify({file,...result},null,2));
   process.exit(result.ok?0:1);
 }
