@@ -1,7 +1,8 @@
 # Veridex — SMART_CONTRACT_AUDIT evaluator contribution
 
-**Current target:** `SMART_CONTRACT_AUDIT`  
-**Published Season II class:** Hybrid  
+**Season II family label:** `SMART_CONTRACT_AUDIT`  
+**Live canonical node Intent:** `SMART_CONTRACT_AUDIT_GENERAL`  
+**Season II published class:** Hybrid; **live node scorer resolution:** Judgment via generic fallback (discrepancy under maintainer review)  
 **Mission:** Telegraph Season II Mission #202 — Web3 Native & DeFi  
 **Track:** Evaluators  
 **State:** engineering scaffold + live evidence workflow; official pool contribution not yet submitted.
@@ -25,7 +26,7 @@ For this Hybrid Intent, the intended contribution has two components, subject to
 
 ## Critical requirements
 
-- The current Season II catalogue lists `SMART_CONTRACT_AUDIT` as Hybrid. The older bounty #128 wording about `SMART_CONTRACT_AUDIT_GENERAL` is historical and is not the current target.
+- The Season II catalogue labels the family `SMART_CONTRACT_AUDIT` as Hybrid. The live node registry identifies `SMART_CONTRACT_AUDIT_GENERAL` as the canonical child Intent, with 18 miners. The live `/api/wasm?resolve=` endpoint currently reports `judgment`, `served_by: GENERIC`, `generic_fallback: true` for both the family and child. The live Intent detail returns `request: null` and `response: null`. This is a material catalogue/node discrepancy; maintainer clarification is required before deciding whether to build Hybrid truth-source material or a Judgment-only adapter.
 - The live node's canonical Intent record, request/response schema, miner supply, scorer resolution and pool status must be captured before creating any official truth source.
 - Hybrid question material is used only when the evaluation pool has at least five distinct contributors. Truth sources have no five-contributor minimum; one eligible source can provide the checkable reference.
 - Every row begins in quarantine. Only row-level `eligible` material in the active frozen snapshot is actually used.
@@ -58,4 +59,4 @@ The empty dataset is expected to fail the data readiness validator. The live evi
 
 ## Honest status
 
-No human-reviewed gold pairs, official truth source, official evaluation upload, eligible row, adapter package, adapter registration, wallet signature, or final hackathon submission is claimed by this repository at this stage. PR #256 is open, Draft and unmerged.
+The live pool for `SMART_CONTRACT_AUDIT_GENERAL` reports 302 eligible rows, 11 admitted, 71 quarantine, 2 rejected, 3 submitters but only 2 eligible submitters (minimum 5). These are existing pool records, not Veridex uploads. No human-reviewed gold pairs from this repository, official truth source, official evaluation upload, adapter package, adapter registration, wallet signature, or final hackathon submission is claimed by this repository at this stage. PR #256 is open, Draft and unmerged.
