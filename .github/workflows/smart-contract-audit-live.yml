@@ -1,0 +1,71 @@
+name: SMART_CONTRACT_AUDIT live protocol evidence
+
+on:
+  push:
+    branches: [bounty/smart-contract-audit-128]
+    paths:
+      - "scripts/verify-smart-contract-audit-live.mjs"
+      - "tests/smart-contract-audit-live.node-test.mjs"
+      - ".github/workflows/smart-contract-audit-live.yml"
+      - "telegraph/evaluation/smart-contract-audit/**"
+  pull_request:
+    paths:
+      - "scripts/verify-smart-contract-audit-live.mjs"
+      - "tests/smart-contract-audit-live.node-test.mjs"
+      - ".github/workflows/smart-contract-audit-live.yml"
+      - "telegraph/evaluation/smart-contract-audit/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: smart-contract-audit-live-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  live-evidence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Run evaluator unit tests
+        run: node --test tests/smart-contract-audit-*.node-test.mjs
+      - name: Capture live Intent, miner, scorer and evaluation-pool evidence
+        id: live
+        continue-on-error: true
+        env:
+          TELEGRAPH_NODE_URL: https://devnode.telegraphprotocol.com
+          VERIDEX_AUDIT_LIVE_OUTPUT: artifacts/smart-contract-audit-live-evidence.json
+        run: node scripts/verify-smart-contract-audit-live.mjs
+      - name: Publish read-only evidence summary
+        if: always()
+        run: |
+          node <<'NODE' >> "$GITHUB_STEP_SUMMARY"
+          const fs = require('node:fs');
+          const p = 'artifacts/smart-contract-audit-live-evidence.json';
+          if (!fs.existsSync(p)) { console.log('Live evidence artifact was not created.'); process.exit(0); }
+          const x = JSON.parse(fs.readFileSync(p, 'utf8'));
+          console.log('## SMART_CONTRACT_AUDIT live protocol evidence');
+          console.log('- checked: ' + x.checkedAt);
+          console.log('- live Intent: ' + x.decision.liveIntentConfirmed);
+          console.log('- live class: ' + (x.decision.resolvedClass ?? 'unconfirmed'));
+          console.log('- canonical: ' + (x.catalogue.canonical ?? 'unconfirmed'));
+          console.log('- request schema: ' + x.decision.liveRequestSchemaConfirmed);
+          console.log('- response schema: ' + x.decision.liveResponseSchemaConfirmed);
+          console.log('- scorer resolved: ' + x.decision.scorerResolved + ' (generic fallback: ' + x.decision.genericFallback + ')');
+          console.log('- active miner count: ' + (x.miners.intentCount ?? 'unavailable'));
+          console.log('- evaluation pool: ' + (x.evaluationPool.byState ? JSON.stringify(x.evaluationPool.byState) : 'unavailable'));
+          console.log('- decision: ' + JSON.stringify(x.decision));
+          NODE
+      - name: Upload live evidence artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smart-contract-audit-live-evidence-${{ github.sha }}
+          path: artifacts/smart-contract-audit-live-evidence.json
+          if-no-files-found: warn
+          retention-days: 30
