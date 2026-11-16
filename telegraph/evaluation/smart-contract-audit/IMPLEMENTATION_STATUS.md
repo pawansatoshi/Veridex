@@ -127,3 +127,11 @@ GitHub Actions read-only evidence run: [43814704469](https://github.com/pawansat
 - The H2 website is open for registration and final submissions; this repository's final entry has not been registered or submitted. Official requirements include a valid evaluator contribution, reproducibility, a 2–5 minute demo or equivalent, public summary, evidence, GitHub username that starred the Bounties repository, and showcase permissions.
 - The Bounties repository star is a mandatory entry item. The connected GitHub integration does not expose a star action; account holder must perform it.
 - No X/LinkedIn/YouTube progress updates have been published by this automation. The three separate-date update requirement remains open.
+
+
+## Latest CI reconciliation — 16 November 2026
+
+- CI passed on code commit `ae31aed8fc56a2c2364e548d6624b094963d914a`: [run 43815193229](https://github.com/pawansatoshi/Veridex/actions/runs/43815193229).
+- The evaluator test suite passed **14/14**; the dataset gate explicitly reported `not_run_empty_dataset` and `submission_ready: false`.
+- Live evidence workflow passed on the latest PR head `3da298c0e24ba7d53eb9da7b5d7f64ecd4c1e6c4`: [run 43815216437](https://github.com/pawansatoshi/Veridex/actions/runs/43815216437).
+- These results verify tests and read-only diagnostics. They do not establish eligible Veridex rows, a dedicated scorer, adapter registration, or final hackathon acceptance.
