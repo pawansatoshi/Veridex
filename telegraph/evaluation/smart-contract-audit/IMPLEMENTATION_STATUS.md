@@ -63,13 +63,13 @@ Every candidate still needs its original audit report, exact commit-pinned sourc
 ## Current verification status
 
 - Previous PR-head CI #630 and Phase 04 #327 passed on commit `47ca616`.
-- Latest remediation commit: `44643905f94455720fc2290cf010a3c9596b4853` (validator syntax repair). The branch compare reports 62 commits ahead of `main`, 0 behind; PR metadata reports 60 commits in the PR.
+- Latest test-fix commit: `1472034116c9b7c283a0aa59567397eaaf3ce891` (corrected normalized-duplicate test expectation); validator syntax repair is `44643905f94455720fc2290cf010a3c9596b4853`. The branch compare reports 64 commits ahead of `main`, 0 behind; PR metadata reports 60 commits in the PR.
 - The following remediation commits have now been pushed to the contribution branch:
   - validator normalization and fail-closed pool-readiness reporting;
   - regression test for normalized rejected-answer duplicates;
   - CI invocation of the actual validator when pairs exist;
   - SCVD artifact retention increased to 30 days.
-- CI run #633 failed at the SMART_CONTRACT_AUDIT test step because an intermediate validator edit contained a literal newline escape; the validator was corrected in commit `4464390`. CI run #634 also failed before that correction. Phase 04 run #331 passed, but it ran before the final validator repair. No Actions run associated with the final commit has been returned yet; do not describe the final commit as CI-passing.
+- CI runs #633 and #634 failed before the validator syntax repair. CI #637 then failed only because the new regression test expected a duplicate rejected-answer share of 0.5; the correct share for two identical normalized rows is 1.0. That assertion was corrected in commit `1472034`. Phase 04 #331 and #334 passed before the final test correction. A fresh CI run for the latest commit is not yet confirmed; do not describe the latest commit as CI-passing.
 - The SCVD workflow file now requests 30-day artifact retention. A fresh artifact has not yet been confirmed; a UI-originated branch push is still needed to verify the push-triggered workflow.
 - No adapter has been trained, exported, packaged, hosted, or registered. No live scorer endpoint has been confirmed.
 
