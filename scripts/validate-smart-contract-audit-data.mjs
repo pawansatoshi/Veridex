@@ -119,7 +119,7 @@ export function validateRows(inputRows) {
         failures.push("line " + line + ": optional rejected must be non-empty and differ from chosen");
       }
       for (const [key, value] of [["chosen", row.chosen], ["rejected", row.rejected]]) {
-        if (value === undefined) continue;
+        if (typeof value !== "string") continue;
         if (chars(value) < 8 || chars(value) > 32000) failures.push("line " + line + ": " + key + " length outside 8..32000");
         if (/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/u.test(value)) failures.push("line " + line + ": " + key + " contains control characters");
       }
