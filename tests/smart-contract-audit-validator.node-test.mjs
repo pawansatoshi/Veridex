@@ -70,12 +70,13 @@ test("Hybrid truth-source object is accepted by local structural preflight", () 
     source: {
       version: "1",
       kind: "miner",
-      id: 0,
+      id: 9001,
       slug: "veridex-public-audit-truth",
       name: "Veridex public audit evidence source",
       base_url: "https://example.org",
       auth: { type: "none" },
-      endpoints: [{ path: "/audit", method: "POST", intents: ["SMART_CONTRACT_AUDIT_GENERAL"] }]
+      semantics: { supported_intents: ["SMART_CONTRACT_AUDIT_GENERAL"] },
+      endpoints: [{ path: "/audit", method: "POST", description: "Return public evidence for the requested audit", intents: ["SMART_CONTRACT_AUDIT_GENERAL"] }]
     }
   };
   const result = validateRows([row]);
