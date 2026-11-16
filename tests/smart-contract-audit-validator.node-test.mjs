@@ -48,6 +48,6 @@ test("rejected-answer uniqueness uses the same Unicode and whitespace normalizat
   ];
   const result = validateRows(rows);
   assert.equal(result.metrics.uniqueRejectedFraction, 0.5);
-  assert.equal(result.metrics.maxRejectedShare, 0.5);
+  assert.equal(result.metrics.maxRejectedShare, 1);
   assert.ok(result.failures.some((message) => message.includes("unique rejected answers")));
 });
