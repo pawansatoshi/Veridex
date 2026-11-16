@@ -85,3 +85,14 @@ Every candidate still needs its original audit report, exact commit-pinned sourc
 - Added [`EXECUTION_FRAMEWORK.md`](EXECUTION_FRAMEWORK.md), defining the full evaluator goal, official-vs-project requirements, P0 live-route gate, evidence and dual-review protocol, dataset quality gates, conditional adapter path, acceptance tests, submission evidence and priority schedule through the 1 December 2026 deadline.
 - Reconciled the current Season II catalogue: `SMART_CONTRACT_AUDIT` is listed as Hybrid, correcting the older #128 Judgment / `_GENERAL` assumption. Live node canonical status, active miners, request schema and scorer resolution remain unverified.
 - Framework does not mark any blocked work complete. Live Intent/scorer compatibility, human review, official data eligibility, adapter work (if required), and final submission remain open.
+
+
+## 16 November implementation update
+
+- Corrected the target identifier from historical `SMART_CONTRACT_AUDIT_GENERAL` to current catalogue Intent `SMART_CONTRACT_AUDIT` (Hybrid).
+- Reworked the local validator to understand Hybrid question rows (`preference_pair`, `ground_truth`, `graded_exemplar`) and the separate `truth_source` row shape. It still always reports `readyForPoolSubmission: false`.
+- Updated the SCVD candidate fetcher and pilot manifest to use the current canonical Intent ID.
+- Added `scripts/verify-smart-contract-audit-live.mjs`, `npm run verify:audit-live`, unit tests, and `.github/workflows/smart-contract-audit-live.yml` to capture live Intent, miners, scorer resolution and pool status without any wallet action.
+- Updated README and protocol requirements to match the current official Hybrid classification and evaluation-pool rules.
+- Current adapter-kit HEAD still does not include `SMART_CONTRACT_AUDIT` in its compiled Hybrid catalogue; do not train/export until maintainers confirm a supported kit/catalogue path.
+- The new workflow has not yet been verified on its post-change commit. All 30 pilot cases remain unreviewed, `pairs.jsonl` remains empty, and no official truth source has been uploaded.
