@@ -78,6 +78,21 @@ export function summarizeLiveEvidence({ checkedAt, baseUrl, registry, intentDeta
   const genericFallback = Boolean(intentResolve?.generic_fallback ?? familyResolve?.generic_fallback);
   const request = detail?.request ?? detail?.request_schema ?? detail?.requestSchema ?? intent?.request ?? null;
   const response = detail?.response ?? detail?.response_schema ?? detail?.responseSchema ?? intent?.response ?? null;
+  const compactMiners = intentMinerList.map((miner) => ({
+    id: miner.id ?? null,
+    slug: miner.slug ?? null,
+    name: miner.name ?? null,
+    activation_status: miner.activation_status ?? null,
+    supported_intents: miner.supported_intents ?? miner.capabilities ?? null
+  }));
+  const compactScorer = (result, target) => {
+    const body = result.ok ? result.body : null;
+    return {
+      count: body?.count ?? null,
+      resolve: body?.resolve ?? null,
+      targetEntries: body?.intents?.[target] ?? null
+    };
+  };
   return {
     schema: "veridex.smart-contract-audit.live-evidence.v2",
     checkedAt,
@@ -92,7 +107,14 @@ export function summarizeLiveEvidence({ checkedAt, baseUrl, registry, intentDeta
       detailHttpStatus: intentDetail.status,
       request,
       response,
-      raw: intent
+      raw: intent,
+      detail: detail ? {
+        class: detail.class ?? null,
+        request: detail.request ?? null,
+        response: detail.response ?? null,
+        miner_count: detail.miner_count ?? null,
+        wasm_count: detail.wasm_count ?? null
+      } : null
     },
     miners: {
       familyEndpointOk: familyMiners.ok,
@@ -101,8 +123,7 @@ export function summarizeLiveEvidence({ checkedAt, baseUrl, registry, intentDeta
       intentEndpointOk: intentMiners.ok,
       intentHttpStatus: intentMiners.status,
       intentCount: Array.isArray(intentMinerList) ? intentMinerList.length : null,
-      entries: intentMinerList,
-      raw: intentMiners.body ?? null
+      entries: compactMiners
     },
     scorer: {
       familyEndpointOk: familyScorer.ok,
@@ -111,11 +132,23 @@ export function summarizeLiveEvidence({ checkedAt, baseUrl, registry, intentDeta
       intentEndpointOk: intentScorer.ok,
       intentHttpStatus: intentScorer.status,
       intentResolution: intentResolve,
-      raw: { family: familyScorer.body ?? null, intent: intentScorer.body ?? null }
+      raw: {
+        family: compactScorer(familyScorer, TARGET_FAMILY),
+        intent: compactScorer(intentScorer, TARGET_INTENT)
+      }
     },
     evaluationPool: pool,
     familyEvaluationPool: poolSummary(familyPool),
-    endpoints: { registry, intentDetail, familyMiners, intentMiners, familyScorer, intentScorer, familyPool, intentPool },
+    endpoints: {
+      registry: { ok: registry.ok, status: registry.status, target: intent },
+      intentDetail: { ok: intentDetail.ok, status: intentDetail.status, detail: detail ? { class: detail.class ?? null, request, response } : null },
+      familyMiners: { ok: familyMiners.ok, status: familyMiners.status, count: familyMinerList.length },
+      intentMiners: { ok: intentMiners.ok, status: intentMiners.status, count: intentMinerList.length },
+      familyScorer: { ok: familyScorer.ok, status: familyScorer.status, resolve: familyResolve },
+      intentScorer: { ok: intentScorer.ok, status: intentScorer.status, resolve: intentResolve },
+      familyPool: poolSummary(familyPool),
+      intentPool: pool
+    },
     decision: {
       liveIntentConfirmed: Boolean(intent),
       liveCanonicalConfirmed: intent?.canonical === true,
