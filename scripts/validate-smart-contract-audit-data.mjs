@@ -32,15 +32,27 @@ function validateTruthSource(row, line, failures) {
     }
   } else {
     const source = row.source;
+    if (source.version !== "1") failures.push("line " + line + ": truth-source version must be string '1'");
     if (source.kind !== "miner") failures.push("line " + line + ": truth-source object must declare kind=miner");
+    if (!Number.isInteger(source.id) || source.id < 0) failures.push("line " + line + ": truth-source id must be a non-negative integer");
+    if (typeof source.slug !== "string" || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/u.test(source.slug)) failures.push("line " + line + ": truth-source slug must be kebab-case");
+    if (typeof source.name !== "string" || !source.name.trim()) failures.push("line " + line + ": truth-source name is required");
     if (source.auth?.type !== "none") failures.push("line " + line + ": truth-source object must use auth.type=none");
     const endpoints = Array.isArray(source.endpoints) ? source.endpoints : [];
+    if (!endpoints.length) failures.push("line " + line + ": truth-source must declare at least one endpoint");
     const servesIntent = endpoints.some((endpoint) =>
+      typeof endpoint?.path === "string" &&
+      ["GET", "POST", "PUT", "PATCH", "DELETE"].includes(String(endpoint.method).toUpperCase()) &&
+      typeof endpoint.description === "string" &&
       Array.isArray(endpoint?.intents) &&
       (endpoint.intents.includes(TARGET_INTENT) || endpoint.intents.includes("*"))
     );
-    if (!servesIntent) failures.push("line " + line + ": no truth-source endpoint declares the target Intent or wildcard");
-    const baseUrl = source.base_url ?? source.endpoint_base_url;
+    if (!servesIntent) failures.push("line " + line + ": no complete truth-source endpoint declares the target Intent or wildcard");
+    const supported = source.semantics?.supported_intents;
+    if (!Array.isArray(supported) || !(supported.includes(TARGET_INTENT) || supported.includes("*"))) {
+      failures.push("line " + line + ": semantics.supported_intents must include the target Intent or wildcard");
+    }
+    const baseUrl = source.base_url;
     if (typeof baseUrl !== "string" || !/^https:\/\//iu.test(baseUrl)) {
       failures.push("line " + line + ": truth-source base_url must be an absolute HTTPS URL");
     }
