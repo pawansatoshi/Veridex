@@ -410,9 +410,9 @@ The Season II shared Intent catalogue labels **`SMART_CONTRACT_AUDIT` as Hybrid*
 Consequences:
 1. Use `SMART_CONTRACT_AUDIT_GENERAL` as the current canonical **evaluation-pool Intent ID** because that is what the live registry returns. Treat `SMART_CONTRACT_AUDIT` as the published family/prefix label, not as a canonical child Intent for pool uploads.
 2. The Season II catalogue says **Hybrid**, but the live scorer says **Judgment** via `served_by: GENERIC`, `generic_fallback: true`. Follow the live scorer for runtime truth, but do not build against this mismatch until maintainers confirm the intended path.
-3. Do not train a judgment-only adapter based on the old bounty wording.
+3. Do not choose a package class from historical bounty wording or the Season II family label alone; obtain maintainer confirmation of the live class and kit mapping before training or export.
 4. The live node remains the final authority. Verify `canonical: true`, `miner_count > 0`, exact `request.params`, `response.fields`, `class`, and the resolved scorer using the documented node endpoints before building or uploading anything.
-5. The live Intent list endpoint was not readable through the available browser fetch during this reconciliation. Therefore the catalogue classification is confirmed as a published Season II reference, but live node routing, active miner supply and the exact request schema remain **unverified**.
+5. Live evidence confirms the child Intent is canonical with 18 miners; both family and child scorer resolutions currently return Judgment via the generic fallback. The detail endpoint returns no request or response schema. This is not a dedicated scoring module.
 
 **Updated P0 decision:** implementation remains blocked by the catalogue/node class mismatch, missing request/response schema, generic scorer fallback, and missing adapter-kit family entry. The canonical child pool has 2 eligible submitters (5 required). Obtain maintainer direction before building or uploading.
 
@@ -436,7 +436,7 @@ For Hybrid scoring, there are two separate material types:
 ### Truth-source material
 - A truth source uses `{"label_kind":"truth_source","source":...}`; it has no `prompt`, `chosen` or `rejected`.
 - `source` is the miner YAML/JSON document, either as a JSON string or an object.
-- The source must use a public, no-key HTTPS endpoint and declare `SMART_CONTRACT_AUDIT` (or wildcard) in its endpoint's `intents`.
+- The source must use a public, no-key HTTPS endpoint and declare the canonical child `SMART_CONTRACT_AUDIT_GENERAL` (or wildcard) in its endpoint's `intents`, if maintainers confirm that a Hybrid truth-source route is intended.
 - Truth sources have no five-contributor minimum; one valid source can be enough. It must match the exact live request/response schema and produce the value required by the Intent's comparator.
 - The node's YAML loader and row checks are authoritative. The Veridex validator only performs local structural preflight.
 
@@ -448,4 +448,4 @@ A read-only live evidence script and GitHub Actions workflow have now been added
 - `scripts/verify-smart-contract-audit-live.mjs`
 - `.github/workflows/smart-contract-audit-live.yml`
 
-The workflow records the live Intent registry, canonical child miner endpoint, both family/child scorer resolutions and both evaluation-pool states. The first completed run found 18 child miners, no family-prefix miners, a generic Judgment fallback, no request/response schema, and only 2 eligible pool contributors. It is observational: no signatures, uploads, bonds, registrations or payments. The first run on the updated branch must be inspected before claiming live route confirmation.
+The workflow records the live Intent registry, canonical child miner endpoint, both family/child scorer resolutions and both evaluation-pool states. The first completed run found 18 child miners, no family-prefix miners, a generic Judgment fallback, no request/response schema, and only 2 eligible pool contributors. It is observational: no signatures, uploads, bonds, registrations or payments.
