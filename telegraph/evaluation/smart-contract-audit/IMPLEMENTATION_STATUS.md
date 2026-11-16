@@ -69,8 +69,8 @@ Every candidate still needs its original audit report, exact commit-pinned sourc
   - regression test for normalized rejected-answer duplicates;
   - CI invocation of the actual validator when pairs exist;
   - SCVD artifact retention increased to 30 days.
-- CI runs #633 and #634 failed before the validator syntax repair. CI #637 then failed only because the new regression test expected a duplicate rejected-answer share of 0.5; the correct share for two identical normalized rows is 1.0. That assertion was corrected in commit `1472034`. Phase 04 #331 and #334 passed before the final test correction. A fresh CI run for the latest commit is not yet confirmed; do not describe the latest commit as CI-passing.
-- The SCVD workflow file now requests 30-day artifact retention. A fresh artifact has not yet been confirmed; a UI-originated branch push is still needed to verify the push-triggered workflow.
+- CI #633 and #634 failed on intermediate edits. CI #637 exposed an incorrect expected duplicate-share value; the test was corrected in `1472034`. On the reconciled PR head `d44cb6ac9eec9aea246119f0b92751699958dc8b`, CI #639 passed and Phase 04 #336 passed. The SMART_CONTRACT_AUDIT unit tests passed, including the new normalization regression. The dataset-validation CI step completed successfully by explicitly reporting that the dataset is empty and not submission-ready; the real data validator will execute when pairs.jsonl is populated. Do not interpret this as a populated-dataset validation.
+- The SCVD workflow file now requests 30-day artifact retention. A fresh artifact has not yet been confirmed. Use a GitHub web UI commit touching the workflow file to verify the push-triggered SCVD workflow; a connector-authored contents update has not yielded a confirmed SCVD run.
 - No adapter has been trained, exported, packaged, hosted, or registered. No live scorer endpoint has been confirmed.
 
 ## Authorization boundaries
