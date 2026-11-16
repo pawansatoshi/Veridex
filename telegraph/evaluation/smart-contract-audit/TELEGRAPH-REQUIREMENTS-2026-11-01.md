@@ -48,3 +48,18 @@ Use primary evidence, source URLs, pinned commits, chain/block identifiers, affe
 - https://anjoman.ai/docs/protocol/how-it-works
 - https://anjoman.ai/docs/scoring/contribute-evaluation-data
 - https://anjoman.ai/docs/scoring/build-a-scoring-module
+
+
+## Live node evidence — 16 November 2026 (read-only)
+
+The new GitHub Actions evidence run queried the live testnet node:
+- `GET /engine/v1/intents` lists `SMART_CONTRACT_AUDIT_GENERAL` as canonical, with `miner_count: 18`.
+- `GET /engine/v1/intents/SMART_CONTRACT_AUDIT_GENERAL/miners` returns 18 miners. The family prefix endpoint `.../SMART_CONTRACT_AUDIT/miners` returns 0, as expected for a family prefix rather than a canonical child Intent.
+- `GET /engine/v1/intents/SMART_CONTRACT_AUDIT_GENERAL` returns `class: judgment`, but `request: null` and `response: null`.
+- `GET /api/wasm?resolve=SMART_CONTRACT_AUDIT` and the child resolution both return `class: judgment`, `served_by: GENERIC`, `generic_fallback: true`, `routed: true`. This is not a dedicated SMART_CONTRACT_AUDIT module.
+- `GET /api/evalpool/status?intent_id=SMART_CONTRACT_AUDIT_GENERAL` reports 302 eligible, 11 admitted, 71 quarantine, 2 rejected; 3 total submitters, 2 eligible submitters, minimum 5. The active snapshot is `6b4735bb12c353bd7c5a66f095d280bc25659c658aa87cddaacf1b57ef21665b`, activation epoch 2091. The family-prefix pool is empty.
+- These rows belong to other contributors. No Veridex upload was made.
+
+**Decision:** the published Season II catalogue says Hybrid, but the live node currently resolves the canonical child as Judgment through the generic fallback and has no request/response schema. Mission guidance says the live node's actual class and scorer path control. Do not invent a truth-source YAML, train an adapter or register anything until Telegraph maintainers resolve this discrepancy and confirm the supported family/kit path.
+
+The question pool is also not activated for scoring: it has only 2 eligible contributors, below the 5-contributor minimum. Three more independent contributors need eligible rows.
