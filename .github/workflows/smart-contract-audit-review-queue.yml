@@ -60,3 +60,5 @@ jobs:
           path: telegraph/evaluation/smart-contract-audit/source-candidates/
           if-no-files-found: error
           retention-days: 30
+
+# Manual SCVD refresh trigger: 2026-11-16
