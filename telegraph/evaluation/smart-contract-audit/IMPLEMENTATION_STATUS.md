@@ -1,5 +1,5 @@
 # SMART_CONTRACT_AUDIT evaluator — implementation status
-**Last reconciled: 16 November 2026, 10:29 IST**
+**Last reconciled: 16 November 2026**
 
 ## Current scope and official destination
 
@@ -79,3 +79,8 @@ Every candidate still needs its original audit report, exact commit-pinned sourc
 - No evaluation data is uploaded to Anjoman/Telegraph by this work.
 - No wallet message is signed; no bond, registration, adapter deployment, bounty claim or payment is performed.
 - PR #256 remains Draft and is not merged.
+
+## End-to-end execution framework
+
+- Added [`EXECUTION_FRAMEWORK.md`](EXECUTION_FRAMEWORK.md), defining the full evaluator goal, official-vs-project requirements, P0 live-route gate, evidence and dual-review protocol, dataset quality gates, conditional adapter path, acceptance tests, submission evidence and priority schedule through the 1 December 2026 deadline.
+- Framework does not mark any blocked work complete. Live Intent/scorer compatibility, human review, official data eligibility, adapter work (if required), and final submission remain open.
