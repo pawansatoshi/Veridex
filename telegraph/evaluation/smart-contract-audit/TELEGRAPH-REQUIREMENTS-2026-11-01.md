@@ -1,53 +1,50 @@
 # Telegraph evaluator requirements — reconciled 16 November 2026
 
-## Current work destination
+## Current Season II destination
 
-Bounty issue [#128](https://github.com/telegraphprotocol/bounties/issues/128) is closed with reason `not_planned` as of 15 November 2026. The maintainer directed continuing work into [Mission #189 — Exchange](https://github.com/telegraphprotocol/bounties/issues/189) and [Mission #202 — Web3 Native & DeFi](https://github.com/telegraphprotocol/bounties/issues/202). Mission #202 explicitly includes SMART_CONTRACT_AUDIT in its Evaluators route.
+- Target Intent: `SMART_CONTRACT_AUDIT`.
+- Published class: **Hybrid**, in the current Season II shared Intent catalogue.
+- Mission: #202 — Web3 Native & DeFi; track: Evaluators.
+- Mission #202 requires the actual live node class, family and scorer path to control implementation. The catalogue is the current public classification, not proof that the live node resolves the Intent or has miners.
+- Historical bounty #128 wording about `SMART_CONTRACT_AUDIT_GENERAL` as Judgment is superseded for current planning. Do not use that identifier unless the live node explicitly returns it.
+- The adapter-kit pin in `baseline.lock` is `1ed063e2f0066cfaf0e124d66ec6a17b7a6121fd`. Its compiled offline catalogue does not list `SMART_CONTRACT_AUDIT`; `ResolveClass` therefore refuses to build an adapter for it. The current public class is Hybrid, but a compatible kit revision or maintainer-confirmed official path is still needed before adapter training/export.
+- Hybrid scoring combines a comparator for the checkable portion with a model-based evaluator for the judgment portion. The actual live scorer may inherit a family module; verify the resolved scorer and do not guess the family prefix.
 
-Issue #128 remains labelled `reward:unfunded` and says there is no standalone GitHub payout. Season II prizes and protocol earnings are separate and subject to their own eligibility and verification.
+## Official evaluation-pool rules
 
-## Intent and adapter
+- Hybrid and Judgment question rows use better/worse examples. The question pool activates only after at least **five distinct contributors** have eligible material. Samples draw evenly across contributors.
+- Truth sources serve the checkable part of Hybrid Intents. There is no five-contributor minimum for truth sources; one valid source can be enough for an Intent to be scored.
+- Each upload is one JSONL file for one Intent. Question rows support `preference_pair`, `ground_truth`, and `graded_exemplar`. Truth-source rows use `label_kind: truth_source` and a separate `source` field, with no prompt/answer fields.
+- A truth source is a public, no-key HTTPS API described using the miner YAML schema. It must expose an endpoint for `SMART_CONTRACT_AUDIT` (or wildcard) and match the exact Intent request/response shape.
+- Rows start in `quarantine`; `admitted` means checks passed but the row waits for a snapshot; `eligible` means it is in a frozen snapshot; only eligible rows are used.
+- HTTP 200 means the file was read, not that every row is eligible. Check each row and the active snapshot separately.
+- Upload requires an EIP-191 signature over the exact body hash, fresh nonce and chain ID. No upload or signature is performed by the automated repo workflow.
 
-- Target: `SMART_CONTRACT_AUDIT_GENERAL`.
-- Family: `SMART_CONTRACT_AUDIT`.
-- The current issue body and published catalogue describe the Intent as judgment.
-- Mission #202 requires using the selected Intent's actual live node class, family and scoring path. Do not infer live routing from a name or a stale description.
-- Current evaluator adapter format: safetensors LoRA delta, `format_version=1`, `abi=lora-v1`, on the shared ModernBERT Foundation Model. Full-model float WASM is a legacy format.
-- Pinned adapter-kit: `1ed063e2f0066cfaf0e124d66ec6a17b7a6121fd`. The compiled catalogue at this pin lacks `SMART_CONTRACT_AUDIT`; offline class resolution rejects the family. Do not invent a catalogue entry or guess the class. Obtain live node evidence and a maintainer-confirmed compatible kit/catalogue revision before training or export.
-- Evaluator adapter is required only where the live scoring path calls for one; mission guidance explicitly says not to assume every Intent needs a new adapter.
+## Adapter requirements (conditional)
 
-## Evaluation data quality
+Build an adapter only if live scoring resolution requires one. Current published docs describe a safetensors LoRA delta on the shared ModernBERT foundation, `abi=lora-v1`, `format_version=1`, rank at most 16, package at most 64 MiB, exact foundation/tokenizer hashes and a runnable URL that reproduces scores bit-for-bit. Registration requires a bond and gas; never use a guessed class or package format.
 
-The official adapter-kit checks include:
-- unique rejected answers at least 80%;
-- no single rejected answer above 2%;
-- identical chosen/rejected at most 1%;
-- length-only shortcut accuracy at most 65%;
-- held-out leakage at most 10%;
-- surface-style shortcut accuracy at most 65%.
+The pinned kit's missing Intent entry is a blocker, not a reason to modify a local catalogue and pretend it is supported.
 
-Use primary evidence, source URLs, pinned commits, chain/block or jurisdiction identifiers, units/tolerances, and balanced correct/incorrect/incomplete/ambiguous cases. A public URL does not prove human authorship or review. Local validation does not establish Anjoman eligibility; each row's final `eligible` / `rejected` state must be checked in the official interface.
+## Evaluation material quality
 
-The local Veridex validator now normalizes rejected-answer uniqueness consistently and reports pool readiness as false because it cannot authenticate independent human review or network eligibility. CI invokes the validator when the dataset is populated. The current `pairs.jsonl` is intentionally empty.
+Use primary evidence, source URLs, pinned commits, chain/block identifiers, affected contract/function, preconditions, impact and remediation. Include correct, incorrect, incomplete and ambiguous cases. Prevent prompt duplication and answer-length/style shortcuts. Run the compatible official kit's data checks and held-out tests. Local validation cannot authenticate reviewers or establish pool eligibility.
 
-## Current SCVD pilot
+## Current project state
 
-The preserved 31 October 2026 metadata snapshot contains 1,064 candidates and a curated 30-case pilot (10 each for reentrancy, access control and arithmetic; 24 repositories). It is not random or representative. Metadata coverage: source URL 30/30, source commit 27/30, source file 11/30, summary links 9/30, raw references 0/30, contract/function names 0/30.
+- 1,064 SCVD metadata records and a curated 30-case pilot are preserved from 31 October 2026; not statistically representative.
+- All 30 pilot cases remain unreviewed by independent humans.
+- `pairs.jsonl` remains empty.
+- No truth source has been uploaded.
+- No official evaluation rows are eligible.
+- No adapter has been trained, exported, packaged, hosted or registered.
+- No live node response has yet been recorded by the new workflow; the read-only live evidence workflow has been added to collect it.
+- No wallet signature, bond, claim, payment or final submission has occurred.
 
-All 30 records remain `needs_independent_human_review`. The GitHub artifact expired 14 November 2026; a local archive is preserved with SHA-256 `f44ac6d05dc2b5f668f6b7e2f338745bdeb7da2fb80a66f82b25cb79c187fee3`. The review-queue workflow now requests 30-day artifact retention and is configured to run on a push touching its workflow file.
+## Official references
 
-## Source-review notes
-
-- AI Arena H-08: original Code4rena report and historical mitigation record located; source callback path is a candidate for independent reproduction. It does not prove current deployment exploitability.
-- Beanstalk: selected arithmetic-category item describes a gas/storage optimization; taxonomy unresolved.
-- Dropbox: selected reentrancy-category item describes an informational import recommendation; taxonomy unresolved.
-
-No candidate is human-adjudicated. Obtain original reports, exact pinned source, exploitability/impact reasoning and independent second review before writing preference pairs.
-
-## Participation
-
-No `/claim` by `pawansatoshi` was found on #128, #189 or #202 in the comments checked on 16 November. If the user chooses to claim a current mission, the bot requires a meaningful `/progress <update>` at least every 72 hours. Do not claim on the user's behalf.
-
-## Authorization
-
-No data upload, signature, wallet approval, bond, adapter registration/deployment, bounty submission or payment is performed here. PR #256 remains Draft and is not merged.
+- https://hackathon.telegraphprotocol.com/intents
+- https://hackathon.telegraphprotocol.com/rules
+- https://anjoman.ai/docs/protocol/how-it-works
+- https://anjoman.ai/docs/scoring/contribute-evaluation-data
+- https://anjoman.ai/docs/scoring/build-a-scoring-module
