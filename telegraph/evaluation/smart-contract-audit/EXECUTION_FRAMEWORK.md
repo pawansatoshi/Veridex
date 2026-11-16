@@ -403,25 +403,25 @@ Supported `label_kind` values are `preference_pair`, `ground_truth`, and `graded
 
 ---
 
-## 15. Critical scope correction — current Season II catalogue lists SMART_CONTRACT_AUDIT as Hybrid
+## 15. Catalogue and live-node scope — a discrepancy must be resolved
 
-A fresh check of the current Season II shared Intent catalogue on 16 November 2026 lists **`SMART_CONTRACT_AUDIT` as a Hybrid Intent**. This supersedes the older bounty #128 wording that described `SMART_CONTRACT_AUDIT_GENERAL` as Judgment for purposes of current project planning.
+The Season II shared Intent catalogue labels **`SMART_CONTRACT_AUDIT` as Hybrid**. A read-only live-node check on 16 November 2026 found the canonical child **`SMART_CONTRACT_AUDIT_GENERAL`**, with 18 miners, while the live scorer currently resolves to Judgment through the generic fallback. The live detail endpoint returns `request: null` and `response: null`. This contradicts the published Hybrid class and requires maintainer clarification.
 
 Consequences:
-1. Treat the exact canonical candidate as `SMART_CONTRACT_AUDIT`, not `SMART_CONTRACT_AUDIT_GENERAL`, unless the live node's canonical Intent list proves otherwise.
-2. Treat the expected evaluator path as **Hybrid** provisionally: a truth-source/comparator for the checkable fields plus a judgment adapter for the residual security reasoning, only where the actual live scorer says both are used.
+1. Use `SMART_CONTRACT_AUDIT_GENERAL` as the current canonical **evaluation-pool Intent ID** because that is what the live registry returns. Treat `SMART_CONTRACT_AUDIT` as the published family/prefix label, not as a canonical child Intent for pool uploads.
+2. The Season II catalogue says **Hybrid**, but the live scorer says **Judgment** via `served_by: GENERIC`, `generic_fallback: true`. Follow the live scorer for runtime truth, but do not build against this mismatch until maintainers confirm the intended path.
 3. Do not train a judgment-only adapter based on the old bounty wording.
 4. The live node remains the final authority. Verify `canonical: true`, `miner_count > 0`, exact `request.params`, `response.fields`, `class`, and the resolved scorer using the documented node endpoints before building or uploading anything.
 5. The live Intent list endpoint was not readable through the available browser fetch during this reconciliation. Therefore the catalogue classification is confirmed as a published Season II reference, but live node routing, active miner supply and the exact request schema remain **unverified**.
 
-**Updated P0 decision:** current best-supported plan is Hybrid, but implementation stays blocked until the live node evidence is captured. If the node disagrees with the Season II catalogue, record the discrepancy and obtain maintainer direction; do not guess.
+**Updated P0 decision:** implementation remains blocked by the catalogue/node class mismatch, missing request/response schema, generic scorer fallback, and missing adapter-kit family entry. The canonical child pool has 2 eligible submitters (5 required). Obtain maintainer direction before building or uploading.
 
 
 ---
 
 ## 16. Corrected implementation target and exact hybrid data contract
 
-The current Season II Intent catalogue identifies `SMART_CONTRACT_AUDIT` as a **Hybrid** Blockchain & Web3 Intent (used by two missions). The earlier `SMART_CONTRACT_AUDIT_GENERAL` Judgment assumption came from historical bounty #128 text and must not be used for current data or tooling unless the live node explicitly returns that identifier.
+The Season II catalogue labels the family `SMART_CONTRACT_AUDIT` as **Hybrid**. The live node identifies `SMART_CONTRACT_AUDIT_GENERAL` as the canonical child Intent. Therefore local evaluation-pool JSONL must use `intent_id: SMART_CONTRACT_AUDIT_GENERAL`; adapter registration family remains a separate prefix decision. The live node currently resolves both family and child to Judgment via the generic fallback, so the catalogue/node mismatch is a hard blocker.
 
 For Hybrid scoring, there are two separate material types:
 
@@ -441,11 +441,11 @@ For Hybrid scoring, there are two separate material types:
 - The node's YAML loader and row checks are authoritative. The Veridex validator only performs local structural preflight.
 
 ### Live route and tooling blockers
-The current public adapter kit at `telegraphprotocol/telegraph-wasm-baseline` HEAD still points to `1ed063e2f0066cfaf0e124d66ec6a17b7a6121fd`. Its compiled hybrid map includes `SECURITY_REVIEW` and `VULNERABILITY_TRIAGE`, but not `SMART_CONTRACT_AUDIT`. The adapter builder deliberately refuses unknown Intent classes. Do not add a local catalogue entry and treat that as network support. A maintainer-confirmed kit update or supported build path is required before adapter packaging.
+The current public adapter kit at `telegraphprotocol/telegraph-wasm-baseline` HEAD still points to `1ed063e2f0066cfaf0e124d66ec6a17b7a6121fd`. Its compiled class catalogue contains neither `SMART_CONTRACT_AUDIT` nor `SMART_CONTRACT_AUDIT_GENERAL`. The adapter builder deliberately refuses unknown Intent classes. Do not add a local catalogue entry and treat that as network support. A maintainer-confirmed kit update or supported build path is required before adapter packaging.
 
 A read-only live evidence script and GitHub Actions workflow have now been added:
 - `npm run verify:audit-live`
 - `scripts/verify-smart-contract-audit-live.mjs`
 - `.github/workflows/smart-contract-audit-live.yml`
 
-The workflow records the live Intent registry, miner endpoint, scorer resolution (`/api/wasm?resolve=SMART_CONTRACT_AUDIT`) and evaluation-pool status. It is observational: no signatures, uploads, bonds, registrations or payments. The first run on the updated branch must be inspected before claiming live route confirmation.
+The workflow records the live Intent registry, canonical child miner endpoint, both family/child scorer resolutions and both evaluation-pool states. The first completed run found 18 child miners, no family-prefix miners, a generic Judgment fallback, no request/response schema, and only 2 eligible pool contributors. It is observational: no signatures, uploads, bonds, registrations or payments. The first run on the updated branch must be inspected before claiming live route confirmation.
