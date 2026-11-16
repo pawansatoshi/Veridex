@@ -59,4 +59,4 @@ jobs:
           name: smart-contract-audit-human-review-queue
           path: telegraph/evaluation/smart-contract-audit/source-candidates/
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 30
