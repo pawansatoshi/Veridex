@@ -11,11 +11,11 @@
 
 ## Current published evaluator requirements
 
-- Historical issue #128 described `SMART_CONTRACT_AUDIT_GENERAL` as judgment. The current Season II shared Intent catalogue lists `SMART_CONTRACT_AUDIT` as Hybrid. The current live node must settle this discrepancy; the execution framework records the hybrid-first plan and exact verification steps.
+- Historical issue #128 and the live node describe `SMART_CONTRACT_AUDIT_GENERAL` as Judgment; the current Season II catalogue labels family `SMART_CONTRACT_AUDIT` Hybrid. Live node: canonical child true, 18 miners, scorer `judgment`, `served_by: GENERIC`, `generic_fallback: true`, request/response null. Do not build against this discrepancy until maintainers clarify the intended class.
 - Current adapter documentation specifies a safetensors LoRA delta for the shared ModernBERT Foundation Model (`abi=lora-v1`, `format_version=1`). Full-model WASM is a legacy format.
 - Mission #202 says evaluator work must follow the selected Intent's actual node class, family and scoring path. It asks for sourced, balanced better/worse examples and a compatible adapter **where needed**; do not assume a new adapter is always required.
-- The published catalogue/issue describe judgment, but live node class and scorer routing have not been independently retrieved in this environment. Treat published classification and live routing as separate facts.
-- The pinned adapter-kit commit in `baseline.lock` is `1ed063e2f0066cfaf0e124d66ec6a17b7a6121fd`. Its compiled catalogue does not include `SMART_CONTRACT_AUDIT`; offline `ResolveClass` refuses the unknown family. Do not invent a catalogue entry or guess the class. Obtain a maintainer-confirmed compatible kit/catalogue revision or a supported official route.
+- The exact child scorer and family scorer both resolve to Judgment via generic fallback. There is no dedicated SMART_CONTRACT_AUDIT scorer confirmed.
+- The pinned adapter-kit commit in `baseline.lock` is `1ed063e2f0066cfaf0e124d66ec6a17b7a6121fd`. Its compiled class catalogue contains neither `SMART_CONTRACT_AUDIT` nor `SMART_CONTRACT_AUDIT_GENERAL`; offline `ResolveClass` refuses the target. Do not invent a catalogue entry or guess the class. Obtain a maintainer-confirmed compatible kit/catalogue revision or a supported official route.
 
 ## Engineering work present on the contribution branch
 
@@ -96,3 +96,24 @@ Every candidate still needs its original audit report, exact commit-pinned sourc
 - Updated README and protocol requirements to match the current official Hybrid classification and evaluation-pool rules.
 - Current adapter-kit HEAD still does not include `SMART_CONTRACT_AUDIT` in its compiled Hybrid catalogue; do not train/export until maintainers confirm a supported kit/catalogue path.
 - The new workflow has not yet been verified on its post-change commit. All 30 pilot cases remain unreviewed, `pairs.jsonl` remains empty, and no official truth source has been uploaded.
+
+
+## Live protocol evidence — 16 November 2026
+
+GitHub Actions read-only evidence run: [43814704469](https://github.com/pawansatoshi/Veridex/actions/runs/43814704469).
+
+- Registry: `SMART_CONTRACT_AUDIT_GENERAL` is canonical; `miner_count=18`.
+- Child miner endpoint returns 18; family-prefix miner endpoint returns 0.
+- Child detail: `class=judgment`, `request=null`, `response=null`.
+- Family and child scorer resolution: `class=judgment`, `served_by=GENERIC`, `generic_fallback=true`, `routed=true`. This is a generic fallback, not a dedicated family module.
+- Child evaluation pool: 302 eligible, 11 admitted, 71 quarantine, 2 rejected; 3 total submitters, 2 eligible submitters, minimum 5. Family-prefix pool is empty. These rows are existing third-party rows, not Veridex uploads.
+- Question pool is below the five-eligible-contributor threshold. Three additional independent eligible contributors are needed.
+- No request/response schema exists in the returned Intent detail, so a conforming truth-source YAML cannot yet be built.
+
+## 16 November implementation update
+
+- Corrected local evaluation-pool target to canonical child `SMART_CONTRACT_AUDIT_GENERAL`; family prefix remains `SMART_CONTRACT_AUDIT`.
+- Reworked validator for official question row types and truth-source shape; it always reports `readyForPoolSubmission: false`.
+- Added read-only live evidence script and Actions workflow. Its first run passed all 14 unit tests and captured the live registry, miners, scorer resolution and pool state.
+- The published Hybrid classification vs live Judgment generic fallback remains unresolved; adapter-kit catalogue lacks both target names. No adapter build or truth-source upload is safe until maintainers confirm the route.
+- All 30 SCVD cases remain unreviewed; `pairs.jsonl` remains empty; no Veridex row has been uploaded.
