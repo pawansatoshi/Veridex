@@ -130,7 +130,7 @@ async function main() {
   const manifest = {
     generated_at: new Date().toISOString(),
     source: BASE,
-    intent_id: "SMART_CONTRACT_AUDIT_GENERAL",
+    intent_id: "SMART_CONTRACT_AUDIT",
     counts: { total: cases.length, by_category: byCategory },
     policy: "Metadata-only review queue. No prompt/answer labels are generated. Every case requires independent human verification before it can become an attested preference pair."
   };
