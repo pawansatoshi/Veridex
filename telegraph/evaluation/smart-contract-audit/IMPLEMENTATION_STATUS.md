@@ -63,7 +63,7 @@ Every candidate still needs its original audit report, exact commit-pinned sourc
 ## Current verification status
 
 - Previous PR-head CI #630 and Phase 04 #327 passed on commit `47ca616`.
-- Latest remediation commit: `44643905f94455720fc2290cf010a3c9596b4853` (validator syntax repair). The branch compare still reports 50 commits ahead of `main`, 0 behind; PR metadata reports 60 commits in the PR.
+- Latest remediation commit: `44643905f94455720fc2290cf010a3c9596b4853` (validator syntax repair). The branch compare reports 62 commits ahead of `main`, 0 behind; PR metadata reports 60 commits in the PR.
 - The following remediation commits have now been pushed to the contribution branch:
   - validator normalization and fail-closed pool-readiness reporting;
   - regression test for normalized rejected-answer duplicates;
