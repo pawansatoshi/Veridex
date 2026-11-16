@@ -2,7 +2,8 @@
 import fs from "node:fs";
 import { pathToFileURL } from "node:url";
 
-export const TARGET_INTENT = "SMART_CONTRACT_AUDIT";
+export const TARGET_FAMILY = "SMART_CONTRACT_AUDIT";
+export const TARGET_INTENT = "SMART_CONTRACT_AUDIT_GENERAL";
 const BASE = (process.env.TELEGRAPH_NODE_URL ?? "https://devnode.telegraphprotocol.com").replace(/\/$/u, "");
 
 async function getJson(path, timeoutMs = 10000) {
@@ -42,77 +43,111 @@ export function findIntent(payload, target = TARGET_INTENT) {
   return visit(payload);
 }
 
-export function summarizeLiveEvidence({ checkedAt, baseUrl, registry, miners, scorer, pool }) {
-  const intent = registry.ok ? findIntent(registry.body) : null;
-  const minerBody = miners.ok ? miners.body : null;
-  const minerList = Array.isArray(minerBody) ? minerBody : (minerBody?.miners ?? minerBody?.items ?? []);
-  const scorerBody = scorer.ok ? scorer.body : null;
-  const poolBody = pool.ok ? pool.body : null;
-  const classValue = intent?.class ?? intent?.kind ?? intent?.scoring_class ?? intent?.scoringClass ?? null;
-  const request = intent?.request ?? intent?.request_schema ?? intent?.requestSchema ?? null;
-  const response = intent?.response ?? intent?.response_schema ?? intent?.responseSchema ?? null;
+function minerEntries(result) {
+  const body = result.ok ? result.body : null;
+  return Array.isArray(body) ? body : (body?.miners ?? body?.items ?? []);
+}
+function resolveBody(result) {
+  const body = result.ok ? result.body : null;
+  return body?.resolve ?? body ?? null;
+}
+function poolSummary(result) {
+  const body = result.ok ? result.body : null;
   return {
-    schema: "veridex.smart-contract-audit.live-evidence.v1",
+    endpointOk: result.ok,
+    httpStatus: result.status,
+    byState: body?.by_state ?? body?.counts ?? null,
+    submitters: body?.submitters ?? null,
+    eligibleSubmitters: body?.eligible_submitters ?? null,
+    minSubmitters: body?.min_submitters ?? null,
+    snapshot: body?.snapshot ?? null,
+    activeSnapshot: body?.active_snapshot ?? null,
+    raw: body
+  };
+}
+
+export function summarizeLiveEvidence({ checkedAt, baseUrl, registry, intentDetail, familyMiners, intentMiners, familyScorer, intentScorer, familyPool, intentPool }) {
+  const intent = registry.ok ? findIntent(registry.body, TARGET_INTENT) : null;
+  const detail = intentDetail.ok ? intentDetail.body : null;
+  const familyMinerList = minerEntries(familyMiners);
+  const intentMinerList = minerEntries(intentMiners);
+  const familyResolve = resolveBody(familyScorer);
+  const intentResolve = resolveBody(intentScorer);
+  const pool = poolSummary(intentPool);
+  const classValue = intentResolve?.class ?? familyResolve?.class ?? null;
+  const genericFallback = Boolean(intentResolve?.generic_fallback ?? familyResolve?.generic_fallback);
+  const request = detail?.request ?? detail?.request_schema ?? detail?.requestSchema ?? intent?.request ?? null;
+  const response = detail?.response ?? detail?.response_schema ?? detail?.responseSchema ?? intent?.response ?? null;
+  return {
+    schema: "veridex.smart-contract-audit.live-evidence.v2",
     checkedAt,
     node: baseUrl,
+    intentFamily: TARGET_FAMILY,
     intentId: TARGET_INTENT,
     catalogue: {
       found: Boolean(intent),
-      class: classValue,
       canonical: intent?.canonical ?? null,
-      minerCount: intent?.miner_count ?? intent?.minerCount ?? (Array.isArray(minerList) ? minerList.length : null),
+      minerCount: intent?.miner_count ?? intent?.minerCount ?? (Array.isArray(intentMinerList) ? intentMinerList.length : null),
+      description: intent?.description ?? null,
+      detailHttpStatus: intentDetail.status,
       request,
       response,
       raw: intent
     },
     miners: {
-      endpointOk: miners.ok,
-      httpStatus: miners.status,
-      count: Array.isArray(minerList) ? minerList.length : null,
-      entries: Array.isArray(minerList) ? minerList : null,
-      raw: minerBody
+      familyEndpointOk: familyMiners.ok,
+      familyHttpStatus: familyMiners.status,
+      familyCount: Array.isArray(familyMinerList) ? familyMinerList.length : null,
+      intentEndpointOk: intentMiners.ok,
+      intentHttpStatus: intentMiners.status,
+      intentCount: Array.isArray(intentMinerList) ? intentMinerList.length : null,
+      entries: intentMinerList,
+      raw: intentMiners.body ?? null
     },
     scorer: {
-      endpointOk: scorer.ok,
-      httpStatus: scorer.status,
-      resolution: scorerBody?.resolve ?? scorerBody,
-      raw: scorerBody
+      familyEndpointOk: familyScorer.ok,
+      familyHttpStatus: familyScorer.status,
+      familyResolution: familyResolve,
+      intentEndpointOk: intentScorer.ok,
+      intentHttpStatus: intentScorer.status,
+      intentResolution: intentResolve,
+      raw: { family: familyScorer.body ?? null, intent: intentScorer.body ?? null }
     },
-    evaluationPool: {
-      endpointOk: pool.ok,
-      httpStatus: pool.status,
-      byState: poolBody?.by_state ?? poolBody?.counts ?? null,
-      submitters: poolBody?.submitters ?? null,
-      eligibleSubmitters: poolBody?.eligible_submitters ?? null,
-      minSubmitters: poolBody?.min_submitters ?? null,
-      snapshot: poolBody?.snapshot ?? null,
-      activeSnapshot: poolBody?.active_snapshot ?? null,
-      raw: poolBody
-    },
-    endpoints: { registry, miners, scorer, pool },
+    evaluationPool: pool,
+    familyEvaluationPool: poolSummary(familyPool),
+    endpoints: { registry, intentDetail, familyMiners, intentMiners, familyScorer, intentScorer, familyPool, intentPool },
     decision: {
       liveIntentConfirmed: Boolean(intent),
-      liveClassConfirmed: Boolean(classValue),
+      liveCanonicalConfirmed: intent?.canonical === true,
+      liveClassConfirmed: Boolean(classValue && !genericFallback),
+      resolvedClass: classValue,
+      genericFallback,
       liveRequestSchemaConfirmed: Boolean(request),
       liveResponseSchemaConfirmed: Boolean(response),
-      scorerResolved: Boolean(scorerBody?.resolve?.scorer ?? scorerBody?.scorer),
-      activeMinerCountKnown: Array.isArray(minerList),
-      questionPoolReady: Number(poolBody?.eligible_submitters ?? 0) >= 5,
-      eligibleRowsPresent: Number(poolBody?.by_state?.eligible ?? poolBody?.eligible ?? 0) > 0
+      scorerResolved: Boolean(intentResolve?.scorer ?? familyResolve?.scorer),
+      activeMinerCountKnown: Array.isArray(intentMinerList),
+      activeMinerCount: Array.isArray(intentMinerList) ? intentMinerList.length : null,
+      questionPoolReady: Number(pool.eligibleSubmitters ?? 0) >= 5,
+      eligibleRowsPresent: Number(pool.byState?.eligible ?? 0) > 0
     },
+    interpretation: "The Season II catalogue labels SMART_CONTRACT_AUDIT Hybrid. The live node's SMART_CONTRACT_AUDIT_GENERAL registry and scorer resolution are recorded independently; generic_fallback means the live family scorer is not a confirmed dedicated module.",
     safety: "Read-only diagnostics only. No wallet signing, upload, bond, registration, or payment was attempted."
   };
 }
 
 async function main() {
   const checkedAt = new Date().toISOString();
-  const [registry, miners, scorer, pool] = await Promise.all([
+  const [registry, intentDetail, familyMiners, intentMiners, familyScorer, intentScorer, familyPool, intentPool] = await Promise.all([
     getJson("/engine/v1/intents"),
+    getJson("/engine/v1/intents/" + TARGET_INTENT),
+    getJson("/engine/v1/intents/" + TARGET_FAMILY + "/miners"),
     getJson("/engine/v1/intents/" + TARGET_INTENT + "/miners"),
+    getJson("/api/wasm?resolve=" + TARGET_FAMILY),
     getJson("/api/wasm?resolve=" + TARGET_INTENT),
+    getJson("/api/evalpool/status?intent_id=" + TARGET_FAMILY),
     getJson("/api/evalpool/status?intent_id=" + TARGET_INTENT)
   ]);
-  const result = summarizeLiveEvidence({ checkedAt, baseUrl: BASE, registry, miners, scorer, pool });
+  const result = summarizeLiveEvidence({ checkedAt, baseUrl: BASE, registry, intentDetail, familyMiners, intentMiners, familyScorer, intentScorer, familyPool, intentPool });
   const output = process.env.VERIDEX_AUDIT_LIVE_OUTPUT ?? "artifacts/smart-contract-audit-live-evidence.json";
   fs.mkdirSync(output.slice(0, Math.max(0, output.lastIndexOf("/"))) || ".", { recursive: true });
   fs.writeFileSync(output, JSON.stringify(result, null, 2) + "\n", "utf8");
