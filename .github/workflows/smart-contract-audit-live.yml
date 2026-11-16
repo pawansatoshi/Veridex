@@ -52,12 +52,12 @@ jobs:
           console.log('## SMART_CONTRACT_AUDIT live protocol evidence');
           console.log('- checked: ' + x.checkedAt);
           console.log('- live Intent: ' + x.decision.liveIntentConfirmed);
-          console.log('- live class: ' + (x.catalogue.class ?? 'unconfirmed'));
+          console.log('- live class: ' + (x.decision.resolvedClass ?? 'unconfirmed'));
           console.log('- canonical: ' + (x.catalogue.canonical ?? 'unconfirmed'));
           console.log('- request schema: ' + x.decision.liveRequestSchemaConfirmed);
           console.log('- response schema: ' + x.decision.liveResponseSchemaConfirmed);
-          console.log('- scorer resolved: ' + x.decision.scorerResolved);
-          console.log('- active miner count: ' + (x.miners.count ?? 'unavailable'));
+          console.log('- scorer resolved: ' + x.decision.scorerResolved + ' (generic fallback: ' + x.decision.genericFallback + ')');
+          console.log('- active miner count: ' + (x.miners.intentCount ?? 'unavailable'));
           console.log('- evaluation pool: ' + (x.evaluationPool.byState ? JSON.stringify(x.evaluationPool.byState) : 'unavailable'));
           console.log('- decision: ' + JSON.stringify(x.decision));
           NODE
