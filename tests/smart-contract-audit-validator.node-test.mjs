@@ -39,3 +39,14 @@ test("an HTTP URL alone does not make a non-human source attested", () => {
   const result = validateRows(rows);
   assert.equal(result.provenance.humanWithUrl, 0);
 });
+
+test("rejected-answer uniqueness uses the same Unicode and whitespace normalization", () => {
+  const rows = [
+    { prompt: "Review the first contract operation for its concrete authorization boundary.", chosen: "The supplied role modifier restricts the operation to the configured administrator and the call path confirms the check.", rejected: "This operation is safe because the function name sounds administrative and no additional checks are needed." },
+    { prompt: "Review the second contract operation for its concrete authorization boundary.", chosen: "The call path applies the configured role check before the protected state transition and no bypass is shown.", rejected: "This operation is safe because the function   name sounds administrative and no additional checks are needed." }
+  ];
+  const result = validateRows(rows);
+  assert.equal(result.metrics.uniqueRejectedFraction, 0.5);
+  assert.equal(result.metrics.maxRejectedShare, 0.5);
+  assert.ok(result.failures.some((message) => message.includes("unique rejected answers")));
+});
