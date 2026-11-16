@@ -58,6 +58,18 @@ jobs:
       - name: SMART_CONTRACT_AUDIT data and pilot tests
         run: npm run test:audit-data
 
+      - name: Validate SMART_CONTRACT_AUDIT preference dataset when populated
+        shell: bash
+        run: |
+          DATASET="telegraph/evaluation/smart-contract-audit/pairs.jsonl"
+          if [ ! -s "$DATASET" ]; then
+            echo "::notice::No preference pairs exist yet. The empty scaffold remains not submission-ready; unit tests enforce fail-closed behavior."
+            printf '{"status":"not_run_empty_dataset","submission_ready":false}\n' > artifacts/audit-data-validation.json
+          else
+            set -o pipefail
+            npm run validate:audit-data | tee artifacts/audit-data-validation.json
+          fi
+
       - name: Track 3 application regression tests
         id: track3
         continue-on-error: true
