@@ -37,7 +37,8 @@ test("an HTTP URL alone does not make a non-human source attested", () => {
     provenance: { source_kind: "public_reference", source_url: "https://docs.openzeppelin.com/contracts/5.x/access-control" }
   }];
   const result = validateRows(rows);
-  assert.equal(result.provenance.humanWithUrl, 0);
+  assert.equal(result.provenance.selfDeclaredHumanWithUrl, 0);
+  assert.equal(result.readyForPoolSubmission, false);
 });
 
 test("rejected-answer uniqueness uses the same Unicode and whitespace normalization", () => {
