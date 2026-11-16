@@ -359,3 +359,43 @@ Dates are internal priority targets. Human review, maintainer response and offic
 - Official submission: https://anjoman.ai/dashboard/hackathon
 
 Re-check live pages before acting; official platform state and rules take precedence over this repository document.
+
+
+---
+
+## 14. Official evaluation-pool mechanics confirmed from current Anjoman documentation
+
+This section records operational details from the current *Contribute Evaluation Data* documentation (updated 31 October 2026). These details are important to execution:
+
+### Pool activation and contribution model
+- Judgment questions are used only once an Intent's pool contains material from at least **five different contributors**. Samples draw evenly across contributors, so a single contributor cannot dominate the pool.
+- Truth sources for deterministic intents have no five-contributor minimum; one valid truth source can be enough for an Intent to be scored.
+- Each row is assigned by the node to either the testing half or ranking half. Contributors do not choose the half. Testing rows are hidden and used to compare scoring modules; ranking rows can be shown to miners.
+- Therefore, a judgment-data plan must recruit independent contributors. Pawan's own rows alone cannot activate the judgment question pool.
+
+### Official JSONL row format
+The documented question-row shape is:
+```json
+{"prompt":"...","chosen":"...","rejected":"...","label_kind":"preference_pair","provenance":{"source_kind":"human","source_url":"https://..."}}
+```
+Supported `label_kind` values are `preference_pair`, `ground_truth`, and `graded_exemplar`; deterministic/hybrid truth sources use `label_kind: truth_source` with a separate `source` document and no prompt/answer fields. Veridex's internal schema must be converted to the exact current official schema; do not assume the local `pairs.jsonl` is upload-ready.
+
+### Provenance semantics
+- A row with an HTTP(S) `source_url` is recorded as `attested`.
+- A row whose `source_kind` is `llm`, `synthetic`, `generated`, or `model` is always `unverified`, even if it has a URL.
+- Other provenance combinations are unverified.
+- The platform's `attested` classification is a provenance state, not proof that two independent reviewers agreed. Keep Veridex's human adjudication records separate.
+
+### Upload, signature and row lifecycle
+- Uploads use `POST /api/evalpool/submissions?intent_id=<INTENT>&submitter=<address>`, with an EIP-191 signature over the exact request-body hash, fresh nonce and node chain ID.
+- The documented Sepolia testnet chain ID is `11155111`. Uploading changes the live evaluation pool.
+- The documentation says there is no fee or bond for evaluation-data upload. A wallet signature is still an authorization and must be performed by the account holder; it is not part of this automated work.
+- A successful HTTP 200 means the file was read, not that every row is eligible. New rows start in `quarantine`; after checks they may become `admitted`, and only rows in a frozen snapshot become `eligible`. Other states include `rejected`, `superseded`, and `revoked`.
+- Check row-level state and the pool status after upload. Rows admitted after an epoch rollover are not immediately eligible in the current snapshot.
+
+### Execution impact
+1. P0 must establish whether the live route is judgment, hybrid or deterministic.
+2. If judgment/hybrid: recruit at least five genuine contributors, create balanced human-reviewed question material, and verify row-level eligible state after an authorized upload.
+3. If deterministic/hybrid: author a valid public, no-key truth-source document matching the exact live request schema and verify its row state.
+4. Only build or train an adapter if the live scoring module actually requires it.
+5. Never treat a successful upload response, `attested` provenance, `admitted` state or a local validator pass as equivalent to `eligible` or canonical scoring-module promotion.
