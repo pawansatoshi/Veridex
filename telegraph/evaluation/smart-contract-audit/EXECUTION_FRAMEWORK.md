@@ -415,3 +415,37 @@ Consequences:
 5. The live Intent list endpoint was not readable through the available browser fetch during this reconciliation. Therefore the catalogue classification is confirmed as a published Season II reference, but live node routing, active miner supply and the exact request schema remain **unverified**.
 
 **Updated P0 decision:** current best-supported plan is Hybrid, but implementation stays blocked until the live node evidence is captured. If the node disagrees with the Season II catalogue, record the discrepancy and obtain maintainer direction; do not guess.
+
+
+---
+
+## 16. Corrected implementation target and exact hybrid data contract
+
+The current Season II Intent catalogue identifies `SMART_CONTRACT_AUDIT` as a **Hybrid** Blockchain & Web3 Intent (used by two missions). The earlier `SMART_CONTRACT_AUDIT_GENERAL` Judgment assumption came from historical bounty #128 text and must not be used for current data or tooling unless the live node explicitly returns that identifier.
+
+For Hybrid scoring, there are two separate material types:
+
+### Question material
+- One JSON object per JSONL line; one Intent per upload.
+- Supported labels: `preference_pair` (default), `ground_truth`, `graded_exemplar`.
+- `preference_pair` requires non-empty `chosen` and `rejected`, which must differ.
+- `ground_truth` and `graded_exemplar` require non-empty `chosen`; `rejected` is optional and, if present, must differ.
+- The question pool requires at least five distinct eligible contributors before question rows are used. The node samples evenly across contributors.
+- A public `source_url` marks platform provenance as `attested` only when the source kind is not generated/model. This is not an independent human-review certificate.
+
+### Truth-source material
+- A truth source uses `{"label_kind":"truth_source","source":...}`; it has no `prompt`, `chosen` or `rejected`.
+- `source` is the miner YAML/JSON document, either as a JSON string or an object.
+- The source must use a public, no-key HTTPS endpoint and declare `SMART_CONTRACT_AUDIT` (or wildcard) in its endpoint's `intents`.
+- Truth sources have no five-contributor minimum; one valid source can be enough. It must match the exact live request/response schema and produce the value required by the Intent's comparator.
+- The node's YAML loader and row checks are authoritative. The Veridex validator only performs local structural preflight.
+
+### Live route and tooling blockers
+The current public adapter kit at `telegraphprotocol/telegraph-wasm-baseline` HEAD still points to `1ed063e2f0066cfaf0e124d66ec6a17b7a6121fd`. Its compiled hybrid map includes `SECURITY_REVIEW` and `VULNERABILITY_TRIAGE`, but not `SMART_CONTRACT_AUDIT`. The adapter builder deliberately refuses unknown Intent classes. Do not add a local catalogue entry and treat that as network support. A maintainer-confirmed kit update or supported build path is required before adapter packaging.
+
+A read-only live evidence script and GitHub Actions workflow have now been added:
+- `npm run verify:audit-live`
+- `scripts/verify-smart-contract-audit-live.mjs`
+- `.github/workflows/smart-contract-audit-live.yml`
+
+The workflow records the live Intent registry, miner endpoint, scorer resolution (`/api/wasm?resolve=SMART_CONTRACT_AUDIT`) and evaluation-pool status. It is observational: no signatures, uploads, bonds, registrations or payments. The first run on the updated branch must be inspected before claiming live route confirmation.
