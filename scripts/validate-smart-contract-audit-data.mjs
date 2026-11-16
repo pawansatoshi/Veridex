@@ -2,7 +2,7 @@
 import fs from "node:fs";
 import { pathToFileURL } from "node:url";
 
-export const TARGET_INTENT = "SMART_CONTRACT_AUDIT";
+export const TARGET_INTENT = "SMART_CONTRACT_AUDIT_GENERAL";
 const normalize = (value) => value.normalize("NFC").replace(/\s+/gu, " ").trim();
 const chars = (value) => [...normalize(value)].length;
 const isHttpUrl = (value) => /^https?:\/\//iu.test(value);
