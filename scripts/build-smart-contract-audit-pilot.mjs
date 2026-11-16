@@ -52,7 +52,7 @@ export function buildPilot(sourceRows, selections, sourceManifest = {}, generate
   }
   const manifest = {
     generated_at: generatedAt,
-    intent_id: "SMART_CONTRACT_AUDIT_GENERAL",
+    intent_id: "SMART_CONTRACT_AUDIT",
     source: sourceManifest.source ?? "https://api.scvd.dev/findings",
     source_generated_at: sourceManifest.generated_at ?? null,
     source_total: sourceManifest.counts?.total ?? sourceRows.length,
