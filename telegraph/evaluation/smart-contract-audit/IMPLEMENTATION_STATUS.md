@@ -117,3 +117,13 @@ GitHub Actions read-only evidence run: [43814704469](https://github.com/pawansat
 - Added read-only live evidence script and Actions workflow. Its first run passed all 14 unit tests and captured the live registry, miners, scorer resolution and pool state.
 - The published Hybrid classification vs live Judgment generic fallback remains unresolved; adapter-kit catalogue lacks both target names. No adapter build or truth-source upload is safe until maintainers confirm the route.
 - All 30 SCVD cases remain unreviewed; `pairs.jsonl` remains empty; no Veridex row has been uploaded.
+
+
+## Collaboration and submission preparation
+
+- Opened Veridex issue [#257 — independent reviewers needed](https://github.com/pawansatoshi/Veridex/issues/257) to recruit genuine independent reviewers and eligible contributors.
+- Opened Veridex issue [#258 — catalogue/live scorer/adapter-kit blocker](https://github.com/pawansatoshi/Veridex/issues/258) to track maintainer clarification.
+- Added `SUBMISSION_DRAFT.md`, `CONTRIBUTOR_ONBOARDING.md` and `MAINTAINER_CLARIFICATION.md`.
+- The H2 website is open for registration and final submissions; this repository's final entry has not been registered or submitted. Official requirements include a valid evaluator contribution, reproducibility, a 2–5 minute demo or equivalent, public summary, evidence, GitHub username that starred the Bounties repository, and showcase permissions.
+- The Bounties repository star is a mandatory entry item. The connected GitHub integration does not expose a star action; account holder must perform it.
+- No X/LinkedIn/YouTube progress updates have been published by this automation. The three separate-date update requirement remains open.
