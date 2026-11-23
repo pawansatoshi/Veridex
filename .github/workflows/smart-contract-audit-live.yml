@@ -69,3 +69,34 @@ jobs:
           path: artifacts/smart-contract-audit-live-evidence.json
           if-no-files-found: warn
           retention-days: 30
+
+  hybrid-readiness:
+    name: Hybrid adapter compatibility gate
+    needs: live-evidence
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Download captured protocol evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: smart-contract-audit-live-evidence-${{ github.sha }}
+          path: artifacts
+      - name: Enforce fail-closed Hybrid compatibility
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const file = 'artifacts/smart-contract-audit-live-evidence.json';
+          if (!fs.existsSync(file)) {
+            console.error('BLOCKED: live evidence artifact is missing');
+            process.exit(1);
+          }
+          const evidence = JSON.parse(fs.readFileSync(file, 'utf8'));
+          const d = evidence.decision || {};
+          const blockers = d.adapterRegistrationBlockers || ['compatibility_decision_missing'];
+          if (d.adapterRegistrationReady !== true) {
+            console.error('BLOCKED: Hybrid adapter registration is not supported by live evidence');
+            console.error('Reasons: ' + blockers.join(', '));
+            process.exit(1);
+          }
+          console.log('Live Hybrid route is structurally compatible; adapter-kit and human-review verification are still separate requirements.');
+          NODE
