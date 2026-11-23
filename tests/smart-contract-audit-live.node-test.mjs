@@ -29,3 +29,24 @@ test("live evidence never promotes catalogue classification into live confirmati
   assert.equal(result.decision.liveClassConfirmed, false);
   assert.equal(result.safety.includes("No wallet signing"), true);
 });
+
+
+test("blocks adapter registration on generic Judgment fallback even when catalogue is canonical", () => {
+  const ok = (body) => ({ ok: true, status: 200, body });
+  const result = summarizeLiveEvidence({
+    checkedAt: "2026-11-23T00:00:00.000Z",
+    baseUrl: "https://devnode.telegraphprotocol.com",
+    registry: ok([{ intent_id: TARGET_INTENT, canonical: true }]),
+    intentDetail: ok({ class: "judgment", request: null, response: null }),
+    familyMiners: ok([]),
+    intentMiners: ok([]),
+    familyScorer: ok({ resolve: { class: "judgment", generic_fallback: true, served_by: "GENERIC" } }),
+    intentScorer: ok({ resolve: { class: "judgment", generic_fallback: true, served_by: "GENERIC" } }),
+    familyPool: ok({}),
+    intentPool: ok({})
+  });
+  assert.equal(result.decision.adapterRegistrationReady, false);
+  assert.ok(result.decision.adapterRegistrationBlockers.includes("generic_scorer_fallback"));
+  assert.ok(result.decision.adapterRegistrationBlockers.includes("live_class_not_hybrid"));
+  assert.ok(result.decision.adapterRegistrationBlockers.includes("request_schema_missing"));
+});
