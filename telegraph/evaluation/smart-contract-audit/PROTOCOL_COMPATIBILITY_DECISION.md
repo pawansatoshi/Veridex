@@ -43,3 +43,16 @@ Before any adapter build, truth-source upload, evaluator registration or officia
 - Tracking issue: https://github.com/pawansatoshi/Veridex/issues/258
 
 **Status: mitigation documented; upstream mismatch NOT resolved.** No upload, bond, signature, adapter registration, or official hackathon submission is claimed.
+
+
+## New live evidence — 23 November 2026 (supersedes old generic-fallback observation)
+GitHub Actions run https://github.com/pawansatoshi/Veridex/actions/runs/45115398844 and its user-visible evidence summary report:
+- canonical child confirmed; live class `judgment`;
+- scorer resolved with `generic_fallback: false` (the earlier generic fallback is **no longer present**);
+- 20 active miners; request schema absent; response schema absent;
+- compatibility blockers: `live_class_not_hybrid`, `request_schema_missing`, `response_schema_missing`.
+- the new Hybrid compatibility gate correctly fails, while read-only capture succeeds.
+
+**Interpretation:** This is evidence of a dedicated/non-generic Judgment route, *not* evidence that a Hybrid comparator exists or that the pinned adapter kit supports registration. A Judgment adapter could be a valid alternative only if supported by official target mapping and registration documentation. Do not convert the live class or manufacture schemas to silence the gate.
+
+**Next engineering verification:** identify the current official adapter-kit supported target list and Judgment interface, then implement an isolated Judgment candidate adapter and test against the real supported target only. Keep the Hybrid gate red until its stated conditions are genuinely met. Human-adjudicated dataset and official submission remain separate.
