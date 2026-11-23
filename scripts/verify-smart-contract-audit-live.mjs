@@ -161,7 +161,16 @@ export function summarizeLiveEvidence({ checkedAt, baseUrl, registry, intentDeta
       activeMinerCountKnown: Array.isArray(intentMinerList),
       activeMinerCount: Array.isArray(intentMinerList) ? intentMinerList.length : null,
       questionPoolReady: Number(pool.eligibleSubmitters ?? 0) >= 5,
-      eligibleRowsPresent: Number(pool.byState?.eligible ?? 0) > 0
+      eligibleRowsPresent: Number(pool.byState?.eligible ?? 0) > 0,
+      adapterRegistrationReady: Boolean(intent?.canonical === true && classValue === "hybrid" && !genericFallback && request && response && intentResolve?.scorer),
+      adapterRegistrationBlockers: [
+        ...(!intent || intent.canonical !== true ? ["canonical_intent_unconfirmed"] : []),
+        ...(classValue !== "hybrid" ? ["live_class_not_hybrid"] : []),
+        ...(genericFallback ? ["generic_scorer_fallback"] : []),
+        ...(!request ? ["request_schema_missing"] : []),
+        ...(!response ? ["response_schema_missing"] : []),
+        ...(!intentResolve?.scorer ? ["dedicated_scorer_unconfirmed"] : [])
+      ]
     },
     interpretation: "The Season II catalogue labels SMART_CONTRACT_AUDIT Hybrid. The live node's SMART_CONTRACT_AUDIT_GENERAL registry and scorer resolution are recorded independently; generic_fallback means the live family scorer is not a confirmed dedicated module.",
     safety: "Read-only diagnostics only. No wallet signing, upload, bond, registration, or payment was attempted."
@@ -185,6 +194,6 @@ async function main() {
   fs.mkdirSync(output.slice(0, Math.max(0, output.lastIndexOf("/"))) || ".", { recursive: true });
   fs.writeFileSync(output, JSON.stringify(result, null, 2) + "\n", "utf8");
   console.log(JSON.stringify(result, null, 2));
-  if (!result.decision.liveIntentConfirmed) process.exitCode = 1;
+  if (!result.decision.liveIntentConfirmed || !result.decision.adapterRegistrationReady) process.exitCode = 1;
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();
