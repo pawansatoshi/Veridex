@@ -111,6 +111,8 @@ export function summarizeLiveEvidence({ checkedAt, baseUrl, registry, intentDeta
       raw: intent,
       detail: detail ? {
         class: detail.class ?? null,
+        adapterRegistration: detail.adapter_registration ?? null,
+        activeAdapterRegistrationId: detail.evaluation?.adapter?.registration_id ?? null,
         request: detail.request ?? null,
         response: detail.response ?? null,
         miner_count: detail.miner_count ?? null,
@@ -163,7 +165,9 @@ export function summarizeLiveEvidence({ checkedAt, baseUrl, registry, intentDeta
       activeMinerCount: Array.isArray(intentMinerList) ? intentMinerList.length : null,
       questionMaterialRouteObserved: intent?.canonical === true && pool.endpointOk &&
         ["judgment", "hybrid"].includes(classValue),
-      questionPoolReady: Number(pool.eligibleSubmitters ?? 0) >= 5,
+      questionPoolReady: pool.endpointOk && Number.isInteger(pool.minSubmitters) &&
+        pool.minSubmitters > 0 && Number.isInteger(pool.eligibleSubmitters) &&
+        pool.eligibleSubmitters >= pool.minSubmitters,
       eligibleRowsPresent: Number(pool.byState?.eligible ?? 0) > 0,
       adapterRegistrationReady: Boolean(intent?.canonical === true && classValue === "hybrid" && !genericFallback && request && response && intentResolve?.scorer),
       adapterRegistrationBlockers: [

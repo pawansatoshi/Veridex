@@ -56,3 +56,14 @@ GitHub Actions run https://github.com/pawansatoshi/Veridex/actions/runs/45115398
 **Interpretation:** This is evidence of a dedicated/non-generic Judgment route, *not* evidence that a Hybrid comparator exists or that the pinned adapter kit supports registration. A Judgment adapter could be a valid alternative only if supported by official target mapping and registration documentation. Do not convert the live class or manufacture schemas to silence the gate.
 
 **Next engineering verification:** identify the current official adapter-kit supported target list and Judgment interface, then implement an isolated Judgment candidate adapter and test against the real supported target only. Keep the Hybrid gate red until its stated conditions are genuinely met. Human-adjudicated dataset and official submission remain separate.
+
+
+## 26 November 2026 node-declared Judgment registration
+
+The canonical child detail now explicitly advertises
+`adapter_registration.register_on=SMART_CONTRACT_AUDIT` and
+`tested_as=judgment`. It lists third-party active adapter #187. The child
+registry and evaluation pool reads are separate from adapter packaging:
+the public kit HEAD still lacks the target in its compiled catalogue.
+The live pool reports 418 eligible rows, six eligible contributors and a
+minimum of three. Veridex's supplied contributor address has zero rows.

@@ -45,10 +45,11 @@ test("blocks adapter registration on generic Judgment fallback even when catalog
     familyScorer: ok({ resolve: { class: "judgment", generic_fallback: true, served_by: "GENERIC" } }),
     intentScorer: ok({ resolve: { class: "judgment", generic_fallback: true, served_by: "GENERIC" } }),
     familyPool: ok({}),
-    intentPool: ok({})
+    intentPool: ok({ min_submitters: 3, eligible_submitters: 3 })
   });
   assert.equal(result.decision.adapterRegistrationReady, false);
   assert.equal(result.decision.questionMaterialRouteObserved, true);
+  assert.equal(result.decision.questionPoolReady, true);
   assert.ok(result.decision.adapterRegistrationBlockers.includes("generic_scorer_fallback"));
   assert.ok(result.decision.adapterRegistrationBlockers.includes("live_class_not_hybrid"));
   assert.ok(result.decision.adapterRegistrationBlockers.includes("request_schema_missing"));

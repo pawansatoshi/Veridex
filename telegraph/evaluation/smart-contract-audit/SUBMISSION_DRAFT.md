@@ -86,9 +86,13 @@ Do not submit this statement as a completed-work claim until each applicable che
 This section supersedes the older live-route and CI snapshot above. The target for
 question material is `SMART_CONTRACT_AUDIT_GENERAL` under Mission #202
 (Web3 Native & DeFi), Evaluators track. The published family label is Hybrid.
-The last confirmed live check documented in
-[the compatibility decision](PROTOCOL_COMPATIBILITY_DECISION.md) resolved the
-child to Judgment. The public adapter kit HEAD remains
+The 26 November live reads confirmed the child is Judgment and the node
+advertises family `SMART_CONTRACT_AUDIT` as the Judgment adapter registration
+target. The active adapter is third-party registration #187. The pool reported
+418 eligible rows from six contributors, with a live minimum of three. This
+supersedes the earlier pool shortfall; the published guide still says five,
+and the current pool exceeds both. A direct submitter lookup for
+`0xb467F683764593316fAEbB0709127E90791Fe47F` returned zero rows. The public adapter kit HEAD remains
 `1ed063e2f0066cfaf0e124d66ec6a17b7a6121fd`. Its compiled catalogue has neither
 target, and the resolver refuses unknown targets.
 
@@ -122,6 +126,11 @@ separate. Local validation cannot authenticate an adjudication or establish elig
    and a demo or equivalent walkthrough to the
    [official Season II form](https://hackathon.telegraphprotocol.com/).
    Deadline is 1 December 2026 at 23:59 UTC (2 December at 05:29 IST).
+
+The SCVD fetch and pilot build were rerun on 26 November. The API returned
+1,064 metadata candidates and the pilot builder selected 30 from 24 repositories.
+Of those, 27 had a source commit and 11 had a file reference. These counts
+record source metadata coverage and leave all 30 verdicts pending.
 
 The reproducible walkthrough is steps 1–3 with the automated test fixture and
 the empty-dataset failure. A final demo must also show the genuine upload and
