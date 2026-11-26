@@ -45,7 +45,8 @@ export function findIntent(payload, target = TARGET_INTENT) {
 
 function minerEntries(result) {
   const body = result.ok ? result.body : null;
-  return Array.isArray(body) ? body : (body?.miners ?? body?.items ?? []);
+  const entries = Array.isArray(body) ? body : (body?.miners ?? body?.items);
+  return Array.isArray(entries) ? entries : null;
 }
 function resolveBody(result) {
   const body = result.ok ? result.body : null;
@@ -78,7 +79,7 @@ export function summarizeLiveEvidence({ checkedAt, baseUrl, registry, intentDeta
   const genericFallback = Boolean(intentResolve?.generic_fallback ?? familyResolve?.generic_fallback);
   const request = detail?.request ?? detail?.request_schema ?? detail?.requestSchema ?? intent?.request ?? null;
   const response = detail?.response ?? detail?.response_schema ?? detail?.responseSchema ?? intent?.response ?? null;
-  const compactMiners = intentMinerList.map((miner) => ({
+  const compactMiners = (intentMinerList ?? []).map((miner) => ({
     id: miner.id ?? null,
     slug: miner.slug ?? null,
     name: miner.name ?? null,
@@ -142,8 +143,8 @@ export function summarizeLiveEvidence({ checkedAt, baseUrl, registry, intentDeta
     endpoints: {
       registry: { ok: registry.ok, status: registry.status, target: intent },
       intentDetail: { ok: intentDetail.ok, status: intentDetail.status, detail: detail ? { class: detail.class ?? null, request, response } : null },
-      familyMiners: { ok: familyMiners.ok, status: familyMiners.status, count: familyMinerList.length },
-      intentMiners: { ok: intentMiners.ok, status: intentMiners.status, count: intentMinerList.length },
+      familyMiners: { ok: familyMiners.ok, status: familyMiners.status, count: familyMinerList?.length ?? null },
+      intentMiners: { ok: intentMiners.ok, status: intentMiners.status, count: intentMinerList?.length ?? null },
       familyScorer: { ok: familyScorer.ok, status: familyScorer.status, resolve: familyResolve },
       intentScorer: { ok: intentScorer.ok, status: intentScorer.status, resolve: intentResolve },
       familyPool: poolSummary(familyPool),
@@ -160,6 +161,8 @@ export function summarizeLiveEvidence({ checkedAt, baseUrl, registry, intentDeta
       scorerResolved: Boolean(intentResolve?.scorer ?? familyResolve?.scorer),
       activeMinerCountKnown: Array.isArray(intentMinerList),
       activeMinerCount: Array.isArray(intentMinerList) ? intentMinerList.length : null,
+      questionMaterialRouteObserved: intent?.canonical === true && pool.endpointOk &&
+        ["judgment", "hybrid"].includes(classValue),
       questionPoolReady: Number(pool.eligibleSubmitters ?? 0) >= 5,
       eligibleRowsPresent: Number(pool.byState?.eligible ?? 0) > 0,
       adapterRegistrationReady: Boolean(intent?.canonical === true && classValue === "hybrid" && !genericFallback && request && response && intentResolve?.scorer),

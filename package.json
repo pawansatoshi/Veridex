@@ -21,7 +21,7 @@
     "verify:production-schema": "node scripts/verify-production-schema.mjs",
     "evaluate:miner": "node scripts/evaluate-miner.mjs",
     "verify:release-qa": "node scripts/verify-release-qa.mjs",
-    "test:audit-data": "node --test tests/smart-contract-audit-*.node-test.mjs",
+    "test:audit-data": "node --test tests/smart-contract-audit-*.node-test.mjs tests/audit-evalpool-preparation.node-test.mjs",
     "validate:audit-data": "node scripts/validate-smart-contract-audit-data.mjs --input telegraph/evaluation/smart-contract-audit/pairs.jsonl",
     "verify:audit-live": "node scripts/verify-smart-contract-audit-live.mjs"
   },

@@ -27,6 +27,8 @@ test("live evidence never promotes catalogue classification into live confirmati
   });
   assert.equal(result.decision.liveIntentConfirmed, false);
   assert.equal(result.decision.liveClassConfirmed, false);
+  assert.equal(result.decision.questionMaterialRouteObserved, false);
+  assert.equal(result.miners.intentCount, null);
   assert.equal(result.safety.includes("No wallet signing"), true);
 });
 
@@ -46,6 +48,7 @@ test("blocks adapter registration on generic Judgment fallback even when catalog
     intentPool: ok({})
   });
   assert.equal(result.decision.adapterRegistrationReady, false);
+  assert.equal(result.decision.questionMaterialRouteObserved, true);
   assert.ok(result.decision.adapterRegistrationBlockers.includes("generic_scorer_fallback"));
   assert.ok(result.decision.adapterRegistrationBlockers.includes("live_class_not_hybrid"));
   assert.ok(result.decision.adapterRegistrationBlockers.includes("request_schema_missing"));

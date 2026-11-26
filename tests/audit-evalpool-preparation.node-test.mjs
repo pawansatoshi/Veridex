@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 const address = '0x' + '1'.repeat(40);
-const row = {prompt:'Review this test fixture for arithmetic errors.',chosen:'The fixture is only a structural test.',rejected:'No analysis was performed.',provenance:{source_kind:'synthetic',source_url:'https://example.com/test-fixture'}};
+const row = {prompt:'Review this test fixture for arithmetic errors.',chosen:'The fixture is only a structural test.',rejected:'No analysis was performed.',provenance:{source_kind:'human',source_url:'https://example.com/test-fixture'}};
 function run(t, body) {
  const dir=mkdtempSync(join(tmpdir(),'veridex-eval-'));
  t.after(()=>rmSync(dir,{recursive:true,force:true}));
@@ -31,3 +31,22 @@ test('rejects empty input',t=>assert.notEqual(run(t,'').result.status,0));
 test('rejects duplicate normalized prompts',t=>assert.notEqual(run(t,JSON.stringify(row)+'\n'+JSON.stringify({...row,prompt:row.prompt+'  '})+'\n').result.status,0));
 test('rejects mismatched intent',t=>assert.notEqual(run(t,JSON.stringify({...row,intent_id:'OTHER'})+'\n').result.status,0));
 test('rejects identical answers',t=>assert.notEqual(run(t,JSON.stringify({...row,rejected:row.chosen})+'\n').result.status,0));
+
+test('accepts judgment ground truth without a rejected answer', t => {
+  const { rejected, ...answer } = row;
+  const { result } = run(t, JSON.stringify({ ...answer, label_kind: 'ground_truth' }));
+  assert.equal(result.status, 0, result.stderr);
+});
+
+test('rejects escaped control characters in answers', t => {
+  assert.notEqual(run(t, JSON.stringify({ ...row, chosen: row.chosen + '\u0000' })).result.status, 0);
+});
+
+test('rejects generated and malformed provenance', t => {
+  for (const provenance of [
+    { ...row.provenance, source_kind: 'synthetic' },
+    { ...row.provenance, source_url: 'https://' }
+  ]) {
+    assert.notEqual(run(t, JSON.stringify({ ...row, provenance })).result.status, 0);
+  }
+});

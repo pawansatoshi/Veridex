@@ -116,3 +116,12 @@ Track 3 is judged on useful production demand and application quality. The app m
 ## Evidence policy
 
 Repository presence is not runtime proof. Never claim official Telegraph ranking, fabricated traffic/demand, current-commit CI GREEN, successful x402 settlement, or current registry alignment without fresh evidence.
+
+## Season II Evaluators branch checkpoint — 26 November 2026
+
+PR #256 targets Mission #202 through the separate Judgment question-material
+route where the live canonical child and pool endpoint are confirmed. See the
+[reviewer handoff](telegraph/evaluation/smart-contract-audit/SUBMISSION_DRAFT.md).
+The readiness job keeps upload payloads out of CI artifacts. The official
+adapter kit still lacks the target. Independent adjudication, signed upload,
+row eligibility and the final submission remain open.

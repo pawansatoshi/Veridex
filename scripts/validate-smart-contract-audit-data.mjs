@@ -5,7 +5,15 @@ import { pathToFileURL } from "node:url";
 export const TARGET_INTENT = "SMART_CONTRACT_AUDIT_GENERAL";
 const normalize = (value) => value.normalize("NFC").replace(/\s+/gu, " ").trim();
 const chars = (value) => [...normalize(value)].length;
-const isHttpUrl = (value) => /^https?:\/\//iu.test(value);
+const isHttpUrl = (value) => {
+  if (!/^https?:\/\//iu.test(value)) return false;
+  try {
+    const url = new URL(value);
+    return Boolean(url.hostname && !url.username && !url.password);
+  } catch {
+    return false;
+  }
+};
 const isPlainObject = (value) => Boolean(value) && typeof value === "object" && !Array.isArray(value);
 
 function validateTruthSource(row, line, failures) {
@@ -59,7 +67,7 @@ function validateTruthSource(row, line, failures) {
   }
 }
 
-export function validateRows(inputRows) {
+export function validateRows(inputRows, { trainingQuality = true } = {}) {
   const failures = [], warnings = [], rows = [], seenPrompts = new Map();
   let generated = 0, selfDeclaredHumanWithUrl = 0, missingProvenance = 0;
   let preferencePairs = 0, truthSources = 0, groundTruthRows = 0, skipped = 0;
@@ -75,7 +83,7 @@ export function validateRows(inputRows) {
       failures.push("line " + line + ": unknown label_kind " + String(labelKind));
       continue;
     }
-    if (row.intent_id && row.intent_id !== TARGET_INTENT) {
+    if ("intent_id" in row && row.intent_id !== TARGET_INTENT) {
       failures.push("line " + line + ": intent_id must be " + TARGET_INTENT);
     }
     if (Buffer.byteLength(JSON.stringify(row), "utf8") > 64 * 1024) {
@@ -148,9 +156,9 @@ export function validateRows(inputRows) {
   const lengthShortcut = Math.max(longerAccuracy, 1 - longerAccuracy);
 
   if (!preferencePairs && !truthSources && !groundTruthRows) failures.push("no usable evaluation material");
-  if (n && uniqueRate < 0.80) failures.push("unique rejected answers " + (uniqueRate * 100).toFixed(1) + "% < 80%");
-  if (n && maxRepeated > 0.02) failures.push("most-repeated rejected answer share " + (maxRepeated * 100).toFixed(1) + "% > 2%");
-  if (n && lengthShortcut > 0.65) failures.push("length-only shortcut " + (lengthShortcut * 100).toFixed(1) + "% > 65%");
+  if (trainingQuality && n && uniqueRate < 0.80) failures.push("unique rejected answers " + (uniqueRate * 100).toFixed(1) + "% < 80%");
+  if (trainingQuality && n && maxRepeated > 0.02) failures.push("most-repeated rejected answer share " + (maxRepeated * 100).toFixed(1) + "% > 2%");
+  if (trainingQuality && n && lengthShortcut > 0.65) failures.push("length-only shortcut " + (lengthShortcut * 100).toFixed(1) + "% > 65%");
   if (generated) warnings.push(generated + " generated/model rows are unverified and must never be relabelled as human");
   if (missingProvenance) warnings.push(missingProvenance + " question rows lack source_kind or source_url");
   if (selfDeclaredHumanWithUrl) warnings.push(selfDeclaredHumanWithUrl + " rows self-declare human provenance plus an HTTP(S) URL; this is not independently authenticated");

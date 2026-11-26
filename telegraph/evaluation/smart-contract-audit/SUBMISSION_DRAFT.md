@@ -80,3 +80,49 @@ Evidence:
 Veridex contributes an evidence-first evaluator for `SMART_CONTRACT_AUDIT_GENERAL`, designed to assess smart-contract security reasoning against commit-pinned primary evidence and balanced adjudicated cases. The entry includes reproducible validation, protocol integration evidence, held-out tests, and transparent limitations. All claims about live scoring, data eligibility and adapter status will be backed by the corresponding official node evidence.
 
 Do not submit this statement as a completed-work claim until each applicable checklist item above is verified.
+
+## 26 November 2026 readiness and reviewer handoff
+
+This section supersedes the older live-route and CI snapshot above. The target for
+question material is `SMART_CONTRACT_AUDIT_GENERAL` under Mission #202
+(Web3 Native & DeFi), Evaluators track. The published family label is Hybrid.
+The last confirmed live check documented in
+[the compatibility decision](PROTOCOL_COMPATIBILITY_DECISION.md) resolved the
+child to Judgment. The public adapter kit HEAD remains
+`1ed063e2f0066cfaf0e124d66ec6a17b7a6121fd`. Its compiled catalogue has neither
+target, and the resolver refuses unknown targets.
+
+Mission #202 and the [evaluation data guide](https://anjoman.ai/docs/scoring/contribute-evaluation-data)
+document an independent question-material path. Use it after genuine adjudication
+and confirmation of the canonical child and its pool endpoint. The local
+packet preflight accepts preference pairs, ground truth and graded exemplars
+with declared human provenance. The adapter-training quality thresholds are
+separate. Local validation cannot authenticate an adjudication or establish eligibility.
+
+1. Run `npm run test:audit-data` and `npm run verify:audit-live`. Inspect
+   `artifacts/smart-contract-audit-live-evidence.json` for
+   `decision.questionMaterialRouteObserved`. The live command can exit 1 when
+   the Hybrid gate is blocked even if the question-material route is observed.
+2. Use the [contributor checklist](CONTRIBUTOR_ONBOARDING.md) to record the
+   primary source, audited revision, evidence and independent review for each
+   row. Keep reviewed upload rows and private review records outside the
+   public repository. The committed `pairs.jsonl` remains empty.
+3. To validate and bind bytes locally, run
+   `node scripts/prepare-audit-evalpool-submission.mjs /private/reviewed.jsonl <wallet-address> /private/unsigned.json`.
+   The output contains the full dataset in base64. Treat it as the dataset
+   itself. CI publishes readiness metadata only.
+4. Have the contributor review the exact file and sign the upload in
+   [Anjoman Evaluate](https://anjoman.ai/dashboard/eval). The official CLI path
+   also supports an EIP-191 signature over the exact bytes; the unsigned
+   packet is optional for the dashboard route. The upload requires no bond.
+5. Check `GET /api/evalpool/submissions/mine?submitter=<wallet-address>&intent_id=SMART_CONTRACT_AUDIT_GENERAL`
+   for row hashes and eligibility. Record timestamps, state counts and reason
+   codes. An upload receipt and an eligible row are separate milestones.
+6. Attach verified evidence, public progress links, the GitHub star username
+   and a demo or equivalent walkthrough to the
+   [official Season II form](https://hackathon.telegraphprotocol.com/).
+   Deadline is 1 December 2026 at 23:59 UTC (2 December at 05:29 IST).
+
+The reproducible walkthrough is steps 1–3 with the automated test fixture and
+the empty-dataset failure. A final demo must also show the genuine upload and
+eligibility evidence. This draft has no signed contribution or submission receipt.

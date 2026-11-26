@@ -2,6 +2,7 @@ name: Audit submission readiness
 on:
   push:
     branches: [bounty/smart-contract-audit-128]
+  pull_request:
   workflow_dispatch:
 permissions:
   contents: read
@@ -17,7 +18,7 @@ jobs:
       - name: Run preparation and evaluator tests
         id: tests
         continue-on-error: true
-        run: node --test tests/audit-evalpool-preparation.node-test.mjs tests/smart-contract-audit-*.node-test.mjs
+        run: npm run test:audit-data
       - name: Capture live evidence independently of adapter readiness
         continue-on-error: true
         run: node scripts/verify-smart-contract-audit-live.mjs
@@ -28,7 +29,7 @@ jobs:
           mkdir -p artifacts
           file=telegraph/evaluation/smart-contract-audit/pairs.jsonl
           if [ ! -s "$file" ]; then echo "Dataset missing or empty"; exit 1; fi
-          node scripts/prepare-audit-evalpool-submission.mjs "$file" 0xb467F683764593316fAEbB0709127E90791Fe47F artifacts/evalpool-unsigned.json
+          node scripts/prepare-audit-evalpool-submission.mjs "$file" 0xb467F683764593316fAEbB0709127E90791Fe47F "$RUNNER_TEMP/evalpool-unsigned.json"
       - name: Consolidate readiness report
         if: always()
         env:
@@ -44,7 +45,7 @@ jobs:
           const report = {
             testsPassed: process.env.TEST_OUTCOME === 'success',
             canonicalIntentConfirmed: d.liveCanonicalConfirmed === true,
-            evaluationRouteObserved: ['judgment','hybrid'].includes(d.resolvedClass) && d.liveCanonicalConfirmed === true,
+            evaluationRouteObserved: d.questionMaterialRouteObserved === true,
             hybridAdapterStructurallyReady: d.adapterRegistrationReady === true,
             hybridBlockers: d.adapterRegistrationBlockers || [],
             unsignedPacketPrepared: process.env.PACKET_OUTCOME === 'success',
