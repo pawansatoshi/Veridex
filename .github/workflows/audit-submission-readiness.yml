@@ -1,0 +1,69 @@
+name: Audit submission readiness
+on:
+  push:
+    branches: [bounty/smart-contract-audit-128]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  readiness:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Run preparation and evaluator tests
+        id: tests
+        continue-on-error: true
+        run: node --test tests/audit-evalpool-preparation.node-test.mjs tests/smart-contract-audit-*.node-test.mjs
+      - name: Capture live evidence independently of adapter readiness
+        continue-on-error: true
+        run: node scripts/verify-smart-contract-audit-live.mjs
+      - name: Prepare unsigned packet if reviewed dataset exists
+        id: packet
+        continue-on-error: true
+        run: |
+          mkdir -p artifacts
+          file=telegraph/evaluation/smart-contract-audit/pairs.jsonl
+          if [ ! -s "$file" ]; then echo "Dataset missing or empty"; exit 1; fi
+          node scripts/prepare-audit-evalpool-submission.mjs "$file" 0xb467F683764593316fAEbB0709127E90791Fe47F artifacts/evalpool-unsigned.json
+      - name: Consolidate readiness report
+        if: always()
+        env:
+          TEST_OUTCOME: ${{ steps.tests.outcome }}
+          PACKET_OUTCOME: ${{ steps.packet.outcome }}
+        run: |
+          mkdir -p artifacts
+          node <<'NODE'
+          const fs = require('node:fs');
+          const path = 'artifacts/smart-contract-audit-live-evidence.json';
+          const evidence = fs.existsSync(path) ? JSON.parse(fs.readFileSync(path)) : {};
+          const d = evidence.decision || {};
+          const report = {
+            testsPassed: process.env.TEST_OUTCOME === 'success',
+            canonicalIntentConfirmed: d.liveCanonicalConfirmed === true,
+            evaluationRouteObserved: ['judgment','hybrid'].includes(d.resolvedClass) && d.liveCanonicalConfirmed === true,
+            hybridAdapterStructurallyReady: d.adapterRegistrationReady === true,
+            hybridBlockers: d.adapterRegistrationBlockers || [],
+            unsignedPacketPrepared: process.env.PACKET_OUTCOME === 'success',
+            independentReviewVerified: false,
+            signedUploadVerified: false,
+            officialSubmissionVerified: false,
+            status: 'NOT_SUBMITTED'
+          };
+          fs.writeFileSync('artifacts/submission-readiness.json', JSON.stringify(report,null,2));
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, '## Submission readiness\n\n'+Object.entries(report).map(([k,v])=>'- '+k+': '+JSON.stringify(v)).join('\n')+'\n');
+          NODE
+      - name: Publish all available evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: audit-submission-readiness-${{ github.sha }}
+          path: artifacts/
+          retention-days: 30
+      - name: Enforce preparation readiness
+        if: always()
+        run: |
+          node -e 'const r=require("./artifacts/submission-readiness.json"); if(!r.testsPassed || !r.evaluationRouteObserved || !r.unsignedPacketPrepared) process.exit(1)'
